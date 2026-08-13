@@ -30,7 +30,9 @@ export function RecordBrowser({ records, cats, onEdit, onDelete }: Props) {
 
   return (
     <div className="space-y-4">
-      <FilterPanel cats={cats} filters={filters} onChange={changeFilters} resultCount={filtered.length} />
+      <div className="sticky top-0 z-20">
+        <FilterPanel cats={cats} filters={filters} onChange={changeFilters} resultCount={filtered.length} />
+      </div>
 
       {records.length === 0 ? (
         <p className="py-12 text-center text-sm text-gray-400">기록이 없습니다</p>
@@ -49,24 +51,26 @@ export function RecordBrowser({ records, cats, onEdit, onDelete }: Props) {
       )}
 
       {filtered.length > PAGE_SIZE && (
-        <div className="flex items-center justify-center gap-3">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={safePage <= 1}
-            className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
-          >
-            ‹ 이전
-          </button>
-          <span className="text-sm text-gray-500">
-            {safePage} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safePage >= totalPages}
-            className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
-          >
-            다음 ›
-          </button>
+        <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 border-t border-gray-200 bg-white/95 py-2 backdrop-blur">
+          <div className="flex items-center justify-center gap-3 pr-24 sm:pr-0">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
+            >
+              ‹ 이전
+            </button>
+            <span className="text-sm text-gray-500">
+              {safePage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
+            >
+              다음 ›
+            </button>
+          </div>
         </div>
       )}
     </div>
