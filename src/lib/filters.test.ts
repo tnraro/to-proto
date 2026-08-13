@@ -1,0 +1,92 @@
+import { describe, expect, test } from 'bun:test'
+import type { VomitRecord } from '../types'
+import { EMPTY_FILTERS, filterRecords, type RecordFilters } from './filters'
+
+function rec(datetime: string, catId: string, types: VomitRecord['types'], memo = ''): VomitRecord {
+  return {
+    id: `${datetime}-${catId}-${types.join('')}`,
+    datetime,
+    catId,
+    types,
+    memo,
+    photos: [],
+    createdAt: datetime,
+    updatedAt: datetime,
+  }
+}
+
+const records = [
+  rec('2026-08-13T10:00:00', 'c1', ['food', 'foam'], '밥 먹고 토함'),
+  rec('2026-08-13T08:00:00', 'c2', ['food'], ''),
+  rec('2026-08-10T12:00:00', 'c1', ['hairball'], '털뭉치'),
+  rec('2026-07-30T09:00:00', 'c2', ['bile'], ''),
+  rec('2025-12-31T23:00:00', 'c1', ['bloody'], '피 발견'),
+]
+
+describe('filterRecords', () => {
+  test('빈 필터 = 전체 반환', () => {
+    expect(filterRecords(records, EMPTY_FILTERS)).toHaveLength(5)
+  })
+
+  test('사용자 예시: (A or B) AND (사료 or 거품) AND (2026년 이후)', () => {
+    const f: RecordFilters = {
+      ...EMPTY_FILTERS,
+      catIds: ['c1', 'c2'],
+      types: ['food', 'foam'],
+      dateMode: 'after',
+      dateAfter: '2026-01-01',
+    }
+    const result = filterRecords(records, f)
+    expect(result).toHaveLength(2)
+    expect(result.map((r) => r.id)).toContain('2026-08-13T10:00:00-c1-foodfoam')
+    expect(result.map((r) => r.id)).toContain('2026-08-13T08:00:00-c2-food')
+  })
+
+  test('고양이 복수 선택 OR', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, catIds: ['c1', 'c2'] }
+    expect(filterRecords(records, f)).toHaveLength(5)
+  })
+
+  test('고양이 단일 선택', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, catIds: ['c1'] }
+    expect(filterRecords(records, f)).toHaveLength(3)
+  })
+
+  test('종류 복수 선택 OR (포함 매칭)', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, types: ['hairball', 'bloody'] }
+    expect(filterRecords(records, f)).toHaveLength(2)
+  })
+
+  test('이전: 기준일 미만 (해당일 제외)', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, dateMode: 'before', dateBefore: '2026-08-10' }
+    expect(filterRecords(records, f)).toHaveLength(2) // 07-30, 12-31
+  })
+
+  test('이후: 기준일 이상 (해당일 포함)', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, dateMode: 'after', dateAfter: '2026-08-10' }
+    expect(filterRecords(records, f)).toHaveLength(3) // 08-10, 08-13 x2
+  })
+
+  test('범위: 양끝 포함', () => {
+    const f: RecordFilters = {
+      ...EMPTY_FILTERS,
+      dateMode: 'range',
+      dateRangeStart: '2026-08-01',
+      dateRangeEnd: '2026-08-13',
+    }
+    expect(filterRecords(records, f)).toHaveLength(3)
+  })
+
+  test('메모: 대소문자 무시 부분 문자열', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, memo: '털' }
+    expect(filterRecords(records, f)).toHaveLength(1)
+    expect(filterRecords(records, f)[0].memo).toBe('털뭉치')
+  })
+
+  test('계열 간 AND: 메모 + 종류', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, memo: '토', types: ['hairball'] }
+    expect(filterRecords(records, f)).toHaveLength(0)
+    const f2: RecordFilters = { ...EMPTY_FILTERS, memo: '토', types: ['food'] }
+    expect(filterRecords(records, f2)).toHaveLength(1)
+  })
+})
