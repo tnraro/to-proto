@@ -1,6 +1,6 @@
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
-import { formatDateTime } from '../lib/dates'
+import { formatRelativeTime } from '../lib/dates'
 import { PhotoThumb } from './PhotoThumb'
 
 interface Props {
@@ -28,7 +28,7 @@ export function RecordList({ records, onEdit, onDelete, catNameFor, emptyText }:
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-sm font-medium">{formatDateTime(r.datetime)}</span>
+              <span className="text-sm font-medium">{formatRelativeTime(r.datetime)}</span>
               <span className="text-xs text-gray-400">{catNameFor(r.catId)}</span>
             </div>
             <div className="truncate text-sm text-gray-500">

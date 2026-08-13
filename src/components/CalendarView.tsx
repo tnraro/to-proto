@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
-import { formatDateTime, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
+import { formatRelativeTime, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
 import { PhotoThumb } from './PhotoThumb'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -133,7 +133,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">
-                    {formatDateTime(r.datetime)} <span className="ml-1 text-xs text-gray-400">{catName(r.catId)}</span>
+                    {formatRelativeTime(r.datetime)} <span className="ml-1 text-xs text-gray-400">{catName(r.catId)}</span>
                   </div>
                   <div className="truncate text-sm text-gray-500">
                     {r.types.map((t) => VOMIT_TYPES[t].label).join(' + ')}

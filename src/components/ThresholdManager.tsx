@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Cat, ThresholdRule, VomitType } from '../types'
 import { VOMIT_TYPES, VOMIT_TYPE_KEYS } from '../types'
 import { RULE_PRESETS } from '../lib/thresholds'
-import { formatDateTime } from '../lib/dates'
+import { formatRelativeTime } from '../lib/dates'
 import type { RuleInput, Store } from '../hooks/useStore'
 
 const WINDOWS = [
@@ -74,7 +74,7 @@ export function ThresholdManager({ cats, rules, alertLog, addRule, updateRule, d
                   <div className="text-sm font-medium">
                     {a.catName} · {a.typeLabel} · {a.windowDays}일 내 {a.maxCount}회 이상 (현재 {a.count}회)
                   </div>
-                  <div className="text-xs text-gray-400">{formatDateTime(a.createdAt)}</div>
+                  <div className="text-xs text-gray-400">{formatRelativeTime(a.createdAt)}</div>
                 </div>
                 <button
                   onClick={() => deleteAlert(a.id)}
