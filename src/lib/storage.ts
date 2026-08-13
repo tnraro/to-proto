@@ -1,26 +1,8 @@
 import type { AlertEntry, Cat, ThresholdRule, VomitRecord } from '../types'
 import { dbClear, dbDel, dbDelByIndex, dbGet, dbGetAll, dbPut } from './db'
 
-const ONBOARDED_KEY = 'to.onboarded'
-
 export function uid(): string {
   return crypto.randomUUID()
-}
-
-export function loadOnboarded(): boolean {
-  try {
-    return localStorage.getItem(ONBOARDED_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-export function saveOnboarded() {
-  try {
-    localStorage.setItem(ONBOARDED_KEY, '1')
-  } catch {
-    // ignore
-  }
 }
 
 export async function getAllCats(): Promise<Cat[]> {

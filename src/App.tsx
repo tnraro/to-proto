@@ -28,12 +28,11 @@ export default function App() {
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
 
-  const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog, onboarded, completeOnboarding } = store
+  const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog } = store
 
   const openCatModal = () => setCatModalOpen(true)
   const handleCatAdd = (name: string) => {
     addCat(name)
-    completeOnboarding()
     setCatModalOpen(false)
   }
 
@@ -45,12 +44,11 @@ export default function App() {
     )
   }
 
-  if (!onboarded && cats.length === 0) {
+  if (cats.length === 0) {
     return (
       <Onboarding
         onAdd={(name) => {
           addCat(name)
-          completeOnboarding()
         }}
       />
     )
