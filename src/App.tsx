@@ -27,11 +27,12 @@ export default function App() {
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
 
-  const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog } = store
+  const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog, onboarded, completeOnboarding } = store
 
   const openCatModal = () => setCatModalOpen(true)
   const handleCatAdd = (name: string) => {
     addCat(name)
+    completeOnboarding()
     setCatModalOpen(false)
   }
 
@@ -63,6 +64,7 @@ export default function App() {
   }
 
   const recent = records.slice(0, 30)
+  const showOnboarding = !onboarded && cats.length === 0 && records.length === 0
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -78,6 +80,29 @@ export default function App() {
       <main className="mx-auto max-w-3xl px-4 pb-32 pt-4 sm:pt-6">
         {tab === 'record' && (
           <div className="space-y-6">
+            {showOnboarding && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                <h2 className="text-base font-bold text-emerald-800">반가워요!</h2>
+                <p className="mt-1 text-sm text-emerald-700">
+                  고양이 토 기록을 시작하려면 먼저 고양이를 등록해 주세요. 등록하면 기록, 캘린더, 통계를 바로
+                  사용할 수 있습니다.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={openCatModal}
+                    className="min-h-11 rounded-lg bg-emerald-600 px-4 font-medium text-white hover:bg-emerald-700"
+                  >
+                    고양이 등록
+                  </button>
+                  <button
+                    onClick={completeOnboarding}
+                    className="min-h-11 rounded-lg border border-emerald-300 px-4 text-sm text-emerald-700"
+                  >
+                    다음에
+                  </button>
+                </div>
+              </div>
+            )}
             <RecordForm
               cats={cats}
               initial={editing}

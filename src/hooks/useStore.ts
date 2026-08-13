@@ -13,11 +13,13 @@ import {
   getAllCats,
   getAllRecords,
   getAllRules,
+  loadOnboarded,
   putAlertEntry,
   putCat,
   putPhoto,
   putRecord,
   putRule,
+  saveOnboarded,
   uid,
 } from '../lib/storage'
 import { evaluateRules, violationToAlertEntry } from '../lib/thresholds'
@@ -33,6 +35,8 @@ export type RuleInput = Omit<ThresholdRule, 'id'>
 
 export interface Store {
   hydrated: boolean
+  onboarded: boolean
+  completeOnboarding: () => void
   cats: Cat[]
   records: VomitRecord[]
   rules: ThresholdRule[]
@@ -53,6 +57,7 @@ export interface Store {
 
 export function useStore(): Store {
   const [hydrated, setHydrated] = useState(false)
+  const [onboarded, setOnboarded] = useState(() => loadOnboarded())
   const [cats, setCats] = useState<Cat[]>([])
   const [records, setRecords] = useState<VomitRecord[]>([])
   const [rules, setRules] = useState<ThresholdRule[]>([])
@@ -213,8 +218,15 @@ export function useStore(): Store {
     void clearAll()
   }, [])
 
+  const completeOnboarding = useCallback(() => {
+    setOnboarded(true)
+    saveOnboarded()
+  }, [])
+
   return {
     hydrated,
+    onboarded,
+    completeOnboarding,
     cats,
     records,
     rules,
