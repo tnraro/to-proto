@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Cat, VomitRecord, VomitType } from '../types'
+import type { Cat, RecordDraft, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
-import { getPhoto } from '../lib/storage'
+import { deleteDraft, getPhoto, loadDraft, saveDraft } from '../lib/storage'
 
 export type RecordInput = Omit<VomitRecord, 'id' | 'createdAt' | 'updatedAt' | 'photos'> & {
   photos?: Blob[]
@@ -10,6 +10,8 @@ export type RecordInput = Omit<VomitRecord, 'id' | 'createdAt' | 'updatedAt' | '
 }
 
 const MAX_PHOTOS = 6
+const DRAFT_TTL_MS = 30 * 60 * 1000
+const DRAFT_SAVE_MS = 500
 
 interface Props {
   cats: Cat[]
@@ -45,7 +47,32 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
   const [newPhotos, setNewPhotos] = useState<Blob[]>([])
   const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([])
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+  const draftReady = useRef(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const draft = await loadDraft()
+      if (cancelled) return
+      const context = initial ? initial.id : 'add'
+      if (draft && draft.applyTo === context && Date.now() - draft.savedAt <= DRAFT_TTL_MS) {
+        setDatetime(draft.datetime)
+        setCatId(draft.catId)
+        if (draft.types.length > 0) setTypes(draft.types)
+        setMemo(draft.memo)
+        if (draft.newPhotos.length > 0) setNewPhotos(draft.newPhotos.map((p) => p.blob))
+        setRemovedPhotoIds(draft.removedPhotos)
+      } else if (draft && Date.now() - draft.savedAt > DRAFT_TTL_MS) {
+        void deleteDraft()
+      }
+      draftReady.current = true
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [initial])
 
   useEffect(() => {
     if (!initial || initial.photos.length === 0) return
@@ -53,6 +80,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     void (async () => {
       const loaded: ExistingPhoto[] = []
       for (const id of initial.photos) {
+        if (removedPhotoIds.includes(id)) continue
         const blob = await getPhoto(id)
         if (blob) loaded.push({ id, blob })
       }
@@ -61,7 +89,24 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     return () => {
       cancelled = true
     }
-  }, [initial])
+  }, [initial, removedPhotoIds])
+
+  useEffect(() => {
+    if (!draftReady.current) return
+    const draft: RecordDraft = {
+      id: 'record',
+      applyTo: initial ? initial.id : 'add',
+      datetime,
+      catId,
+      types,
+      memo,
+      newPhotos: newPhotos.map((blob, i) => ({ id: `d${i}`, blob })),
+      removedPhotos: removedPhotoIds,
+      savedAt: Date.now(),
+    }
+    const t = setTimeout(() => void saveDraft(draft), DRAFT_SAVE_MS)
+    return () => clearTimeout(t)
+  }, [datetime, catId, types, memo, newPhotos, removedPhotoIds, initial])
 
   useEffect(() => {
     if (cats.length === 0) return
@@ -90,10 +135,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       types,
       memo: memo.trim(),
       photos: newPhotos.length > 0 ? newPhotos : undefined,
-      removedPhotos:
-        initial && initial.photos.filter((id) => !existingPhotos.some((p) => p.id === id)).length > 0
-          ? initial.photos.filter((id) => !existingPhotos.some((p) => p.id === id))
-          : undefined,
+      removedPhotos: removedPhotoIds.length > 0 ? removedPhotoIds : undefined,
     })
   }
 
@@ -197,7 +239,10 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
             <PhotoPreview
               key={p.id}
               blob={p.blob}
-              onRemove={() => setExistingPhotos((prev) => prev.filter((x) => x.id !== p.id))}
+              onRemove={() => {
+                setExistingPhotos((prev) => prev.filter((x) => x.id !== p.id))
+                setRemovedPhotoIds((prev) => (prev.includes(p.id) ? prev : [...prev, p.id]))
+              }}
             />
           ))}
           {newPhotos.map((blob, i) => (

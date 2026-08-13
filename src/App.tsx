@@ -10,6 +10,7 @@ import { CatFormModal } from './components/CatFormModal'
 import { Onboarding } from './components/Onboarding'
 import { ThresholdManager } from './components/ThresholdManager'
 import { SettingsView } from './components/SettingsView'
+import { deleteDraft } from './lib/storage'
 import type { AlertEntry, VomitRecord } from './types'
 
 type Tab = 'record' | 'calendar' | 'stats' | 'alert' | 'settings'
@@ -80,6 +81,12 @@ export default function App() {
     setFormPresetDate(null)
   }
 
+  /** 취소 버튼: draft 삭제 후 닫기 */
+  const cancelRecordForm = () => {
+    void deleteDraft()
+    closeRecordForm()
+  }
+
   const handleSubmit = async (input: RecordInput) => {
     if (formInitial) {
       await updateRecord(formInitial.id, input)
@@ -87,6 +94,7 @@ export default function App() {
       const newAlerts = await addRecord(input)
       if (newAlerts.length > 0) setModalAlerts(newAlerts)
     }
+    void deleteDraft()
     closeRecordForm()
     setTab('record')
   }
@@ -149,7 +157,8 @@ export default function App() {
         initial={formInitial}
         presetDate={formPresetDate}
         onSubmit={handleSubmit}
-        onCancel={closeRecordForm}
+        onCancel={cancelRecordForm}
+        onClose={closeRecordForm}
         onAddCat={openCatModal}
       />
 

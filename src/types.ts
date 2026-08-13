@@ -51,6 +51,23 @@ export interface AlertEntry {
   count: number
 }
 
+/** 기록 폼 실수 방지용 draft. 단일 엔트리(id='record') */
+export interface RecordDraft {
+  id: 'record'
+  /** 'add' 또는 수정 대상 기록 id — 복원 시 컨텍스트 가드 */
+  applyTo: 'add' | string
+  datetime: string
+  catId: string
+  types: VomitType[]
+  memo: string
+  /** 새로 추가한 사진 Blob */
+  newPhotos: { id: string; blob: Blob }[]
+  /** 편집 중 제거한 기존 사진 id */
+  removedPhotos: string[]
+  /** 저장 시각(epoch ms) — 30분 만료 판정 */
+  savedAt: number
+}
+
 export interface TypeMeta {
   label: string
   /** tailwind bg color class for chips */

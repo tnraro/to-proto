@@ -1,8 +1,22 @@
-import type { AlertEntry, Cat, ThresholdRule, VomitRecord } from '../types'
+import type { AlertEntry, Cat, RecordDraft, ThresholdRule, VomitRecord } from '../types'
 import { dbClear, dbDel, dbDelByIndex, dbGet, dbGetAll, dbPut } from './db'
+
+const DRAFT_ID = 'record'
 
 export function uid(): string {
   return crypto.randomUUID()
+}
+
+export async function saveDraft(draft: RecordDraft): Promise<void> {
+  await dbPut('draft', draft)
+}
+
+export async function loadDraft(): Promise<RecordDraft | undefined> {
+  return dbGet<RecordDraft>('draft', DRAFT_ID)
+}
+
+export async function deleteDraft(): Promise<void> {
+  await dbDel('draft', DRAFT_ID)
 }
 
 export async function getAllCats(): Promise<Cat[]> {
@@ -80,6 +94,6 @@ export async function delPhotos(ids: string[]): Promise<void> {
 
 export async function clearAll(): Promise<void> {
   await Promise.all(
-    (['cats', 'records', 'rules', 'alertLog', 'photos'] as const).map((s) => dbClear(s)),
+    (['cats', 'records', 'rules', 'alertLog', 'photos', 'draft'] as const).map((s) => dbClear(s)),
   )
 }
