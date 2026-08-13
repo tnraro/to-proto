@@ -83,7 +83,7 @@ function CatItem({
 
   return (
     <li className="flex items-center gap-3 px-4 py-3">
-      <CatAvatar cat={cat} />
+      <CatAvatar cat={cat} variant="photo" onClick={() => fileRef.current?.click()} />
       <div className="min-w-0 flex-1">
         {editingName ? (
           <EditCatName
