@@ -143,8 +143,6 @@ export default function App() {
         {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} />}
       </main>
 
-      <CatFormModal open={catModalOpen} onClose={() => setCatModalOpen(false)} onAdd={handleCatAdd} />
-
       <RecordFormModal
         open={formOpen}
         cats={cats}
@@ -154,6 +152,8 @@ export default function App() {
         onCancel={closeRecordForm}
         onAddCat={openCatModal}
       />
+
+      <CatFormModal open={catModalOpen} onClose={() => setCatModalOpen(false)} onAdd={handleCatAdd} />
 
       <button
         onClick={openAddFromFAB}
