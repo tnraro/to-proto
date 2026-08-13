@@ -139,7 +139,9 @@ export default function App() {
             records={records}
             cats={cats}
             onEdit={handleEdit}
-            onDelete={deleteRecord}
+            onDelete={(id) => {
+              if (confirm('기록을 삭제할까요?')) deleteRecord(id)
+            }}
             onSelectedDateChange={setCalendarDate}
           />
         )}
