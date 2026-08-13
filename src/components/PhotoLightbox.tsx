@@ -17,7 +17,8 @@ export function PhotoLightbox({ photoIds, initialIndex, onClose }: Props) {
   usePhotoUrl(photoIds[(index - 1 + count) % count])
   usePhotoUrl(photoIds[(index + 1) % count])
 
-  const startX = useRef<number | null>(null)
+  const startRef = useRef<{ x: number } | null>(null)
+  const lastPointerOnPadding = useRef(false)
   const suppressClick = useRef(false)
 
   const go = useCallback(
@@ -41,13 +42,16 @@ export function PhotoLightbox({ photoIds, initialIndex, onClose }: Props) {
     <div
       className="fixed inset-0 z-50 flex touch-none flex-col items-center justify-center bg-black/90"
       onPointerDown={(e) => {
-        startX.current = e.clientX
+        if ((e.target as HTMLElement).closest('button')) return
+        startRef.current = { x: e.clientX }
+        lastPointerOnPadding.current = e.target === e.currentTarget
         e.currentTarget.setPointerCapture(e.pointerId)
       }}
       onPointerUp={(e) => {
-        if (startX.current === null) return
-        const dx = e.clientX - startX.current
-        startX.current = null
+        const start = startRef.current
+        if (!start) return
+        startRef.current = null
+        const dx = e.clientX - start.x
         if (Math.abs(dx) > SWIPE_THRESHOLD) {
           suppressClick.current = true
           go(dx < 0 ? 1 : -1)
@@ -58,7 +62,10 @@ export function PhotoLightbox({ photoIds, initialIndex, onClose }: Props) {
           suppressClick.current = false
           return
         }
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && lastPointerOnPadding.current) {
+          lastPointerOnPadding.current = false
+          onClose()
+        }
       }}
       role="dialog"
       aria-modal="true"
