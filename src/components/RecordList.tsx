@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { formatRelativeTime } from '../lib/dates'
 import { PhotoThumb } from './PhotoThumb'
 import { CatAvatar } from './CatAvatar'
+import { DropdownMenu } from './DropdownMenu'
 
 interface Props {
   records: VomitRecord[]
@@ -34,8 +33,6 @@ export function RecordList({ records, cats, onEdit, onDelete, emptyText }: Props
   )
 }
 
-const MENU_WIDTH = 112
-
 function RecordListItem({
   record,
   cat,
@@ -47,44 +44,6 @@ function RecordListItem({
   onEdit: (record: VomitRecord) => void
   onDelete: (id: string) => void
 }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node
-      if (buttonRef.current?.contains(target) || dropdownRef.current?.contains(target)) return
-      setMenuOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false)
-    }
-    const onScroll = () => setMenuOpen(false)
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKey)
-    window.addEventListener('scroll', onScroll, true)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKey)
-      window.removeEventListener('scroll', onScroll, true)
-    }
-  }, [menuOpen])
-
-  const toggleMenu = () => {
-    if (menuOpen) {
-      setMenuOpen(false)
-      return
-    }
-    const rect = buttonRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const left = Math.max(8, Math.min(rect.left + rect.width - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8))
-    setMenuPos({ top: rect.bottom + 4, left })
-    setMenuOpen(true)
-  }
-
   return (
     <li className="flex gap-3 px-4 py-3">
       <div className="mt-0.5">
@@ -113,47 +72,13 @@ function RecordListItem({
         )}
       </div>
 
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggleMenu}
-        className="flex h-11 w-9 shrink-0 items-center justify-center self-start rounded text-gray-400 hover:bg-gray-100"
-        aria-label="기록 메뉴"
-      >
-        ⋮
-      </button>
-
-      {menuOpen &&
-        menuPos &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            className="fixed z-50"
-            style={{ top: menuPos.top, left: menuPos.left }}
-          >
-            <div className="w-28 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-              <button
-                onClick={() => {
-                  setMenuOpen(false)
-                  onEdit(record)
-                }}
-                className="block min-h-11 w-full px-4 text-left text-sm text-gray-700 hover:bg-gray-50"
-              >
-                수정
-              </button>
-              <button
-                onClick={() => {
-                  setMenuOpen(false)
-                  onDelete(record.id)
-                }}
-                className="block min-h-11 w-full px-4 text-left text-sm text-red-500 hover:bg-red-50"
-              >
-                삭제
-              </button>
-            </div>
-          </div>,
-          document.body,
-        )}
+      <DropdownMenu
+        ariaLabel="기록 메뉴"
+        items={[
+          { label: '수정', onClick: () => onEdit(record) },
+          { label: '삭제', danger: true, onClick: () => onDelete(record.id) },
+        ]}
+      />
     </li>
   )
 }
