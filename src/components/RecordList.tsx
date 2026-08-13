@@ -47,12 +47,17 @@ function RecordListItem({
   onDelete: (id: string) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { refs, floatingStyles } = useFloating<HTMLButtonElement>({
+  const { refs, floatingStyles, update } = useFloating<HTMLButtonElement>({
     placement: 'bottom-end',
     strategy: 'fixed',
+    transform: false,
     middleware: [offset(4), shift({ padding: 8 })],
     whileElementsMounted: autoUpdate,
   })
+
+  useEffect(() => {
+    if (menuOpen) update()
+  }, [menuOpen, update])
 
   useEffect(() => {
     if (!menuOpen) return
