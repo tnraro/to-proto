@@ -1,21 +1,46 @@
 @import "tailwindcss";
 
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+@theme {
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 3px rgb(0 0 0 / 0.04);
+  --shadow-pop: 0 10px 30px rgb(0 0 0 / 0.12);
 }
 
-/* iOS 자동 줌 방지: 모바일에서도 16px 이상 */
-input,
-select,
-textarea {
-  font-size: 16px;
-}
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    background-color: var(--color-gray-100);
+  }
 
-@media (min-width: 640px) {
+  body {
+    background-color: var(--color-gray-100);
+  }
+
+  /* iOS 자동 줌 방지 */
   input,
   select,
   textarea {
-    font-size: 14px;
+    font-size: 16px;
   }
+
+  @media (min-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 14px;
+    }
+  }
+}
+
+/* 스크롤바 숨김 */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
