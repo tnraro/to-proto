@@ -11,7 +11,7 @@
     "icons": "bun run scripts/gen-icons.mjs"
   },
   "dependencies": {
-    "@floating-ui/react-dom": "^2.1.9",
+    "@floating-ui/react": "^0.27.20",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "recharts": "^3.10.1"
