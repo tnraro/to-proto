@@ -135,7 +135,9 @@ export function Modal({
             >
               <div className="mx-auto h-1.5 w-12 rounded-full bg-gray-300" />
             </div>
-            <div className={`min-h-0 flex-1 overflow-y-auto ${contentClassName ?? ''}`}>{children}</div>
+            <div className={`min-h-0 flex-1 overflow-y-auto px-2 -mx-2 ${contentClassName ?? ''}`}>
+              {children}
+            </div>
           </>
         ) : (
           <div className={contentClassName ?? ''}>{children}</div>
