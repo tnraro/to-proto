@@ -23,6 +23,12 @@ bun run build   # tsc -b && vite build
 bun run lint    # oxlint
 ```
 
+## 배포 (GitHub Pages)
+
+- 빌드 산출물은 상대 경로(`base: './'`)라 어떤 서브패스에서도 동작합니다.
+- `.github/workflows/deploy.yml`이 `main` push 또는 수동 실행 시 빌드 후 Pages에 배포합니다.
+- 저장소 설정: Settings → Pages → Source를 **GitHub Actions**로 변경.
+
 ## 구조
 
 - `src/types.ts` — 데이터 모델 + 토 종류 정의
