@@ -1,9 +1,9 @@
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
-import { formatRelativeTime } from '../lib/dates'
 import { PhotoThumb } from './PhotoThumb'
 import { CatAvatar } from './CatAvatar'
 import { DropdownMenu } from './DropdownMenu'
+import { RelativeTime } from './RelativeTime'
 
 interface Props {
   records: VomitRecord[]
@@ -52,9 +52,10 @@ function RecordListItem({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-base font-semibold text-gray-900">{cat?.name ?? '?'}</span>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-            {formatRelativeTime(record.datetime)}
-          </span>
+          <RelativeTime
+            iso={record.datetime}
+            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500"
+          />
         </div>
         {record.memo && <p className="mt-1 break-words text-sm text-gray-500">{record.memo}</p>}
         <div className="mt-1.5 flex flex-wrap gap-1.5">

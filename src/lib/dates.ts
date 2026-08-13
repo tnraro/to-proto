@@ -31,6 +31,11 @@ const absFmt = new Intl.DateTimeFormat(resolveLocale(), {
   minute: '2-digit',
 })
 
+const absFullFmt = new Intl.DateTimeFormat(resolveLocale(), {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
+
 const MINUTE = 60
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
@@ -48,6 +53,11 @@ export function formatRelativeTime(iso: string, now = new Date()): string {
 export function formatDateTime(iso: string): string {
   const d = new Date(iso)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** 로케일 기반 보기 좋은 절대 시각 (툴팁용) — 예: 2026. 8. 13. 오후 4:47 */
+export function formatAbsoluteTime(iso: string): string {
+  return absFullFmt.format(new Date(iso))
 }
 
 export function sameDayKey(iso: string): string {
