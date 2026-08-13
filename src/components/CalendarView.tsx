@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { formatDateTime, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
@@ -11,13 +11,18 @@ interface Props {
   cats: Cat[]
   onEdit: (record: VomitRecord) => void
   onDelete: (id: string) => void
-  onAddRecord: (dateKey: string) => void
+  /** 선택된 날짜(YYYY-MM-DD)를 상위로 보고 — FAB의 프리셋에 사용 */
+  onSelectedDateChange: (dateKey: string) => void
 }
 
-export function CalendarView({ records, cats, onEdit, onDelete, onAddRecord }: Props) {
+export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateChange }: Props) {
   const today = new Date()
   const [cursor, setCursor] = useState(() => startOfMonth(today))
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(today))
+
+  useEffect(() => {
+    onSelectedDateChange(selectedKey)
+  }, [selectedKey, onSelectedDateChange])
 
   const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '?'
 
@@ -114,15 +119,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onAddRecord }: P
       </div>
 
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-600">{selectedKey} 기록</h3>
-          <button
-            onClick={() => onAddRecord(selectedKey)}
-            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-          >
-            이 날짜에 기록
-          </button>
-        </div>
+        <h3 className="mb-2 text-sm font-semibold text-gray-600">{selectedKey} 기록</h3>
         {dayRecords.length === 0 ? (
           <p className="py-4 text-center text-sm text-gray-400">기록이 없습니다</p>
         ) : (

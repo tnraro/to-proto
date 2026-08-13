@@ -28,6 +28,7 @@ export default function App() {
   const [formOpen, setFormOpen] = useState(false)
   const [formInitial, setFormInitial] = useState<VomitRecord | null>(null)
   const [formPresetDate, setFormPresetDate] = useState<string | null>(null)
+  const [calendarDate, setCalendarDate] = useState<string | null>(null)
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
 
@@ -63,6 +64,14 @@ export default function App() {
     setFormInitial(initial)
     setFormPresetDate(presetDate)
     setFormOpen(true)
+  }
+
+  const openAddFromFAB = () => {
+    if (tab === 'calendar' && calendarDate) {
+      openRecordForm(null, calendarDate)
+    } else {
+      openRecordForm()
+    }
   }
 
   const closeRecordForm = () => {
@@ -123,7 +132,7 @@ export default function App() {
             cats={cats}
             onEdit={handleEdit}
             onDelete={deleteRecord}
-            onAddRecord={(dateKey) => openRecordForm(null, dateKey)}
+            onSelectedDateChange={setCalendarDate}
           />
         )}
 
@@ -147,7 +156,7 @@ export default function App() {
       />
 
       <button
-        onClick={() => openRecordForm()}
+        onClick={openAddFromFAB}
         className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
       >
         기록 추가
