@@ -132,14 +132,14 @@ export default function App() {
         {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
 
         {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} />}
-
-        <button
-          onClick={openAddFromFAB}
-          className="absolute bottom-4 right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
-        >
-          기록 추가
-        </button>
       </main>
+
+      <button
+        onClick={openAddFromFAB}
+        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
+      >
+        기록 추가
+      </button>
 
       <RecordFormModal
         open={formOpen}
