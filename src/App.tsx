@@ -136,7 +136,7 @@ export default function App() {
 
       <button
         onClick={openAddFromFAB}
-        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex items-center gap-1.5 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-pop transition-all hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/30 active:translate-y-0 active:scale-95 active:shadow-pop"
+        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex items-center gap-1.5 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(5,150,105,0.45),0_2px_6px_rgba(0,0,0,0.15)] active:scale-95 active:shadow-[0_4px_10px_rgba(5,150,105,0.35)]"
       >
         <span className="text-base leading-none">+</span>
         기록 추가
