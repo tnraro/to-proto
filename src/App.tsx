@@ -103,7 +103,7 @@ export default function App() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-gray-50 text-gray-900">
-      <main className="relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto px-4 pt-4 sm:pt-6">
+      <main className="relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto">
         {tab === 'record' && (
           <RecordBrowser
             records={records}
@@ -116,22 +116,36 @@ export default function App() {
         )}
 
         {tab === 'calendar' && (
-          <CalendarView
-            records={records}
-            cats={cats}
-            onEdit={handleEdit}
-            onDelete={(id) => {
-              if (confirm('기록을 삭제할까요?')) deleteRecord(id)
-            }}
-            onSelectedDateChange={setCalendarDate}
-          />
+          <div className="px-4 pb-8 pt-4 sm:pt-6">
+            <CalendarView
+              records={records}
+              cats={cats}
+              onEdit={handleEdit}
+              onDelete={(id) => {
+                if (confirm('기록을 삭제할까요?')) deleteRecord(id)
+              }}
+              onSelectedDateChange={setCalendarDate}
+            />
+          </div>
         )}
 
-        {tab === 'stats' && <StatsView records={records} cats={cats} />}
+        {tab === 'stats' && (
+          <div className="px-4 pb-8 pt-4 sm:pt-6">
+            <StatsView records={records} cats={cats} />
+          </div>
+        )}
 
-        {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
+        {tab === 'alert' && (
+          <div className="px-4 pb-8 pt-4 sm:pt-6">
+            <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />
+          </div>
+        )}
 
-        {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} />}
+        {tab === 'settings' && (
+          <div className="px-4 pb-8 pt-4 sm:pt-6">
+            <SettingsView {...store} onAddCat={openCatModal} />
+          </div>
+        )}
       </main>
 
       <button
