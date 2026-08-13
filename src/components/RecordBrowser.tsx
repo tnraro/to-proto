@@ -28,8 +28,6 @@ export function RecordBrowser({ records, cats, onEdit, onDelete }: Props) {
     setPage(1)
   }
 
-  const paginationVisible = filtered.length > PAGE_SIZE
-
   return (
     <div className="space-y-4">
       <FilterPanel cats={cats} filters={filters} onChange={changeFilters} resultCount={filtered.length} />
@@ -50,29 +48,25 @@ export function RecordBrowser({ records, cats, onEdit, onDelete }: Props) {
         <RecordList records={pageRecords} cats={cats} onEdit={onEdit} onDelete={onDelete} />
       )}
 
-      {paginationVisible && <div className="h-14" aria-hidden="true" />}
-
-      {paginationVisible && (
-        <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 border-t border-gray-200 bg-white/95 backdrop-blur">
-          <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 py-2 pr-28 sm:pr-4">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={safePage <= 1}
-              className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
-            >
-              ‹ 이전
-            </button>
-            <span className="text-sm text-gray-500">
-              {safePage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage >= totalPages}
-              className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
-            >
-              다음 ›
-            </button>
-          </div>
+      {filtered.length > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+            className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
+          >
+            ‹ 이전
+          </button>
+          <span className="text-sm text-gray-500">
+            {safePage} / {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+            className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
+          >
+            다음 ›
+          </button>
         </div>
       )}
     </div>
