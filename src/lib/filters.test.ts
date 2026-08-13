@@ -83,6 +83,12 @@ describe('filterRecords', () => {
     expect(filterRecords(records, f)[0].memo).toBe('털뭉치')
   })
 
+  test('날짜는 로컬 기준 (timezone 무관): 로컬 08-13 23:30 기록은 이후(08-13)에 포함', () => {
+    const late = rec(new Date(2026, 7, 13, 23, 30).toISOString(), 'c1', ['food'])
+    const f: RecordFilters = { ...EMPTY_FILTERS, dateMode: 'after', dateAfter: '2026-08-13' }
+    expect(filterRecords([late], f)).toHaveLength(1)
+  })
+
   test('계열 간 AND: 메모 + 종류', () => {
     const f: RecordFilters = { ...EMPTY_FILTERS, memo: '토', types: ['hairball'] }
     expect(filterRecords(records, f)).toHaveLength(0)
