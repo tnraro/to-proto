@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 interface Props {
@@ -15,6 +15,8 @@ interface Props {
 
 let scrollLockCount = 0
 
+const DRAG_CLOSE_RATIO = 0.25
+
 export function Modal({
   open,
   onClose,
@@ -25,6 +27,8 @@ export function Modal({
   children,
 }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null)
+  const dragStart = useRef<number | null>(null)
+  const [dragY, setDragY] = useState<number | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -66,6 +70,30 @@ export function Modal({
     }
   }, [open])
 
+  useEffect(() => {
+    if (dragY === null) return
+    const onMove = (e: PointerEvent) => {
+      if (dragStart.current === null) return
+      setDragY(Math.max(0, e.clientY - dragStart.current))
+    }
+    const onUp = () => {
+      const sheet = sheetRef.current
+      const threshold = sheet ? sheet.offsetHeight * DRAG_CLOSE_RATIO : 0
+      const willClose = dragStart.current !== null && dragY !== null && dragY > threshold
+      dragStart.current = null
+      setDragY(null)
+      if (willClose) onClose()
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [dragY, onClose])
+
   if (!open) return null
 
   const overlay = (
@@ -86,8 +114,27 @@ export function Modal({
             ? 'w-full rounded-t-2xl sm:max-w-md sm:rounded-xl sm:pb-5'
             : 'w-full max-w-md rounded-xl sm:pb-5'
         } ${contentClassName ?? ''}`}
-        style={{ overscrollBehavior: 'contain' }}
+        style={{
+          overscrollBehavior: 'contain',
+          transform: dragY !== null ? `translateY(${dragY}px)` : undefined,
+          transition:
+            dragY !== null
+              ? 'none'
+              : 'transform 200ms ease-out, margin-bottom 200ms ease-out',
+        }}
       >
+        {drawer && (
+          <div
+            className="mb-2 flex cursor-grab touch-none select-none justify-center pb-1 active:cursor-grabbing"
+            onPointerDown={(e) => {
+              dragStart.current = e.clientY
+              setDragY(0)
+            }}
+            aria-hidden="true"
+          >
+            <span className="h-1 w-10 rounded-full bg-gray-200 sm:hidden" />
+          </div>
+        )}
         {children}
       </div>
     </div>

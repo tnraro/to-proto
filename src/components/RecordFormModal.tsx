@@ -15,7 +15,6 @@ interface Props {
 export function RecordFormModal({ open, cats, initial, presetDate, onSubmit, onCancel, onAddCat }: Props) {
   return (
     <Modal open={open} onClose={onCancel} contentClassName="max-h-[85vh] overflow-y-auto">
-      <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200 sm:hidden" />
       <h2 className="mb-4 text-lg font-bold">{initial ? '기록 수정' : '토 기록 추가'}</h2>
       <RecordForm
         cats={cats}

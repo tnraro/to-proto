@@ -27,7 +27,6 @@ export function CatFormModal({ open, onClose, onAdd }: Props) {
 
   return (
     <Modal open={open} onClose={onClose}>
-      <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200 sm:hidden" />
       <h2 className="text-lg font-bold">고양이 등록</h2>
       <p className="mt-1 text-sm text-gray-500">기록에 사용할 고양이 이름을 입력하세요</p>
       <form onSubmit={submit} className="mt-4 flex gap-2">
