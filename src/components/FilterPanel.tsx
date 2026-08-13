@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Cat, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { EMPTY_FILTERS, type DateMode, type RecordFilters } from '../lib/filters'
+import { toDateKey } from '../lib/dates'
 import { Chip } from './ui/Chip'
 
 const DATE_MODES: { id: DateMode; label: string }[] = [
@@ -10,6 +11,18 @@ const DATE_MODES: { id: DateMode; label: string }[] = [
   { id: 'after', label: '이후' },
   { id: 'range', label: '범위' },
 ]
+
+const DATE_PRESETS = [
+  { days: 7 },
+  { days: 30 },
+  { days: 90 },
+]
+
+function presetAfter(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return toDateKey(d)
+}
 
 const inputClass =
   'min-h-9 rounded-lg border border-gray-200 bg-gray-50 px-3 text-sm focus:border-primary focus:bg-white focus:outline-none'
@@ -111,6 +124,20 @@ export function FilterPanel({ cats, filters, onChange, resultCount }: Props) {
                   {m.label}
                 </Chip>
               ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {DATE_PRESETS.map((p) => {
+                const date = presetAfter(p.days)
+                return (
+                  <Chip
+                    key={p.days}
+                    selected={filters.dateMode === 'after' && filters.dateAfter === date}
+                    onClick={() => onChange({ ...filters, dateMode: 'after', dateAfter: date })}
+                  >
+                    최근 {p.days}일
+                  </Chip>
+                )
+              })}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {filters.dateMode === 'before' && (
