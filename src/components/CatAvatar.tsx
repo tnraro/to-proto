@@ -20,14 +20,10 @@ export function CatAvatar({ cat, sizeClass = 'h-10 w-10', variant = 'plain', onC
     />
   ) : (
     <span
-      className={`${sizeClass} relative shrink-0 rounded-full bg-gray-200`}
+      className={`${sizeClass} flex shrink-0 items-center justify-center rounded-full bg-gray-200`}
       aria-hidden="true"
     >
-      {variant === 'photo' && (
-        <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-gray-400">
-          +
-        </span>
-      )}
+      {variant === 'photo' && <span className="text-lg font-semibold text-gray-400">+</span>}
     </span>
   )
 
