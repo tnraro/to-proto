@@ -1,21 +1,12 @@
-import { runMigrations } from './migrations'
+import { runMigrations, type StoreName } from './migrations'
 
-export const STORES = ['cats', 'records', 'rules', 'alertLog', 'photos', 'draft'] as const
-export type StoreName = (typeof STORES)[number]
+export { STORES } from './migrations'
+export type { StoreName } from './migrations'
 
 const DB_NAME = 'to-app'
 export const DB_VERSION = 1
 
 let dbPromise: Promise<IDBDatabase> | null = null
-
-/** 신규 설치: 현재 스키마 전체 생성 */
-function createFreshSchema(db: IDBDatabase, tx: IDBTransaction): void {
-  for (const name of STORES) {
-    db.createObjectStore(name, { keyPath: 'id' })
-  }
-  const records = tx.objectStore('records')
-  records.createIndex('catId', 'catId')
-}
 
 function openDB(): Promise<IDBDatabase> {
   if (!dbPromise) {
@@ -23,14 +14,9 @@ function openDB(): Promise<IDBDatabase> {
       const req = indexedDB.open(DB_NAME, DB_VERSION)
       req.onupgradeneeded = (e) => {
         const oldVersion = (e as IDBVersionChangeEvent).oldVersion
-        const db = req.result
-        const tx = req.transaction!
-        if (oldVersion === 0) {
-          createFreshSchema(db, tx)
-        } else {
-          // 기존 설치: 등록된 마이그레이션을 버전 순서대로 적용
-          runMigrations(db, oldVersion, tx)
-        }
+        // 신규 설치(oldVersion 0)면 v1 마이그레이션이 초기 스키마를 만들고,
+        // 기존 설치는 등록된 마이그레이션을 버전 순서대로 적용한다.
+        runMigrations(req.result, oldVersion, req.transaction!)
       }
       req.onsuccess = () => resolve(req.result)
       req.onerror = () => reject(req.error)

@@ -10,13 +10,31 @@ export interface Migration {
   up: (db: IDBDatabase, tx: IDBTransaction) => void | Promise<void>
 }
 
+export const STORES = ['cats', 'records', 'rules', 'alertLog', 'photos', 'draft'] as const
+export type StoreName = (typeof STORES)[number]
+
 /**
  * 버전별 스키마 히스토리.
- * - v1: 초기 스키마
+ * - v1: 초기 스키마 (정규화 스토어, records.catId 인덱스)
  * 향후 스키마 변경 시: db.ts의 DB_VERSION을 올리고 이 배열에 새 항목을 추가할 것.
+ * 신규 설치(oldVersion 0)도 v1부터 순차 적용되므로 기준 스키마는 v1이 담당한다.
  */
 export const MIGRATIONS: Migration[] = [
-  { version: 1, name: 'initial schema', up: () => {} },
+  {
+    version: 1,
+    name: 'initial schema',
+    up: (db, tx) => {
+      for (const name of STORES) {
+        if (!db.objectStoreNames.contains(name)) {
+          db.createObjectStore(name, { keyPath: 'id' })
+        }
+      }
+      const records = tx.objectStore('records')
+      if (!records.indexNames.contains('catId')) {
+        records.createIndex('catId', 'catId')
+      }
+    },
+  },
 ]
 
 export function runMigrations(db: IDBDatabase, oldVersion: number, tx: IDBTransaction): void {
