@@ -39,7 +39,7 @@ export function FilterPanel({ cats, filters, onChange, resultCount }: Props) {
   }
 
   return (
-    <div className="border border-gray-200 bg-white shadow-sm">
+    <div className="border-b border-gray-200 bg-white">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
