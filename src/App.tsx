@@ -94,7 +94,6 @@ export default function App() {
     }
     void deleteDraft()
     closeRecordForm()
-    setTab('record')
   }
 
   const handleEdit = (r: VomitRecord) => {
