@@ -149,7 +149,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
             type="datetime-local"
             value={datetime}
             onChange={(e) => setDatetime(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
             required
           />
         </label>
@@ -160,7 +160,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
             <button
               type="button"
               onClick={onAddCat}
-              className="mt-2 min-h-11 rounded-lg bg-emerald-600 px-4 font-medium text-white hover:bg-emerald-700"
+              className="mt-2 min-h-11 rounded-lg bg-primary px-4 font-medium text-white hover:bg-primary-hover"
             >
               고양이 등록
             </button>
@@ -177,7 +177,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
                 }
                 setCatId(e.target.value)
               }}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
               required
             >
               {cats.map((c) => (
@@ -227,7 +227,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
           onChange={(e) => setMemo(e.target.value)}
           rows={2}
           placeholder="남긴 음식 종류, 상태 등 간단한 메모"
-          className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2"
+          className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
         />
       </label>
 
@@ -277,12 +277,12 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
         <button
           type="submit"
           disabled={!catId || !datetime || types.length === 0}
-          className="rounded-lg bg-emerald-600 px-5 py-2 font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+          className="rounded-lg bg-primary px-5 py-2 font-medium text-white hover:bg-primary-hover disabled:opacity-40"
         >
           {initial ? '수정 저장' : '기록 추가'}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-lg border border-gray-300 px-4 py-2 text-gray-600">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-gray-200 px-4 py-2 text-gray-600">
             취소
           </button>
         )}

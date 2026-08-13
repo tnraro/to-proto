@@ -109,10 +109,10 @@ export function Modal({
     >
       <div
         ref={sheetRef}
-        className={`bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl ${
+        className={`bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-pop ${
           drawer
-            ? 'flex max-h-[85vh] w-full flex-col rounded-t-2xl sm:max-w-md sm:rounded-xl sm:pb-5'
-            : 'w-full max-w-md rounded-xl sm:pb-5'
+            ? 'flex max-h-[85vh] w-full flex-col rounded-t-2xl sm:max-w-md sm:rounded-2xl sm:pb-5'
+            : 'w-full max-w-md rounded-2xl sm:pb-5'
         }`}
         style={{
           overscrollBehavior: 'contain',
