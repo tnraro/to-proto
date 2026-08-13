@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from './hooks/useStore'
 import { type RecordInput } from './components/RecordForm'
-import { RecordList } from './components/RecordList'
+import { RecordBrowser } from './components/RecordBrowser'
 import { RecordFormModal } from './components/RecordFormModal'
 import { CalendarView } from './components/CalendarView'
 import { StatsView } from './components/StatsView'
@@ -101,25 +101,18 @@ export default function App() {
     openRecordForm(r)
   }
 
-  const recent = records.slice(0, 30)
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <main className="mx-auto max-w-3xl px-4 pb-32 pt-4 sm:pt-6">
         {tab === 'record' && (
-          <div className="space-y-6">
-            <section>
-              <h2 className="mb-2 text-sm font-semibold text-gray-600">최근 기록</h2>
-              <RecordList
-                records={recent}
-                cats={cats}
-                onEdit={handleEdit}
-                onDelete={(id) => {
-                  if (confirm('기록을 삭제할까요?')) deleteRecord(id)
-                }}
-              />
-            </section>
-          </div>
+          <RecordBrowser
+            records={records}
+            cats={cats}
+            onEdit={handleEdit}
+            onDelete={(id) => {
+              if (confirm('기록을 삭제할까요?')) deleteRecord(id)
+            }}
+          />
         )}
 
         {tab === 'calendar' && (
