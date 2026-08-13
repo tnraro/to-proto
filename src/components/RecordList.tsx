@@ -115,7 +115,7 @@ function RecordListItem({
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
-        className="flex min-h-11 w-9 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-100"
+        className="flex h-11 w-9 shrink-0 items-center justify-center self-start rounded text-gray-400 hover:bg-gray-100"
         aria-label="기록 메뉴"
       >
         ⋮
