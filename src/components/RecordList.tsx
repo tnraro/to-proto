@@ -19,7 +19,7 @@ export function RecordList({ records, cats, onEdit, onDelete, emptyText }: Props
   }
 
   return (
-    <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
+    <ul className="divide-y divide-gray-100 bg-white">
       {records.map((r) => (
         <RecordListItem
           key={r.id}
