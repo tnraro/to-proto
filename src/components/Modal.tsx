@@ -76,7 +76,7 @@ export function Modal({
     >
       <div
         ref={sheetRef}
-        className={`w-full max-w-md rounded-t-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl sm:rounded-xl sm:pb-5 ${contentClassName ?? ''}`}
+        className={`w-full rounded-t-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl sm:max-w-md sm:rounded-xl sm:pb-5 ${contentClassName ?? ''}`}
         style={{ overscrollBehavior: 'contain' }}
       >
         {children}
