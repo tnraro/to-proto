@@ -3,6 +3,7 @@ import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
 import { Modal } from './Modal'
 import { PhotoPreview } from './PhotoPreview'
+import { ImageEditorModal } from './ImageEditorModal'
 
 interface Props {
   open: boolean
@@ -13,6 +14,7 @@ interface Props {
 export function CatFormModal({ open, onClose, onAdd }: Props) {
   const [name, setName] = useState('')
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
+  const [editingBlob, setEditingBlob] = useState<Blob | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -20,6 +22,7 @@ export function CatFormModal({ open, onClose, onAdd }: Props) {
     if (open) {
       setName('')
       setPhotoBlob(null)
+      setEditingBlob(null)
       setTimeout(() => inputRef.current?.focus(), 0)
     }
   }, [open])
@@ -73,24 +76,34 @@ export function CatFormModal({ open, onClose, onAdd }: Props) {
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]
-            if (file) setPhotoBlob(file)
+            if (file) setEditingBlob(file)
             if (fileRef.current) fileRef.current.value = ''
           }}
         />
         <button
           type="submit"
           disabled={!name.trim()}
-          className="min-h-11 w-full rounded-lg bg-emerald-600 font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+          className="min-h-11 w-full rounded-lg bg-primary font-medium text-white hover:bg-primary-hover disabled:opacity-40"
         >
           추가
         </button>
       </form>
       <button
         onClick={onClose}
-        className="mt-3 min-h-11 w-full rounded-lg border border-gray-300 text-gray-600"
+        className="mt-3 min-h-11 w-full rounded-lg border border-gray-200 text-gray-600"
       >
         취소
       </button>
+      <ImageEditorModal
+        open={editingBlob !== null}
+        image={editingBlob}
+        aspect={1}
+        onCancel={() => setEditingBlob(null)}
+        onApply={(blob) => {
+          setPhotoBlob(blob)
+          setEditingBlob(null)
+        }}
+      />
     </Modal>
   )
 }

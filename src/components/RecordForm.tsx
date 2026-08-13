@@ -4,6 +4,7 @@ import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
 import { deleteDraft, getPhoto, loadDraft, saveDraft } from '../lib/storage'
 import { PhotoPreview } from './PhotoPreview'
+import { ImageEditorModal } from './ImageEditorModal'
 
 export type RecordInput = Omit<VomitRecord, 'id' | 'createdAt' | 'updatedAt' | 'photos'> & {
   photos?: Blob[]
@@ -49,6 +50,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [newPhotos, setNewPhotos] = useState<Blob[]>([])
   const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([])
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([])
+  const [editingBlob, setEditingBlob] = useState<Blob | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const draftReady = useRef(false)
 
@@ -123,7 +125,10 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const onFiles = (files: FileList | null) => {
     if (!files) return
     const added = Array.from(files).slice(0, MAX_PHOTOS - newPhotos.length - existingPhotos.length)
-    if (added.length > 0) setNewPhotos((prev) => [...prev, ...added])
+    if (added.length === 0) return
+    const [first, ...rest] = added
+    setEditingBlob(first)
+    if (rest.length > 0) setNewPhotos((prev) => [...prev, ...rest])
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -287,6 +292,15 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
           </button>
         )}
       </div>
+      <ImageEditorModal
+        open={editingBlob !== null}
+        image={editingBlob}
+        onCancel={() => setEditingBlob(null)}
+        onApply={(blob) => {
+          setNewPhotos((prev) => [...prev, blob])
+          setEditingBlob(null)
+        }}
+      />
     </form>
   )
 }
