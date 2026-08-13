@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { formatRelativeTime } from '../lib/dates'
@@ -20,45 +21,106 @@ export function RecordList({ records, onEdit, onDelete, catNameFor, emptyText }:
   return (
     <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
       {records.map((r) => (
-        <li key={r.id} className="flex items-center gap-3 px-4 py-3">
-          <span className="flex shrink-0 gap-0.5">
-            {r.types.map((t) => (
-              <span key={t} className={`inline-block h-3 w-3 rounded-full ${VOMIT_TYPES[t].color}`} />
+        <RecordListItem
+          key={r.id}
+          record={r}
+          catName={catNameFor(r.catId)}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      ))}
+    </ul>
+  )
+}
+
+function RecordListItem({
+  record,
+  catName,
+  onEdit,
+  onDelete,
+}: {
+  record: VomitRecord
+  catName: string
+  onEdit: (record: VomitRecord) => void
+  onDelete: (id: string) => void
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
+  return (
+    <li className="relative flex gap-3 px-4 py-3">
+      <span className="mt-0.5 h-10 w-10 shrink-0 rounded-full bg-gray-200" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="text-base font-medium text-gray-900">{catName}</span>
+          <span className="text-xs text-gray-400">{formatRelativeTime(record.datetime)}</span>
+        </div>
+        {record.memo && <p className="mt-0.5 break-words text-sm text-gray-500">{record.memo}</p>}
+        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+          {record.types.map((t) => (
+            <span key={t} className="flex items-center gap-1.5 text-sm text-gray-600">
+              <span className={`inline-block h-2.5 w-2.5 rounded-full ${VOMIT_TYPES[t].color}`} />
+              {VOMIT_TYPES[t].label}
+            </span>
+          ))}
+        </div>
+        {record.photos.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {record.photos.map((pid) => (
+              <PhotoThumb key={pid} photoId={pid} />
             ))}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-medium">{formatRelativeTime(r.datetime)}</span>
-              <span className="text-xs text-gray-400">{catNameFor(r.catId)}</span>
-            </div>
-            <div className="truncate text-sm text-gray-500">
-              {r.types.map((t) => VOMIT_TYPES[t].label).join(' + ')}
-              {r.memo && <span className="text-gray-400"> · {r.memo}</span>}
-            </div>
-            {r.photos.length > 0 && (
-              <div className="mt-1.5 flex gap-1.5">
-                {r.photos.map((pid) => (
-                  <PhotoThumb key={pid} photoId={pid} />
-                ))}
-              </div>
-            )}
           </div>
-          <div className="flex shrink-0 gap-1">
+        )}
+      </div>
+
+      <div ref={menuRef} className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          className="flex min-h-11 w-9 items-center justify-center rounded text-gray-400 hover:bg-gray-100"
+          aria-label="기록 메뉴"
+        >
+          ⋮
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 top-full z-20 w-28 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
             <button
-              onClick={() => onEdit(r)}
-              className="min-h-11 rounded px-3 py-2 text-sm text-gray-500 hover:bg-gray-100"
+              onClick={() => {
+                setMenuOpen(false)
+                onEdit(record)
+              }}
+              className="block min-h-11 w-full px-4 text-left text-sm text-gray-700 hover:bg-gray-50"
             >
               수정
             </button>
             <button
-              onClick={() => onDelete(r.id)}
-              className="min-h-11 rounded px-3 py-2 text-sm text-red-500 hover:bg-red-50"
+              onClick={() => {
+                setMenuOpen(false)
+                onDelete(record.id)
+              }}
+              className="block min-h-11 w-full px-4 text-left text-sm text-red-500 hover:bg-red-50"
             >
               삭제
             </button>
           </div>
-        </li>
-      ))}
-    </ul>
+        )}
+      </div>
+    </li>
   )
 }
