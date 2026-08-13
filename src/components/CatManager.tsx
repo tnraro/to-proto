@@ -1,7 +1,14 @@
 import { useState } from 'react'
-import type { Store } from '../hooks/useStore'
+import type { Cat } from '../types'
 
-export function CatManager({ cats, addCat, renameCat, deleteCat }: Store) {
+interface Props {
+  cats: Cat[]
+  addCat: (name: string) => void
+  renameCat: (id: string, name: string) => void
+  deleteCat: (id: string) => void
+}
+
+export function CatManager({ cats, addCat, renameCat, deleteCat }: Props) {
   const [name, setName] = useState('')
 
   const submit = (e: React.FormEvent) => {
@@ -18,11 +25,11 @@ export function CatManager({ cats, addCat, renameCat, deleteCat }: Store) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="고양이 이름"
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-2"
+          className="min-h-11 flex-1 rounded-lg border border-gray-300 px-3"
         />
         <button
           type="submit"
-          className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
+          className="min-h-11 rounded-lg bg-emerald-600 px-4 font-medium text-white hover:bg-emerald-700"
         >
           추가
         </button>

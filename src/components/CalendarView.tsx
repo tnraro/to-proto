@@ -81,7 +81,7 @@ export function CalendarView({ records, cats, onEdit, onDelete }: Props) {
               key={i}
               disabled={!cell}
               onClick={() => cell && setSelectedKey(toDateKey(cell))}
-              className={`flex min-h-16 flex-col rounded-lg border p-1 text-left transition ${
+              className={`flex min-h-12 flex-col rounded-lg border p-1 text-left transition sm:min-h-16 ${
                 isSelected
                   ? 'border-emerald-500 bg-emerald-50'
                   : 'border-gray-100 bg-white hover:border-gray-300'

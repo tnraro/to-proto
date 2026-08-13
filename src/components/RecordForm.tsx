@@ -71,7 +71,7 @@ export function RecordForm({ cats, initial, onSubmit, onCancel }: Props) {
               key={k}
               type="button"
               onClick={() => setType(k)}
-              className={`rounded-full border px-3 py-1.5 text-sm transition ${
+              className={`min-h-11 rounded-full border px-3.5 py-2 text-sm transition ${
                 type === k
                   ? `border-transparent bg-white ring-2 ${VOMIT_TYPES[k].ring}`
                   : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'

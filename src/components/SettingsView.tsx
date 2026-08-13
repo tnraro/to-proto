@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { Store } from '../hooks/useStore'
+import { CatManager } from './CatManager'
 
-export function SettingsView({ cats, records, rules, alertLog, resetAll }: Store) {
+export function SettingsView({ cats, records, rules, alertLog, resetAll, addCat, renameCat, deleteCat }: Store) {
   const [confirming, setConfirming] = useState(false)
 
   let storageBytes = 0
@@ -15,6 +16,11 @@ export function SettingsView({ cats, records, rules, alertLog, resetAll }: Store
 
   return (
     <div className="space-y-6">
+      <section>
+        <h2 className="mb-3 text-sm font-semibold text-gray-600">고양이 관리</h2>
+        <CatManager cats={cats} addCat={addCat} renameCat={renameCat} deleteCat={deleteCat} />
+      </section>
+
       <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-gray-600">데이터 현황</h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">

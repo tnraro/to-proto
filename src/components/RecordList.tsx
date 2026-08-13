@@ -34,13 +34,13 @@ export function RecordList({ records, onEdit, onDelete, catNameFor, emptyText }:
           <div className="flex shrink-0 gap-1">
             <button
               onClick={() => onEdit(r)}
-              className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+              className="min-h-11 rounded px-3 py-2 text-sm text-gray-500 hover:bg-gray-100"
             >
               수정
             </button>
             <button
               onClick={() => onDelete(r.id)}
-              className="rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50"
+              className="min-h-11 rounded px-3 py-2 text-sm text-red-500 hover:bg-red-50"
             >
               삭제
             </button>

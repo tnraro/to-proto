@@ -7,8 +7,9 @@ interface Props {
 
 export function AlertModal({ alerts, onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+      <div className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl sm:rounded-xl sm:pb-5">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200 sm:hidden" />
         <h2 className="text-lg font-bold text-red-600">⚠ 임계값 초과 경고</h2>
         <p className="mt-1 text-sm text-gray-500">기록 추가로 인해 다음 임계값을 초과했습니다</p>
         <ul className="mt-4 space-y-2">
@@ -23,7 +24,7 @@ export function AlertModal({ alerts, onClose }: Props) {
         </ul>
         <button
           onClick={onClose}
-          className="mt-5 w-full rounded-lg bg-red-600 py-2 font-medium text-white hover:bg-red-700"
+          className="mt-5 min-h-11 w-full rounded-lg bg-red-600 font-medium text-white hover:bg-red-700"
         >
           확인
         </button>

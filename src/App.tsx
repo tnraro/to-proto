@@ -4,20 +4,18 @@ import { RecordForm, type RecordInput } from './components/RecordForm'
 import { RecordList } from './components/RecordList'
 import { CalendarView } from './components/CalendarView'
 import { StatsView } from './components/StatsView'
-import { CatManager } from './components/CatManager'
 import { AlertModal } from './components/AlertModal'
 import { ThresholdManager } from './components/ThresholdManager'
 import { SettingsView } from './components/SettingsView'
 import type { AlertEntry, VomitRecord } from './types'
 
-type Tab = 'record' | 'calendar' | 'stats' | 'alert' | 'cats' | 'settings'
+type Tab = 'record' | 'calendar' | 'stats' | 'alert' | 'settings'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'record', label: '기록' },
   { id: 'calendar', label: '캘린더' },
   { id: 'stats', label: '통계' },
   { id: 'alert', label: '경고' },
-  { id: 'cats', label: '고양이' },
   { id: 'settings', label: '설정' },
 ]
 
@@ -53,34 +51,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-bold">
+      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-2.5">
+          <h1 className="text-base font-bold">
             고양이 토 기록
-            <span className="ml-2 text-sm font-normal text-gray-400">총 {records.length}회</span>
-            {alertLog.length > 0 && (
-              <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
-                경고 {alertLog.length}
-              </span>
-            )}
+            <span className="ml-2 text-xs font-normal text-gray-400">총 {records.length}회</span>
           </h1>
         </div>
-        <nav className="mx-auto flex max-w-3xl gap-1 px-4">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`rounded-t-lg px-4 py-2 text-sm font-medium ${
-                tab === t.id ? 'border-b-2 border-emerald-600 text-emerald-700' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-6">
+      <main className="mx-auto max-w-3xl px-4 pb-32 pt-4 sm:pt-6">
         {tab === 'record' && (
           <div className="space-y-6">
             <RecordForm
@@ -112,10 +92,38 @@ export default function App() {
 
         {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
 
-        {tab === 'cats' && <CatManager {...store} />}
-
         {tab === 'settings' && <SettingsView {...store} />}
       </main>
+
+      {tab !== 'record' && (
+        <button
+          onClick={() => setTab('record')}
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
+        >
+          기록 추가
+        </button>
+      )}
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto grid max-w-3xl grid-cols-5">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
+                tab === t.id ? 'font-semibold text-emerald-600' : 'text-gray-500'
+              }`}
+            >
+              {t.label}
+              {t.id === 'alert' && alertLog.length > 0 && (
+                <span className="rounded-full bg-red-100 px-1.5 py-px text-[10px] font-medium text-red-600">
+                  {alertLog.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
 
       {modalAlerts.length > 0 && <AlertModal alerts={modalAlerts} onClose={() => setModalAlerts([])} />}
     </div>

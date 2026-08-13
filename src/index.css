@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* iOS 자동 줌 방지: 모바일에서도 16px 이상 */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+@media (min-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 14px;
+  }
+}
