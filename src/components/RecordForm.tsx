@@ -16,6 +16,7 @@ interface Props {
   initial?: VomitRecord | null
   onSubmit: (input: RecordInput) => void
   onCancel?: () => void
+  onAddCat: () => void
 }
 
 interface ExistingPhoto {
@@ -23,7 +24,7 @@ interface ExistingPhoto {
   blob: Blob
 }
 
-export function RecordForm({ cats, initial, onSubmit, onCancel }: Props) {
+export function RecordForm({ cats, initial, onSubmit, onCancel, onAddCat }: Props) {
   const now = new Date()
   const [datetime, setDatetime] = useState(() =>
     initial ? toLocalDateTimeInput(new Date(initial.datetime)) : toLocalDateTimeInput(now),
@@ -52,6 +53,13 @@ export function RecordForm({ cats, initial, onSubmit, onCancel }: Props) {
       cancelled = true
     }
   }, [initial])
+
+  useEffect(() => {
+    if (cats.length === 0) return
+    if (!cats.some((c) => c.id === catId)) {
+      setCatId(cats[cats.length - 1].id)
+    }
+  }, [cats, catId])
 
   const toggleType = (k: VomitType) => {
     setTypes((prev) => (prev.includes(k) ? prev.filter((t) => t !== k) : [...prev, k]))
@@ -93,22 +101,42 @@ export function RecordForm({ cats, initial, onSubmit, onCancel }: Props) {
             required
           />
         </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-gray-600">고양이</span>
-          <select
-            value={catId}
-            onChange={(e) => setCatId(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
-            required
-          >
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-            {cats.length === 0 && <option value="">고양이를 먼저 등록하세요</option>}
-          </select>
-        </label>
+        {cats.length === 0 ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
+            <p className="text-sm font-medium text-amber-800">고양이를 먼저 등록해 주세요</p>
+            <p className="mt-0.5 text-xs text-amber-600">등록하면 바로 기록을 시작할 수 있습니다</p>
+            <button
+              type="button"
+              onClick={onAddCat}
+              className="mt-2 min-h-11 rounded-lg bg-emerald-600 px-4 font-medium text-white hover:bg-emerald-700"
+            >
+              고양이 등록
+            </button>
+          </div>
+        ) : (
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-gray-600">고양이</span>
+            <select
+              value={catId}
+              onChange={(e) => {
+                if (e.target.value === '__new') {
+                  onAddCat()
+                  return
+                }
+                setCatId(e.target.value)
+              }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              required
+            >
+              {cats.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+              <option value="__new">+ 새 고양이 등록</option>
+            </select>
+          </label>
+        )}
       </div>
 
       <div>

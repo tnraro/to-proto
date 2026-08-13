@@ -83,6 +83,7 @@ export default function App() {
               initial={editing}
               onSubmit={handleSubmit}
               onCancel={editing ? () => setEditing(null) : undefined}
+              onAddCat={openCatModal}
             />
             <section>
               <h2 className="mb-2 text-sm font-semibold text-gray-600">최근 기록</h2>
