@@ -11,6 +11,8 @@ export type VomitType =
 export interface Cat {
   id: string
   name: string
+  /** 고양이 사진 id (없으면 아바타 placeholder) */
+  photoId?: string
 }
 
 export interface VomitRecord {

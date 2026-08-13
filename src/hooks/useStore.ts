@@ -37,8 +37,9 @@ export interface Store {
   records: VomitRecord[]
   rules: ThresholdRule[]
   alertLog: AlertEntry[]
-  addCat: (name: string) => void
+  addCat: (name: string, photoId?: string) => void
   renameCat: (id: string, name: string) => void
+  updateCatPhoto: (id: string, photoId?: string) => void
   deleteCat: (id: string) => void
   addRecord: (input: RecordInput) => Promise<AlertEntry[]>
   updateRecord: (id: string, input: RecordInput) => Promise<void>
@@ -79,8 +80,8 @@ export function useStore(): Store {
     }
   }, [])
 
-  const addCat = useCallback((name: string) => {
-    const cat: Cat = { id: uid(), name: name.trim() }
+  const addCat = useCallback((name: string, photoId?: string) => {
+    const cat: Cat = { id: uid(), name: name.trim(), photoId }
     setCats((prev) => [...prev, cat])
     void putCat(cat)
   }, [])
@@ -94,8 +95,23 @@ export function useStore(): Store {
     })
   }, [])
 
+  const updateCatPhoto = useCallback((id: string, photoId?: string) => {
+    setCats((prev) => {
+      const prevCat = prev.find((c) => c.id === id)
+      const next = prev.map((c) => (c.id === id ? { ...c, photoId } : c))
+      const target = next.find((c) => c.id === id)
+      if (target) void putCat(target)
+      if (prevCat?.photoId && prevCat.photoId !== photoId) void delPhotos([prevCat.photoId])
+      return next
+    })
+  }, [])
+
   const deleteCat = useCallback((id: string) => {
-    setCats((prev) => prev.filter((c) => c.id !== id))
+    setCats((prev) => {
+      const target = prev.find((c) => c.id === id)
+      if (target?.photoId) void delPhotos([target.photoId])
+      return prev.filter((c) => c.id !== id)
+    })
     setRecords((prev) => prev.filter((r) => r.catId !== id))
     void (async () => {
       const photoIds = await delRecordsByCat(id)
@@ -221,6 +237,7 @@ export function useStore(): Store {
     alertLog,
     addCat,
     renameCat,
+    updateCatPhoto,
     deleteCat,
     addRecord,
     updateRecord,

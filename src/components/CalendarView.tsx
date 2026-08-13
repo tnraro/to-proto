@@ -120,13 +120,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
 
       <div>
         <h3 className="mb-2 text-sm font-semibold text-gray-600">{selectedKey} 기록</h3>
-        <RecordList
-          records={dayRecords}
-          cats={cats}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          catNameFor={catName}
-        />
+        <RecordList records={dayRecords} cats={cats} onEdit={onEdit} onDelete={onDelete} />
       </div>
     </div>
   )

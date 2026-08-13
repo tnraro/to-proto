@@ -36,8 +36,8 @@ export default function App() {
   const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog } = store
 
   const openCatModal = () => setCatModalOpen(true)
-  const handleCatAdd = (name: string) => {
-    addCat(name)
+  const handleCatAdd = (name: string, photoId?: string) => {
+    addCat(name, photoId)
     setCatModalOpen(false)
   }
 
@@ -58,8 +58,6 @@ export default function App() {
       />
     )
   }
-
-  const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '?'
 
   const openRecordForm = (initial: VomitRecord | null = null, presetDate: string | null = null) => {
     setFormInitial(initial)
@@ -119,7 +117,6 @@ export default function App() {
                 onDelete={(id) => {
                   if (confirm('기록을 삭제할까요?')) deleteRecord(id)
                 }}
-                catNameFor={catName}
               />
             </section>
           </div>

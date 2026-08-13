@@ -4,17 +4,17 @@ import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { formatRelativeTime } from '../lib/dates'
 import { PhotoThumb } from './PhotoThumb'
+import { CatAvatar } from './CatAvatar'
 
 interface Props {
   records: VomitRecord[]
   cats: Cat[]
   onEdit: (record: VomitRecord) => void
   onDelete: (id: string) => void
-  catNameFor: (catId: string) => string
   emptyText?: string
 }
 
-export function RecordList({ records, onEdit, onDelete, catNameFor, emptyText }: Props) {
+export function RecordList({ records, cats, onEdit, onDelete, emptyText }: Props) {
   if (records.length === 0) {
     return <p className="py-8 text-center text-sm text-gray-400">{emptyText ?? '기록이 없습니다'}</p>
   }
@@ -25,7 +25,7 @@ export function RecordList({ records, onEdit, onDelete, catNameFor, emptyText }:
         <RecordListItem
           key={r.id}
           record={r}
-          catName={catNameFor(r.catId)}
+          cat={cats.find((c) => c.id === r.catId)}
           onEdit={onEdit}
           onDelete={onDelete}
         />
@@ -38,12 +38,12 @@ const MENU_WIDTH = 112
 
 function RecordListItem({
   record,
-  catName,
+  cat,
   onEdit,
   onDelete,
 }: {
   record: VomitRecord
-  catName: string
+  cat?: Cat
   onEdit: (record: VomitRecord) => void
   onDelete: (id: string) => void
 }) {
@@ -87,10 +87,12 @@ function RecordListItem({
 
   return (
     <li className="flex gap-3 px-4 py-3">
-      <span className="mt-0.5 h-10 w-10 shrink-0 rounded-full bg-gray-200" aria-hidden="true" />
+      <div className="mt-0.5">
+        <CatAvatar cat={cat} />
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-base font-medium text-gray-900">{catName}</span>
+          <span className="text-base font-medium text-gray-900">{cat?.name ?? '?'}</span>
           <span className="text-xs text-gray-400">{formatRelativeTime(record.datetime)}</span>
         </div>
         {record.memo && <p className="mt-0.5 break-words text-sm text-gray-500">{record.memo}</p>}

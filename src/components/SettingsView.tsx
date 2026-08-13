@@ -2,14 +2,14 @@ import { useState } from 'react'
 import type { Store } from '../hooks/useStore'
 import { CatManager } from './CatManager'
 
-export function SettingsView({ cats, records, rules, alertLog, resetAll, renameCat, deleteCat, onAddCat }: Store & { onAddCat: () => void }) {
+export function SettingsView({ cats, records, rules, alertLog, resetAll, renameCat, updateCatPhoto, deleteCat, onAddCat }: Store & { onAddCat: () => void }) {
   const [confirming, setConfirming] = useState(false)
 
   return (
     <div className="space-y-6">
       <section>
         <h2 className="mb-3 text-sm font-semibold text-gray-600">고양이 관리</h2>
-        <CatManager cats={cats} renameCat={renameCat} deleteCat={deleteCat} onAddCat={onAddCat} />
+        <CatManager cats={cats} renameCat={renameCat} updateCatPhoto={updateCatPhoto} deleteCat={deleteCat} onAddCat={onAddCat} />
       </section>
 
       <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">

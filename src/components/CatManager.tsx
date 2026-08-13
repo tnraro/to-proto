@@ -1,14 +1,18 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Cat } from '../types'
+import { putPhoto, uid } from '../lib/storage'
+import { resizeImage } from '../lib/image'
+import { CatAvatar } from './CatAvatar'
 
 interface Props {
   cats: Cat[]
   renameCat: (id: string, name: string) => void
+  updateCatPhoto: (id: string, photoId?: string) => void
   deleteCat: (id: string) => void
   onAddCat: () => void
 }
 
-export function CatManager({ cats, renameCat, deleteCat, onAddCat }: Props) {
+export function CatManager({ cats, renameCat, updateCatPhoto, deleteCat, onAddCat }: Props) {
   return (
     <div className="space-y-4">
       <button
@@ -20,9 +24,13 @@ export function CatManager({ cats, renameCat, deleteCat, onAddCat }: Props) {
 
       <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
         {cats.map((cat) => (
-          <li key={cat.id} className="flex items-center justify-between px-4 py-3">
-            <span className="font-medium">{cat.name}</span>
-            <div className="flex gap-2">
+          <li key={cat.id} className="flex items-center justify-between gap-2 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <CatAvatar cat={cat} />
+              <span className="truncate font-medium">{cat.name}</span>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <CatPhotoButton cat={cat} onUpdate={(photoId) => updateCatPhoto(cat.id, photoId)} />
               <EditCatName catName={cat.name} onSave={(n) => renameCat(cat.id, n)} />
               <button
                 onClick={() => {
@@ -40,6 +48,45 @@ export function CatManager({ cats, renameCat, deleteCat, onAddCat }: Props) {
         )}
       </ul>
     </div>
+  )
+}
+
+function CatPhotoButton({ cat, onUpdate }: { cat: Cat; onUpdate: (photoId?: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return
+    const photoId = uid()
+    await putPhoto(photoId, await resizeImage(file))
+    onUpdate(photoId)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => fileRef.current?.click()}
+        className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+        title={cat.photoId ? '사진 변경' : '사진 추가'}
+      >
+        {cat.photoId ? '사진 변경' : '사진 추가'}
+      </button>
+      {cat.photoId && (
+        <button
+          onClick={() => onUpdate(undefined)}
+          className="rounded px-2 py-1 text-sm text-red-500 hover:bg-red-50"
+        >
+          사진 삭제
+        </button>
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => void onFile(e.target.files?.[0])}
+      />
+    </>
   )
 }
 

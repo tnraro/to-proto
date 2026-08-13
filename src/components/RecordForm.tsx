@@ -3,6 +3,7 @@ import type { Cat, RecordDraft, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
 import { deleteDraft, getPhoto, loadDraft, saveDraft } from '../lib/storage'
+import { PhotoPreview } from './PhotoPreview'
 
 export type RecordInput = Omit<VomitRecord, 'id' | 'createdAt' | 'updatedAt' | 'photos'> & {
   photos?: Blob[]
@@ -287,33 +288,5 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
         )}
       </div>
     </form>
-  )
-}
-
-function useObjectUrl(blob: Blob | undefined): string | undefined {
-  const [url, setUrl] = useState<string>()
-  useEffect(() => {
-    if (!blob) return
-    const u = URL.createObjectURL(blob)
-    setUrl(u)
-    return () => URL.revokeObjectURL(u)
-  }, [blob])
-  return url
-}
-
-function PhotoPreview({ blob, onRemove }: { blob: Blob; onRemove: () => void }) {
-  const src = useObjectUrl(blob)
-  return (
-    <div className="relative h-20 w-20">
-      {src && <img src={src} alt="사진 미리보기" className="h-full w-full rounded-lg object-cover" />}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white"
-        aria-label="사진 제거"
-      >
-        ✕
-      </button>
-    </div>
   )
 }
