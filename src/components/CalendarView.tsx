@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Cat, VomitRecord } from '../types'
+import type { Cat, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { monthLabel, startOfMonth, toDateKey } from '../lib/dates'
 import { RecordList } from './RecordList'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+const MAX_TYPE_PAIRS = 3
 
 interface Props {
   records: VomitRecord[]
@@ -23,8 +24,6 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
   useEffect(() => {
     onSelectedDateChange(selectedKey)
   }, [selectedKey, onSelectedDateChange])
-
-  const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '?'
 
   const cells = useMemo(() => buildMonthCells(cursor), [cursor])
 
@@ -100,17 +99,24 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
                 {cell?.getDate()}
               </span>
               {list && (
-                <span className="mt-0.5 flex flex-wrap gap-0.5">
-                  {list.slice(0, 4).map((r) =>
-                    r.types.map((t) => (
+                <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  {summarizeByType(list)
+                    .slice(0, MAX_TYPE_PAIRS)
+                    .map(({ type, count }) => (
                       <span
-                        key={`${r.id}-${t}`}
-                        title={`${catName(r.catId)} · ${VOMIT_TYPES[t].label}`}
-                        className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[t].color}`}
-                      />
-                    )),
+                        key={type}
+                        className="flex items-center gap-0.5"
+                        title={`${VOMIT_TYPES[type].label} ${count}회`}
+                      >
+                        <span className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[type].color}`} />
+                        {count > 1 && <span className="text-[10px] leading-none text-gray-500">{count}</span>}
+                      </span>
+                    ))}
+                  {summarizeByType(list).length > MAX_TYPE_PAIRS && (
+                    <span className="text-[10px] leading-none text-gray-400">
+                      +{summarizeByType(list).slice(MAX_TYPE_PAIRS).reduce((s, x) => s + x.count, 0)}
+                    </span>
                   )}
-                  {list.length > 4 && <span className="text-[10px] text-gray-400">+{list.length - 4}</span>}
                 </span>
               )}
             </button>
@@ -135,4 +141,15 @@ function buildMonthCells(cursor: Date): (Date | null)[] {
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(cursor.getFullYear(), cursor.getMonth(), d))
   while (cells.length % 7 !== 0) cells.push(null)
   return cells
+}
+
+/** 하루 기록을 종류별로 집계해 횟수 내림차순으로 정렬 */
+function summarizeByType(records: VomitRecord[]): { type: VomitType; count: number }[] {
+  const counts = new Map<VomitType, number>()
+  for (const r of records) {
+    for (const t of r.types) counts.set(t, (counts.get(t) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count)
 }
