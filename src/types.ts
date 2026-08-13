@@ -23,6 +23,31 @@ export interface VomitRecord {
   updatedAt: string
 }
 
+export interface ThresholdRule {
+  id: string
+  /** null = 모든 고양이 */
+  catId: string | null
+  /** 집계 기간(일) */
+  windowDays: number
+  /** 이 기간 내 최대 허용 횟수 (초과 시 경고) */
+  maxCount: number
+  /** null = 종류 무관 */
+  type: VomitType | null
+  enabled: boolean
+}
+
+/** 저장되는 경고 이력. 규칙/고양이 변경에도 읽을 수 있도록 스냅샷 저장 */
+export interface AlertEntry {
+  id: string
+  ruleId: string
+  createdAt: string
+  catName: string
+  typeLabel: string
+  windowDays: number
+  maxCount: number
+  count: number
+}
+
 export interface TypeMeta {
   label: string
   /** tailwind bg color class for chips */

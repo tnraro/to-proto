@@ -1,7 +1,9 @@
-import type { Cat, VomitRecord } from '../types'
+import type { AlertEntry, Cat, ThresholdRule, VomitRecord } from '../types'
 
 const CATS_KEY = 'to.cats'
 const RECORDS_KEY = 'to.records'
+const RULES_KEY = 'to.rules'
+const ALERT_LOG_KEY = 'to.alertLog'
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -35,4 +37,20 @@ export function loadRecords(): VomitRecord[] {
 
 export function saveRecords(records: VomitRecord[]) {
   save(RECORDS_KEY, records)
+}
+
+export function loadRules(): ThresholdRule[] {
+  return load<ThresholdRule[]>(RULES_KEY, [])
+}
+
+export function saveRules(rules: ThresholdRule[]) {
+  save(RULES_KEY, rules)
+}
+
+export function loadAlertLog(): AlertEntry[] {
+  return load<AlertEntry[]>(ALERT_LOG_KEY, [])
+}
+
+export function saveAlertLog(entries: AlertEntry[]) {
+  save(ALERT_LOG_KEY, entries)
 }

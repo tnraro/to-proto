@@ -5,34 +5,42 @@ import { RecordList } from './components/RecordList'
 import { CalendarView } from './components/CalendarView'
 import { StatsView } from './components/StatsView'
 import { CatManager } from './components/CatManager'
-import type { VomitRecord } from './types'
+import { AlertModal } from './components/AlertModal'
+import { ThresholdManager } from './components/ThresholdManager'
+import { SettingsView } from './components/SettingsView'
+import type { AlertEntry, VomitRecord } from './types'
 
-type Tab = 'record' | 'calendar' | 'stats' | 'cats'
+type Tab = 'record' | 'calendar' | 'stats' | 'alert' | 'cats' | 'settings'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'record', label: '기록' },
   { id: 'calendar', label: '캘린더' },
   { id: 'stats', label: '통계' },
+  { id: 'alert', label: '경고' },
   { id: 'cats', label: '고양이' },
+  { id: 'settings', label: '설정' },
 ]
 
 export default function App() {
   const store = useStore()
   const [tab, setTab] = useState<Tab>('record')
   const [editing, setEditing] = useState<VomitRecord | null>(null)
+  const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
 
-  const { cats, records, addRecord, updateRecord, deleteRecord } = store
+  const { cats, records, addRecord, updateRecord, deleteRecord, alertLog } = store
 
   const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '?'
 
   const handleSubmit = (input: RecordInput) => {
+    let newAlerts: AlertEntry[] = []
     if (editing) {
       updateRecord(editing.id, input)
       setEditing(null)
     } else {
-      addRecord(input)
+      newAlerts = addRecord(input)
     }
     setTab('record')
+    if (newAlerts.length > 0) setModalAlerts(newAlerts)
   }
 
   const handleEdit = (r: VomitRecord) => {
@@ -50,6 +58,11 @@ export default function App() {
           <h1 className="text-lg font-bold">
             고양이 토 기록
             <span className="ml-2 text-sm font-normal text-gray-400">총 {records.length}회</span>
+            {alertLog.length > 0 && (
+              <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                경고 {alertLog.length}
+              </span>
+            )}
           </h1>
         </div>
         <nav className="mx-auto flex max-w-3xl gap-1 px-4">
@@ -97,8 +110,14 @@ export default function App() {
 
         {tab === 'stats' && <StatsView records={records} cats={cats} />}
 
+        {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
+
         {tab === 'cats' && <CatManager {...store} />}
+
+        {tab === 'settings' && <SettingsView {...store} />}
       </main>
+
+      {modalAlerts.length > 0 && <AlertModal alerts={modalAlerts} onClose={() => setModalAlerts([])} />}
     </div>
   )
 }
