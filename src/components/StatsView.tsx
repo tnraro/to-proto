@@ -78,10 +78,10 @@ export function StatsView({ records, cats }: Props) {
           <button
             key={p.label}
             onClick={() => setPeriodDays(p.days)}
-            className={`rounded-full px-4 py-1.5 text-sm ${
+            className={`min-h-9 rounded-full px-4 text-sm ${
               periodDays === p.days
-                ? 'bg-emerald-600 text-white'
-                : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                ? 'bg-primary font-medium text-white shadow-sm'
+                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
             {p.label}
@@ -161,8 +161,8 @@ export function StatsView({ records, cats }: Props) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-semibold text-gray-600">{title}</h3>
+    <div className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
+      <h3 className="mb-3 text-sm font-semibold text-gray-700">{title}</h3>
       {children}
     </div>
   )
