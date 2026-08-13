@@ -1,9 +1,22 @@
-import type { AlertEntry, Cat, ThresholdRule, VomitRecord } from '../types'
+import type { AlertEntry, Cat, ThresholdRule, VomitRecord, VomitType } from '../types'
 
 const CATS_KEY = 'to.cats'
 const RECORDS_KEY = 'to.records'
 const RULES_KEY = 'to.rules'
 const ALERT_LOG_KEY = 'to.alertLog'
+
+type LegacyRecord = Omit<VomitRecord, 'types'> & { type?: VomitType; types?: VomitType[] }
+
+/** 구버전 단일 type 필드를 types 배열로 마이그레이션 */
+export function migrateRecord(r: LegacyRecord): VomitRecord {
+  if (Array.isArray(r.types) && r.types.length > 0) return r as VomitRecord
+  const type = r.type
+  if (type) {
+    const { type: _omit, ...rest } = r
+    return { ...rest, types: [type] }
+  }
+  return { ...r, types: [] }
+}
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -32,7 +45,7 @@ export function saveCats(cats: Cat[]) {
 }
 
 export function loadRecords(): VomitRecord[] {
-  return load<VomitRecord[]>(RECORDS_KEY, [])
+  return load<VomitRecord[]>(RECORDS_KEY, []).map(migrateRecord)
 }
 
 export function saveRecords(records: VomitRecord[]) {

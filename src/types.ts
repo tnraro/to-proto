@@ -17,7 +17,8 @@ export interface VomitRecord {
   id: string
   datetime: string // ISO
   catId: string
-  type: VomitType
+  /** 토 종류 (1건에 여러 종류 가능) */
+  types: VomitType[]
   memo: string
   createdAt: string
   updatedAt: string

@@ -25,7 +25,7 @@ export function evaluateRules(
       const t = new Date(r.datetime).getTime()
       if (t < cutoff || t > now.getTime()) continue
       if (rule.catId !== null && r.catId !== rule.catId) continue
-      if (rule.type !== null && r.type !== rule.type) continue
+      if (rule.type !== null && !r.types.includes(rule.type)) continue
       count++
     }
     if (count > rule.maxCount) {

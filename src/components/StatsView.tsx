@@ -46,7 +46,9 @@ export function StatsView({ records, cats }: Props) {
 
   const typeData = useMemo(() => {
     const counts = new Map<VomitType, number>()
-    for (const r of filtered) counts.set(r.type, (counts.get(r.type) ?? 0) + 1)
+    for (const r of filtered) {
+      for (const t of r.types) counts.set(t, (counts.get(t) ?? 0) + 1)
+    }
     return VOMIT_TYPE_KEYS.filter((k) => counts.has(k)).map((k) => ({
       name: VOMIT_TYPES[k].label,
       value: counts.get(k) ?? 0,

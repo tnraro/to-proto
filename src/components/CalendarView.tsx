@@ -94,13 +94,15 @@ export function CalendarView({ records, cats, onEdit, onDelete }: Props) {
               </span>
               {list && (
                 <span className="mt-0.5 flex flex-wrap gap-0.5">
-                  {list.slice(0, 4).map((r) => (
-                    <span
-                      key={r.id}
-                      title={`${catName(r.catId)} · ${VOMIT_TYPES[r.type].label}`}
-                      className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[r.type].color}`}
-                    />
-                  ))}
+                  {list.slice(0, 4).map((r) =>
+                    r.types.map((t) => (
+                      <span
+                        key={`${r.id}-${t}`}
+                        title={`${catName(r.catId)} · ${VOMIT_TYPES[t].label}`}
+                        className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[t].color}`}
+                      />
+                    )),
+                  )}
                   {list.length > 4 && <span className="text-[10px] text-gray-400">+{list.length - 4}</span>}
                 </span>
               )}
@@ -117,13 +119,17 @@ export function CalendarView({ records, cats, onEdit, onDelete }: Props) {
           <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
             {dayRecords.map((r) => (
               <li key={r.id} className="flex items-center gap-3 px-4 py-3">
-                <span className={`inline-block h-3 w-3 shrink-0 rounded-full ${VOMIT_TYPES[r.type].color}`} />
+                <span className="flex shrink-0 gap-0.5">
+                  {r.types.map((t) => (
+                    <span key={t} className={`inline-block h-3 w-3 rounded-full ${VOMIT_TYPES[t].color}`} />
+                  ))}
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">
                     {formatDateTime(r.datetime)} <span className="ml-1 text-xs text-gray-400">{catName(r.catId)}</span>
                   </div>
                   <div className="truncate text-sm text-gray-500">
-                    {VOMIT_TYPES[r.type].label}
+                    {r.types.map((t) => VOMIT_TYPES[t].label).join(' + ')}
                     {r.memo && <span className="text-gray-400"> · {r.memo}</span>}
                   </div>
                 </div>

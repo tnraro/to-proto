@@ -1,17 +1,18 @@
 import { describe, expect, test } from 'bun:test'
-import type { Cat, ThresholdRule, VomitRecord } from '../types'
+import type { Cat, ThresholdRule, VomitRecord, VomitType } from '../types'
 import { evaluateRules } from './thresholds'
+import { migrateRecord } from './storage'
 
 const cats: Cat[] = [{ id: 'c1', name: '나비' }]
 
 const now = new Date('2026-08-13T12:00:00')
 
-function rec(datetime: Date, catId = 'c1', type: VomitRecord['type'] = 'food'): VomitRecord {
+function rec(datetime: Date, catId = 'c1', types: VomitType[] = ['food']): VomitRecord {
   return {
     id: Math.random().toString(36).slice(2),
     datetime: datetime.toISOString(),
     catId,
-    type,
+    types,
     memo: '',
     createdAt: datetime.toISOString(),
     updatedAt: datetime.toISOString(),
@@ -69,14 +70,14 @@ describe('evaluateRules', () => {
     expect(violations[0].count).toBe(4)
   })
 
-  test('종류 필터: 특정 종류만 집계', () => {
+  test('종류 필터: 포함 매칭 (다중 종류 기록도 집계)', () => {
     const rule = { ...rule1d, type: 'bloody' as const }
     const records = [
       rec(new Date('2026-08-13T06:00:00')), // food
-      rec(new Date('2026-08-13T07:00:00'), 'c1', 'bloody'),
-      rec(new Date('2026-08-13T08:00:00'), 'c1', 'bloody'),
-      rec(new Date('2026-08-13T09:00:00'), 'c1', 'bloody'),
-      rec(new Date('2026-08-13T10:00:00'), 'c1', 'bloody'),
+      rec(new Date('2026-08-13T07:00:00'), 'c1', ['bloody']),
+      rec(new Date('2026-08-13T08:00:00'), 'c1', ['food', 'bloody']), // 다중: 포함 매칭
+      rec(new Date('2026-08-13T09:00:00'), 'c1', ['bloody']),
+      rec(new Date('2026-08-13T10:00:00'), 'c1', ['bloody']),
     ]
     const violations = evaluateRules([rule], records, cats, now)
     expect(violations).toHaveLength(1)
@@ -122,5 +123,27 @@ describe('addRecord 경고 생성 시뮬레이션 (수정 후)', () => {
     const created = rec(new Date('2026-08-10T09:00:00')) // 3일 전 기록을 이제 추가
     const newAlerts = evaluateRules([rule1d], [...existing, created], cats, now)
     expect(newAlerts).toHaveLength(0)
+  })
+})
+
+describe('migrateRecord (단일 type → types 배열)', () => {
+  test('구버전 type 필드가 types로 변환', () => {
+    const legacy = {
+      id: 'x',
+      datetime: now.toISOString(),
+      catId: 'c1',
+      type: 'hairball',
+      memo: '',
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    }
+    const migrated = migrateRecord(legacy as never)
+    expect(migrated.types).toEqual(['hairball'])
+    expect('type' in migrated).toBe(false)
+  })
+
+  test('이미 types 배열이면 그대로 유지', () => {
+    const r = rec(now, 'c1', ['food', 'bile'])
+    expect(migrateRecord(r)).toEqual(r)
   })
 })

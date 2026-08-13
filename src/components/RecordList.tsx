@@ -20,14 +20,18 @@ export function RecordList({ records, onEdit, onDelete, catNameFor, emptyText }:
     <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
       {records.map((r) => (
         <li key={r.id} className="flex items-center gap-3 px-4 py-3">
-          <span className={`inline-block h-3 w-3 shrink-0 rounded-full ${VOMIT_TYPES[r.type].color}`} />
+          <span className="flex shrink-0 gap-0.5">
+            {r.types.map((t) => (
+              <span key={t} className={`inline-block h-3 w-3 rounded-full ${VOMIT_TYPES[t].color}`} />
+            ))}
+          </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-medium">{formatDateTime(r.datetime)}</span>
               <span className="text-xs text-gray-400">{catNameFor(r.catId)}</span>
             </div>
             <div className="truncate text-sm text-gray-500">
-              {VOMIT_TYPES[r.type].label}
+              {r.types.map((t) => VOMIT_TYPES[t].label).join(' + ')}
               {r.memo && <span className="text-gray-400"> · {r.memo}</span>}
             </div>
           </div>
