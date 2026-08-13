@@ -72,7 +72,7 @@ export function ThresholdManager({ cats, rules, alertLog, addRule, updateRule, d
                 <span className="inline-block h-3 w-3 shrink-0 rounded-full bg-red-500" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">
-                    {a.catName} · {a.typeLabel} · {a.windowDays}일 내 {a.maxCount}회 초과 (현재 {a.count}회)
+                    {a.catName} · {a.typeLabel} · {a.windowDays}일 내 {a.maxCount}회 이상 (현재 {a.count}회)
                   </div>
                   <div className="text-xs text-gray-400">{formatDateTime(a.createdAt)}</div>
                 </div>
@@ -176,7 +176,7 @@ function RuleForm({
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-gray-600">초과 기준 횟수</span>
+          <span className="mb-1 block text-sm font-medium text-gray-600">이상 기준 횟수</span>
           <input
             type="number"
             min={1}
@@ -250,7 +250,7 @@ function RuleItem({
           {catName} · {typeLabel}
         </div>
         <div className="text-xs text-gray-400">
-          {rule.windowDays}일 내 {rule.maxCount}회 초과 시 경고 {rule.enabled ? '' : '(비활성)'}
+          {rule.windowDays}일 내 {rule.maxCount}회 이상 시 경고 {rule.enabled ? '' : '(비활성)'}
         </div>
       </div>
       <button

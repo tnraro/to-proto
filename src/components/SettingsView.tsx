@@ -5,15 +5,6 @@ import { CatManager } from './CatManager'
 export function SettingsView({ cats, records, rules, alertLog, resetAll, addCat, renameCat, deleteCat }: Store) {
   const [confirming, setConfirming] = useState(false)
 
-  let storageBytes = 0
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (key?.startsWith('to.')) {
-      storageBytes += (localStorage.getItem(key)?.length ?? 0) * 2
-    }
-  }
-  const storageUsage = (storageBytes / 1024).toFixed(1)
-
   return (
     <div className="space-y-6">
       <section>
@@ -29,7 +20,7 @@ export function SettingsView({ cats, records, rules, alertLog, resetAll, addCat,
           <Stat label="규칙" value={rules.length} />
           <Stat label="경고 이력" value={alertLog.length} />
         </dl>
-        <p className="mt-3 text-xs text-gray-400">localStorage 사용량: 약 {storageUsage} KB</p>
+        <p className="mt-3 text-xs text-gray-400">데이터는 이 기기의 IndexedDB에 저장됩니다</p>
       </section>
 
       <section className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">

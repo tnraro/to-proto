@@ -28,7 +28,7 @@ export function evaluateRules(
       if (rule.type !== null && !r.types.includes(rule.type)) continue
       count++
     }
-    if (count > rule.maxCount) {
+    if (count >= rule.maxCount) {
       violations.push({
         rule,
         catName: rule.catId === null ? '전체 고양이' : (cats.find((c) => c.id === rule.catId)?.name ?? '?'),

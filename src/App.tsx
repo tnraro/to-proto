@@ -27,6 +27,14 @@ export default function App() {
 
   const { cats, records, addRecord, updateRecord, deleteRecord, alertLog } = store
 
+  if (!store.hydrated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-400">
+        로딩 중...
+      </div>
+    )
+  }
+
   const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '?'
 
   const handleSubmit = (input: RecordInput) => {

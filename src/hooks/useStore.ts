@@ -17,6 +17,7 @@ export type RecordInput = Omit<VomitRecord, 'id' | 'createdAt' | 'updatedAt'>
 export type RuleInput = Omit<ThresholdRule, 'id'>
 
 export interface Store {
+  hydrated: boolean
   cats: Cat[]
   records: VomitRecord[]
   rules: ThresholdRule[]
@@ -36,15 +37,49 @@ export interface Store {
 }
 
 export function useStore(): Store {
-  const [cats, setCats] = useState<Cat[]>(() => loadCats())
-  const [records, setRecords] = useState<VomitRecord[]>(() => loadRecords())
-  const [rules, setRules] = useState<ThresholdRule[]>(() => loadRules())
-  const [alertLog, setAlertLog] = useState<AlertEntry[]>(() => loadAlertLog())
+  const [hydrated, setHydrated] = useState(false)
+  const [cats, setCats] = useState<Cat[]>([])
+  const [records, setRecords] = useState<VomitRecord[]>([])
+  const [rules, setRules] = useState<ThresholdRule[]>([])
+  const [alertLog, setAlertLog] = useState<AlertEntry[]>([])
 
-  useEffect(() => saveCats(cats), [cats])
-  useEffect(() => saveRecords(records), [records])
-  useEffect(() => saveRules(rules), [rules])
-  useEffect(() => saveAlertLog(alertLog), [alertLog])
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const [loadedCats, loadedRecords, loadedRules, loadedAlerts] = await Promise.all([
+        loadCats(),
+        loadRecords(),
+        loadRules(),
+        loadAlertLog(),
+      ])
+      if (cancelled) return
+      setCats(loadedCats)
+      setRecords(loadedRecords)
+      setRules(loadedRules)
+      setAlertLog(loadedAlerts)
+      setHydrated(true)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) return
+    void saveCats(cats)
+  }, [cats, hydrated])
+  useEffect(() => {
+    if (!hydrated) return
+    void saveRecords(records)
+  }, [records, hydrated])
+  useEffect(() => {
+    if (!hydrated) return
+    void saveRules(rules)
+  }, [rules, hydrated])
+  useEffect(() => {
+    if (!hydrated) return
+    void saveAlertLog(alertLog)
+  }, [alertLog, hydrated])
 
   const addCat = useCallback((name: string) => {
     setCats((prev) => [...prev, { id: uid(), name: name.trim() }])
@@ -119,6 +154,7 @@ export function useStore(): Store {
   }, [])
 
   return {
+    hydrated,
     cats,
     records,
     rules,

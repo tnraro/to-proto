@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { Cat, ThresholdRule, VomitRecord, VomitType } from '../types'
 import { evaluateRules } from './thresholds'
-import { migrateRecord } from './storage'
 
 const cats: Cat[] = [{ id: 'c1', name: '나비' }]
 
@@ -22,7 +21,7 @@ function rec(datetime: Date, catId = 'c1', types: VomitType[] = ['food']): Vomit
 const rule1d: ThresholdRule = { id: 'r1', catId: 'c1', windowDays: 1, maxCount: 3, type: null, enabled: true }
 
 describe('evaluateRules', () => {
-  test('24시간 내 4회면 3회 초과 규칙 위반', () => {
+  test('24시간 내 4회면 3회 이상 규칙 위반', () => {
     const records = [
       rec(new Date('2026-08-13T06:00:00')),
       rec(new Date('2026-08-13T08:00:00')),
@@ -35,13 +34,23 @@ describe('evaluateRules', () => {
     expect(violations[0].catName).toBe('나비')
   })
 
-  test('3회면 위반 아님 (초과만 경고)', () => {
+  test('2회면 위반 아님', () => {
+    const records = [
+      rec(new Date('2026-08-13T06:00:00')),
+      rec(new Date('2026-08-13T08:00:00')),
+    ]
+    expect(evaluateRules([rule1d], records, cats, now)).toHaveLength(0)
+  })
+
+  test('정확히 3회면 위반 (이상 규칙)', () => {
     const records = [
       rec(new Date('2026-08-13T06:00:00')),
       rec(new Date('2026-08-13T08:00:00')),
       rec(new Date('2026-08-13T10:00:00')),
     ]
-    expect(evaluateRules([rule1d], records, cats, now)).toHaveLength(0)
+    const violations = evaluateRules([rule1d], records, cats, now)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].count).toBe(3)
   })
 
   test('윈도우 밖 기록은 집계 제외', () => {
@@ -90,14 +99,13 @@ describe('evaluateRules', () => {
   })
 })
 
-describe('addRecord 경고 생성 시뮬레이션 (수정 후)', () => {
-  test('3회 → 4회째 추가 시 경고 1건', () => {
+describe('addRecord 경고 생성 시뮬레이션 (이상 규칙)', () => {
+  test('2회 → 3회째 추가 시 경고 1건 (기준 도달)', () => {
     const before = [
       rec(new Date('2026-08-13T06:00:00')),
       rec(new Date('2026-08-13T08:00:00')),
-      rec(new Date('2026-08-13T10:00:00')),
     ]
-    const created = rec(new Date('2026-08-13T11:30:00'))
+    const created = rec(new Date('2026-08-13T10:00:00'))
     const newAlerts = evaluateRules([rule1d], [...before, created], cats, now)
     expect(newAlerts).toHaveLength(1)
   })
@@ -118,32 +126,9 @@ describe('addRecord 경고 생성 시뮬레이션 (수정 후)', () => {
     const existing = [
       rec(new Date('2026-08-13T06:00:00')),
       rec(new Date('2026-08-13T08:00:00')),
-      rec(new Date('2026-08-13T10:00:00')),
     ]
     const created = rec(new Date('2026-08-10T09:00:00')) // 3일 전 기록을 이제 추가
     const newAlerts = evaluateRules([rule1d], [...existing, created], cats, now)
     expect(newAlerts).toHaveLength(0)
-  })
-})
-
-describe('migrateRecord (단일 type → types 배열)', () => {
-  test('구버전 type 필드가 types로 변환', () => {
-    const legacy = {
-      id: 'x',
-      datetime: now.toISOString(),
-      catId: 'c1',
-      type: 'hairball',
-      memo: '',
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    }
-    const migrated = migrateRecord(legacy as never)
-    expect(migrated.types).toEqual(['hairball'])
-    expect('type' in migrated).toBe(false)
-  })
-
-  test('이미 types 배열이면 그대로 유지', () => {
-    const r = rec(now, 'c1', ['food', 'bile'])
-    expect(migrateRecord(r)).toEqual(r)
   })
 })
