@@ -58,7 +58,10 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
             ›
           </button>
           <button
-            onClick={() => setCursor(startOfMonth(today))}
+            onClick={() => {
+              setCursor(startOfMonth(today))
+              setSelectedKey(toDateKey(today))
+            }}
             className="ml-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
           >
             오늘
