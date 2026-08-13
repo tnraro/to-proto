@@ -43,7 +43,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [datetime, setDatetime] = useState(initialDatetime)
   const [catId, setCatId] = useState(() => initial?.catId ?? cats[0]?.id ?? '')
   const [types, setTypes] = useState<VomitType[]>(() =>
-    initial && initial.types.length > 0 ? initial.types : ['food'],
+    initial && initial.types.length > 0 ? initial.types : [],
   )
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
   const [newPhotos, setNewPhotos] = useState<Blob[]>([])
