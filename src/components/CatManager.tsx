@@ -3,37 +3,20 @@ import type { Cat } from '../types'
 
 interface Props {
   cats: Cat[]
-  addCat: (name: string) => void
   renameCat: (id: string, name: string) => void
   deleteCat: (id: string) => void
+  onAddCat: () => void
 }
 
-export function CatManager({ cats, addCat, renameCat, deleteCat }: Props) {
-  const [name, setName] = useState('')
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
-    addCat(name)
-    setName('')
-  }
-
+export function CatManager({ cats, renameCat, deleteCat, onAddCat }: Props) {
   return (
     <div className="space-y-4">
-      <form onSubmit={submit} className="flex gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="고양이 이름"
-          className="min-h-11 flex-1 rounded-lg border border-gray-300 px-3"
-        />
-        <button
-          type="submit"
-          className="min-h-11 rounded-lg bg-emerald-600 px-4 font-medium text-white hover:bg-emerald-700"
-        >
-          추가
-        </button>
-      </form>
+      <button
+        onClick={onAddCat}
+        className="min-h-11 w-full rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50 font-medium text-emerald-700 hover:bg-emerald-100"
+      >
+        + 고양이 추가
+      </button>
 
       <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
         {cats.map((cat) => (

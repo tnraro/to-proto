@@ -5,6 +5,7 @@ import { RecordList } from './components/RecordList'
 import { CalendarView } from './components/CalendarView'
 import { StatsView } from './components/StatsView'
 import { AlertModal } from './components/AlertModal'
+import { CatFormModal } from './components/CatFormModal'
 import { ThresholdManager } from './components/ThresholdManager'
 import { SettingsView } from './components/SettingsView'
 import type { AlertEntry, VomitRecord } from './types'
@@ -24,8 +25,15 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('record')
   const [editing, setEditing] = useState<VomitRecord | null>(null)
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
+  const [catModalOpen, setCatModalOpen] = useState(false)
 
-  const { cats, records, addRecord, updateRecord, deleteRecord, alertLog } = store
+  const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog } = store
+
+  const openCatModal = () => setCatModalOpen(true)
+  const handleCatAdd = (name: string) => {
+    addCat(name)
+    setCatModalOpen(false)
+  }
 
   if (!store.hydrated) {
     return (
@@ -99,8 +107,10 @@ export default function App() {
 
         {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
 
-        {tab === 'settings' && <SettingsView {...store} />}
+        {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} />}
       </main>
+
+      <CatFormModal open={catModalOpen} onClose={() => setCatModalOpen(false)} onAdd={handleCatAdd} />
 
       {tab !== 'record' && (
         <button
