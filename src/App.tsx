@@ -116,36 +116,22 @@ export default function App() {
         )}
 
         {tab === 'calendar' && (
-          <div className="px-4 pb-8 pt-4 sm:pt-6">
-            <CalendarView
-              records={records}
-              cats={cats}
-              onEdit={handleEdit}
-              onDelete={(id) => {
-                if (confirm('기록을 삭제할까요?')) deleteRecord(id)
-              }}
-              onSelectedDateChange={setCalendarDate}
-            />
-          </div>
+          <CalendarView
+            records={records}
+            cats={cats}
+            onEdit={handleEdit}
+            onDelete={(id) => {
+              if (confirm('기록을 삭제할까요?')) deleteRecord(id)
+            }}
+            onSelectedDateChange={setCalendarDate}
+          />
         )}
 
-        {tab === 'stats' && (
-          <div className="px-4 pb-8 pt-4 sm:pt-6">
-            <StatsView records={records} cats={cats} />
-          </div>
-        )}
+        {tab === 'stats' && <StatsView records={records} cats={cats} />}
 
-        {tab === 'alert' && (
-          <div className="px-4 pb-8 pt-4 sm:pt-6">
-            <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />
-          </div>
-        )}
+        {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
 
-        {tab === 'settings' && (
-          <div className="px-4 pb-8 pt-4 sm:pt-6">
-            <SettingsView {...store} onAddCat={openCatModal} />
-          </div>
-        )}
+        {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} />}
       </main>
 
       <button

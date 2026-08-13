@@ -29,10 +29,10 @@ export function RecordBrowser({ records, cats, onEdit, onDelete }: Props) {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 px-4 pt-4 sm:pt-6">
+    <div className="flex h-full flex-col gap-4">
       <FilterPanel cats={cats} filters={filters} onChange={changeFilters} resultCount={filtered.length} />
 
-      <div className="min-h-0 flex-1 overflow-y-auto pb-20">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {records.length === 0 ? (
           <p className="py-12 text-center text-sm text-gray-400">기록이 없습니다</p>
         ) : filtered.length === 0 ? (
