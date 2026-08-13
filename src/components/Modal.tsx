@@ -111,9 +111,9 @@ export function Modal({
         ref={sheetRef}
         className={`bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl ${
           drawer
-            ? 'w-full rounded-t-2xl sm:max-w-md sm:rounded-xl sm:pb-5'
+            ? 'flex max-h-[85vh] w-full flex-col rounded-t-2xl sm:max-w-md sm:rounded-xl sm:pb-5'
             : 'w-full max-w-md rounded-xl sm:pb-5'
-        } ${contentClassName ?? ''}`}
+        }`}
         style={{
           overscrollBehavior: 'contain',
           transform: dragY !== null ? `translateY(${dragY}px)` : undefined,
@@ -123,19 +123,23 @@ export function Modal({
               : 'transform 200ms ease-out, margin-bottom 200ms ease-out',
         }}
       >
-        {drawer && (
-          <div
-            className="mb-2 flex cursor-grab touch-none select-none justify-center pb-1 active:cursor-grabbing"
-            onPointerDown={(e) => {
-              dragStart.current = e.clientY
-              setDragY(0)
-            }}
-            aria-hidden="true"
-          >
-            <span className="h-1 w-10 rounded-full bg-gray-200 sm:hidden" />
-          </div>
+        {drawer ? (
+          <>
+            <div
+              className="-mx-5 -mt-5 mb-2 shrink-0 cursor-grab touch-none select-none px-5 pb-1 pt-4 active:cursor-grabbing sm:hidden"
+              onPointerDown={(e) => {
+                dragStart.current = e.clientY
+                setDragY(0)
+              }}
+              aria-hidden="true"
+            >
+              <div className="mx-auto h-1.5 w-12 rounded-full bg-gray-300" />
+            </div>
+            <div className={`min-h-0 flex-1 overflow-y-auto ${contentClassName ?? ''}`}>{children}</div>
+          </>
+        ) : (
+          <div className={contentClassName ?? ''}>{children}</div>
         )}
-        {children}
       </div>
     </div>
   )
