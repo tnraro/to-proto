@@ -7,6 +7,10 @@ export function usePhotoUrl(photoId: string): string | undefined {
   useEffect(() => {
     let cancelled = false
     let objectUrl: string | undefined
+    if (!photoId) {
+      setUrl(undefined)
+      return
+    }
     void (async () => {
       const blob = await getPhoto(photoId)
       if (!blob || cancelled) return
