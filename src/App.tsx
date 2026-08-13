@@ -47,8 +47,8 @@ export default function App() {
   if (cats.length === 0) {
     return (
       <Onboarding
-        onAdd={(name) => {
-          addCat(name)
+        onFinish={(names) => {
+          for (const n of names) addCat(n)
         }}
       />
     )
