@@ -69,7 +69,7 @@ export function useStore(): Store {
       ])
       if (cancelled) return
       setCats(loadedCats)
-      setRecords(loadedRecords)
+      setRecords(loadedRecords.sort((a, b) => b.datetime.localeCompare(a.datetime)))
       setRules(loadedRules)
       setAlertLog(loadedAlerts)
       setHydrated(true)
