@@ -104,8 +104,8 @@ function RecordListItem({
         </div>
         {record.photos.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {record.photos.map((pid) => (
-              <PhotoThumb key={pid} photoId={pid} />
+            {record.photos.map((pid, i) => (
+              <PhotoThumb key={pid} photos={record.photos} index={i} />
             ))}
           </div>
         )}
