@@ -37,16 +37,15 @@ export default function App() {
 
   const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '?'
 
-  const handleSubmit = (input: RecordInput) => {
-    let newAlerts: AlertEntry[] = []
+  const handleSubmit = async (input: RecordInput) => {
     if (editing) {
-      updateRecord(editing.id, input)
+      await updateRecord(editing.id, input)
       setEditing(null)
     } else {
-      newAlerts = addRecord(input)
+      const newAlerts = await addRecord(input)
+      if (newAlerts.length > 0) setModalAlerts(newAlerts)
     }
     setTab('record')
-    if (newAlerts.length > 0) setModalAlerts(newAlerts)
   }
 
   const handleEdit = (r: VomitRecord) => {

@@ -19,6 +19,8 @@ export interface VomitRecord {
   catId: string
   /** 토 종류 (1건에 여러 종류 가능) */
   types: VomitType[]
+  /** 사진 id 배열 (본체는 photos 스토어) */
+  photos: string[]
   memo: string
   createdAt: string
   updatedAt: string

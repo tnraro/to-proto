@@ -1,6 +1,7 @@
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { formatDateTime } from '../lib/dates'
+import { PhotoThumb } from './PhotoThumb'
 
 interface Props {
   records: VomitRecord[]
@@ -34,6 +35,13 @@ export function RecordList({ records, onEdit, onDelete, catNameFor, emptyText }:
               {r.types.map((t) => VOMIT_TYPES[t].label).join(' + ')}
               {r.memo && <span className="text-gray-400"> · {r.memo}</span>}
             </div>
+            {r.photos.length > 0 && (
+              <div className="mt-1.5 flex gap-1.5">
+                {r.photos.map((pid) => (
+                  <PhotoThumb key={pid} photoId={pid} />
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex shrink-0 gap-1">
             <button

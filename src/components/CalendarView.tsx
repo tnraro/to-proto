@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { formatDateTime, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
+import { PhotoThumb } from './PhotoThumb'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -132,6 +133,13 @@ export function CalendarView({ records, cats, onEdit, onDelete }: Props) {
                     {r.types.map((t) => VOMIT_TYPES[t].label).join(' + ')}
                     {r.memo && <span className="text-gray-400"> · {r.memo}</span>}
                   </div>
+                  {r.photos.length > 0 && (
+                    <div className="mt-1.5 flex gap-1.5">
+                      {r.photos.map((pid) => (
+                        <PhotoThumb key={pid} photoId={pid} />
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <button onClick={() => onEdit(r)} className="rounded px-2 py-1 text-sm text-gray-500 hover:bg-gray-100">

@@ -1,43 +1,85 @@
 import type { AlertEntry, Cat, ThresholdRule, VomitRecord } from '../types'
-import { dbGet, dbSet } from './db'
-
-const CATS_KEY = 'cats'
-const RECORDS_KEY = 'records'
-const RULES_KEY = 'rules'
-const ALERT_LOG_KEY = 'alertLog'
+import { dbClear, dbDel, dbDelByIndex, dbGet, dbGetAll, dbPut } from './db'
 
 export function uid(): string {
   return crypto.randomUUID()
 }
 
-export async function loadCats(): Promise<Cat[]> {
-  return (await dbGet<Cat[]>(CATS_KEY)) ?? []
+export async function getAllCats(): Promise<Cat[]> {
+  return dbGetAll<Cat>('cats')
 }
 
-export async function saveCats(cats: Cat[]) {
-  await dbSet(CATS_KEY, cats)
+export async function putCat(cat: Cat): Promise<void> {
+  await dbPut('cats', cat)
 }
 
-export async function loadRecords(): Promise<VomitRecord[]> {
-  return (await dbGet<VomitRecord[]>(RECORDS_KEY)) ?? []
+export async function delCat(id: string): Promise<void> {
+  await dbDel('cats', id)
 }
 
-export async function saveRecords(records: VomitRecord[]) {
-  await dbSet(RECORDS_KEY, records)
+export async function getAllRecords(): Promise<VomitRecord[]> {
+  const records = await dbGetAll<VomitRecord>('records')
+  return records.map((r) => ({ ...r, photos: r.photos ?? [] }))
 }
 
-export async function loadRules(): Promise<ThresholdRule[]> {
-  return (await dbGet<ThresholdRule[]>(RULES_KEY)) ?? []
+export async function putRecord(record: VomitRecord): Promise<void> {
+  await dbPut('records', record)
 }
 
-export async function saveRules(rules: ThresholdRule[]) {
-  await dbSet(RULES_KEY, rules)
+export async function delRecord(id: string): Promise<void> {
+  await dbDel('records', id)
 }
 
-export async function loadAlertLog(): Promise<AlertEntry[]> {
-  return (await dbGet<AlertEntry[]>(ALERT_LOG_KEY)) ?? []
+export async function delRecordsByCat(catId: string): Promise<string[]> {
+  const records = await dbGetAll<VomitRecord>('records')
+  const targets = records.filter((r) => r.catId === catId)
+  await dbDelByIndex('records', 'catId', catId)
+  return targets.flatMap((r) => r.photos)
 }
 
-export async function saveAlertLog(entries: AlertEntry[]) {
-  await dbSet(ALERT_LOG_KEY, entries)
+export async function getAllRules(): Promise<ThresholdRule[]> {
+  return dbGetAll<ThresholdRule>('rules')
+}
+
+export async function putRule(rule: ThresholdRule): Promise<void> {
+  await dbPut('rules', rule)
+}
+
+export async function delRule(id: string): Promise<void> {
+  await dbDel('rules', id)
+}
+
+export async function getAllAlertLog(): Promise<AlertEntry[]> {
+  return dbGetAll<AlertEntry>('alertLog')
+}
+
+export async function putAlertEntry(entry: AlertEntry): Promise<void> {
+  await dbPut('alertLog', entry)
+}
+
+export async function delAlertEntry(id: string): Promise<void> {
+  await dbDel('alertLog', id)
+}
+
+export async function clearAlertLog(): Promise<void> {
+  await dbClear('alertLog')
+}
+
+export async function putPhoto(id: string, blob: Blob): Promise<void> {
+  await dbPut('photos', { id, blob })
+}
+
+export async function getPhoto(id: string): Promise<Blob | undefined> {
+  const entry = await dbGet<{ id: string; blob: Blob }>('photos', id)
+  return entry?.blob
+}
+
+export async function delPhotos(ids: string[]): Promise<void> {
+  for (const id of ids) await dbDel('photos', id)
+}
+
+export async function clearAll(): Promise<void> {
+  await Promise.all(
+    (['cats', 'records', 'rules', 'alertLog', 'photos'] as const).map((s) => dbClear(s)),
+  )
 }
