@@ -76,7 +76,7 @@ export function DropdownMenu({ items, beforeClose, ariaLabel = '메뉴' }: Props
         pos &&
         createPortal(
           <div ref={menuRef} className="fixed z-50" style={{ top: pos.top, left: pos.left }}>
-            <div className="w-32 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+            <div className="w-32 overflow-hidden rounded-xl border border-gray-100 bg-white py-1 shadow-pop">
               {items.map((item) => (
                 <button
                   key={item.label}

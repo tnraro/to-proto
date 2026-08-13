@@ -51,22 +51,22 @@ export function RecordBrowser({ records, cats, onEdit, onDelete }: Props) {
       </div>
 
       {filtered.length > PAGE_SIZE && (
-        <div className="shrink-0 border-t border-gray-200 bg-white py-2">
-          <div className="flex items-center justify-center gap-3 pr-24 sm:pr-0">
+        <div className="shrink-0 border-t border-gray-200 bg-white py-2 pr-24 sm:pr-0">
+          <div className="flex items-center justify-center gap-1">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={safePage <= 1}
-              className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
+              className="min-h-10 rounded-full px-4 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40"
             >
               ‹ 이전
             </button>
-            <span className="text-sm text-gray-500">
+            <span className="min-w-16 text-center text-sm text-gray-500">
               {safePage} / {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={safePage >= totalPages}
-              className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 disabled:opacity-40"
+              className="min-h-10 rounded-full px-4 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40"
             >
               다음 ›
             </button>

@@ -17,8 +17,8 @@ export function PhotoThumb({ photos, index }: Props) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="shrink-0">
-        <img src={url} alt="기록 사진" className="h-14 w-14 rounded-lg object-cover" />
+      <button type="button" onClick={() => setOpen(true)} className="block w-full shrink-0">
+        <img src={url} alt="기록 사진" className="aspect-square w-full rounded-lg object-cover" />
       </button>
       {open && (
         <PhotoLightbox photoIds={photos} initialIndex={index} onClose={() => setOpen(false)} />

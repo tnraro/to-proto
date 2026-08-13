@@ -45,26 +45,31 @@ function RecordListItem({
   onDelete: (id: string) => void
 }) {
   return (
-    <li className="flex gap-3 px-4 py-3">
+    <li className="flex gap-3 px-4 py-3.5">
       <div className="mt-0.5">
         <CatAvatar cat={cat} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-base font-medium text-gray-900">{cat?.name ?? '?'}</span>
-          <span className="text-xs text-gray-400">{formatRelativeTime(record.datetime)}</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-base font-semibold text-gray-900">{cat?.name ?? '?'}</span>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+            {formatRelativeTime(record.datetime)}
+          </span>
         </div>
-        {record.memo && <p className="mt-0.5 break-words text-sm text-gray-500">{record.memo}</p>}
-        <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+        {record.memo && <p className="mt-1 break-words text-sm text-gray-500">{record.memo}</p>}
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
           {record.types.map((t) => (
-            <span key={t} className="flex items-center gap-1.5 text-sm text-gray-600">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full ${VOMIT_TYPES[t].color}`} />
+            <span
+              key={t}
+              className="flex items-center gap-1.5 rounded-full bg-gray-50 px-2 py-0.5 text-xs text-gray-600"
+            >
+              <span className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[t].color}`} />
               {VOMIT_TYPES[t].label}
             </span>
           ))}
         </div>
         {record.photos.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
             {record.photos.map((pid, i) => (
               <PhotoThumb key={pid} photos={record.photos} index={i} />
             ))}
