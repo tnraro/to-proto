@@ -35,7 +35,7 @@ export function ThresholdManager({ cats, rules, alertLog, addRule, updateRule, d
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4">
       <section>
         <h2 className="mb-3 text-sm font-semibold text-gray-600">임계값 규칙</h2>
         <RuleForm cats={cats} editing={editing} onSubmit={handleSubmit} onCancel={() => setEditing(null)} />

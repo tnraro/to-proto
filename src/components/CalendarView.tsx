@@ -48,7 +48,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button
