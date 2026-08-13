@@ -8,8 +8,12 @@ interface Props {
 
 export function AlertModal({ alerts, onClose }: Props) {
   return (
-    <Modal open={alerts.length > 0} onClose={onClose} contentClassName="max-h-[80vh] overflow-y-auto">
-      <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200 sm:hidden" />
+    <Modal
+      open={alerts.length > 0}
+      onClose={onClose}
+      drawer={false}
+      contentClassName="max-h-[80vh] overflow-y-auto"
+    >
       <h2 className="text-lg font-bold text-red-600">⚠ 임계값 이상 경고</h2>
       <p className="mt-1 text-sm text-gray-500">기록 추가로 인해 다음 임계값 이상이 되었습니다</p>
       <ul className="mt-4 space-y-2">

@@ -6,6 +6,8 @@ interface Props {
   onClose: () => void
   closeOnEsc?: boolean
   closeOnBackdrop?: boolean
+  /** 모바일에서 하단 드로어(바텀 시트)로 표시할지. false면 모든 화면에서 중앙 다이얼로그 */
+  drawer?: boolean
   /** 시트 내용부 추가 클래스 (예: max-h/overflow) */
   contentClassName?: string
   children: ReactNode
@@ -18,6 +20,7 @@ export function Modal({
   onClose,
   closeOnEsc = true,
   closeOnBackdrop = true,
+  drawer = true,
   contentClassName,
   children,
 }: Props) {
@@ -67,7 +70,9 @@ export function Modal({
 
   const overlay = (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      className={`fixed inset-0 z-50 flex justify-center bg-black/40 ${
+        drawer ? 'items-end sm:items-center sm:p-4' : 'items-center p-4'
+      }`}
       onClick={(e) => {
         if (closeOnBackdrop && e.target === e.currentTarget) onClose()
       }}
@@ -76,7 +81,11 @@ export function Modal({
     >
       <div
         ref={sheetRef}
-        className={`w-full rounded-t-2xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl sm:max-w-md sm:rounded-xl sm:pb-5 ${contentClassName ?? ''}`}
+        className={`bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl ${
+          drawer
+            ? 'w-full rounded-t-2xl sm:max-w-md sm:rounded-xl sm:pb-5'
+            : 'w-full max-w-md rounded-xl sm:pb-5'
+        } ${contentClassName ?? ''}`}
         style={{ overscrollBehavior: 'contain' }}
       >
         {children}
