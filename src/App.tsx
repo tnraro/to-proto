@@ -103,7 +103,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      <main className="mx-auto max-w-3xl px-4 pb-32 pt-4 sm:pt-6">
+      <main
+        className={`mx-auto max-w-3xl px-4 pt-4 sm:pt-6 ${
+          tab === 'record' ? 'pb-0' : 'pb-32'
+        }`}
+      >
         {tab === 'record' && (
           <RecordBrowser
             records={records}
