@@ -6,6 +6,7 @@ import { CalendarView } from './components/CalendarView'
 import { StatsView } from './components/StatsView'
 import { AlertModal } from './components/AlertModal'
 import { CatFormModal } from './components/CatFormModal'
+import { Onboarding } from './components/Onboarding'
 import { ThresholdManager } from './components/ThresholdManager'
 import { SettingsView } from './components/SettingsView'
 import type { AlertEntry, VomitRecord } from './types'
@@ -44,6 +45,17 @@ export default function App() {
     )
   }
 
+  if (!onboarded && cats.length === 0) {
+    return (
+      <Onboarding
+        onAdd={(name) => {
+          addCat(name)
+          completeOnboarding()
+        }}
+      />
+    )
+  }
+
   const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '?'
 
   const handleSubmit = async (input: RecordInput) => {
@@ -64,7 +76,6 @@ export default function App() {
   }
 
   const recent = records.slice(0, 30)
-  const showOnboarding = !onboarded && cats.length === 0 && records.length === 0
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -80,29 +91,6 @@ export default function App() {
       <main className="mx-auto max-w-3xl px-4 pb-32 pt-4 sm:pt-6">
         {tab === 'record' && (
           <div className="space-y-6">
-            {showOnboarding && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-                <h2 className="text-base font-bold text-emerald-800">반가워요!</h2>
-                <p className="mt-1 text-sm text-emerald-700">
-                  고양이 토 기록을 시작하려면 먼저 고양이를 등록해 주세요. 등록하면 기록, 캘린더, 통계를 바로
-                  사용할 수 있습니다.
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={openCatModal}
-                    className="min-h-11 rounded-lg bg-emerald-600 px-4 font-medium text-white hover:bg-emerald-700"
-                  >
-                    고양이 등록
-                  </button>
-                  <button
-                    onClick={completeOnboarding}
-                    className="min-h-11 rounded-lg border border-emerald-300 px-4 text-sm text-emerald-700"
-                  >
-                    다음에
-                  </button>
-                </div>
-              </div>
-            )}
             <RecordForm
               cats={cats}
               initial={editing}
