@@ -74,7 +74,7 @@ export function ThresholdManager({ cats, rules, alertLog, addRule, updateRule, d
                   <div className="text-sm font-medium">
                     {a.catName} · {a.typeLabel} · {a.windowDays}일 내 {a.maxCount}회 이상 (현재 {a.count}회)
                   </div>
-                  <RelativeTime iso={a.createdAt} className="text-xs text-gray-400" />
+                  <RelativeTime iso={a.createdAt} />
                 </div>
                 <button
                   onClick={() => deleteAlert(a.id)}

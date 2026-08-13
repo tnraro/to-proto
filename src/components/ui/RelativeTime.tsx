@@ -4,11 +4,11 @@ import { formatAbsoluteTime, formatRelativeTime } from '../../lib/dates'
 
 interface Props {
   iso: string
-  /** 표시기 스타일 (기본: 회색 필) */
+  /** 표시기 스타일 (기본: 통일된 작은 회색 텍스트) */
   className?: string
 }
 
-const DEFAULT_CLASS = 'rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500'
+const DEFAULT_CLASS = 'text-xs text-gray-500'
 
 export function RelativeTime({ iso, className = DEFAULT_CLASS }: Props) {
   const [show, setShow] = useState(false)
