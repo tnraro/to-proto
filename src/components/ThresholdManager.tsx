@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Cat, ThresholdRule, VomitType } from '../types'
 import { VOMIT_TYPES, VOMIT_TYPE_KEYS } from '../types'
 import { RULE_PRESETS } from '../lib/thresholds'
-import { RelativeTime } from './RelativeTime'
+import { RelativeTime } from './ui/RelativeTime'
 import type { RuleInput, Store } from '../hooks/useStore'
 
 const WINDOWS = [

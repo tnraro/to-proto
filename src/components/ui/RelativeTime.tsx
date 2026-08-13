@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { formatAbsoluteTime, formatRelativeTime } from '../lib/dates'
+import { formatAbsoluteTime, formatRelativeTime } from '../../lib/dates'
 
 interface Props {
   iso: string
+  /** 표시기 스타일 (기본: 회색 필) */
   className?: string
 }
 
-export function RelativeTime({ iso, className }: Props) {
+const DEFAULT_CLASS = 'rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500'
+
+export function RelativeTime({ iso, className = DEFAULT_CLASS }: Props) {
   const [show, setShow] = useState(false)
   const [pos, setPos] = useState<{ top: number; left: number; below: boolean } | null>(null)
   const spanRef = useRef<HTMLSpanElement>(null)
