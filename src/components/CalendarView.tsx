@@ -51,10 +51,18 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <button onClick={() => move(-1)} className="rounded-lg border border-gray-300 px-3 py-1.5 hover:bg-gray-50">
+          <button
+            onClick={() => move(-1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
+            aria-label="이전 달"
+          >
             ‹
           </button>
-          <button onClick={() => move(1)} className="rounded-lg border border-gray-300 px-3 py-1.5 hover:bg-gray-50">
+          <button
+            onClick={() => move(1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
+            aria-label="다음 달"
+          >
             ›
           </button>
           <button
@@ -62,7 +70,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
               setCursor(startOfMonth(today))
               setSelectedKey(toDateKey(today))
             }}
-            className="ml-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+            className="ml-1 min-h-9 rounded-full px-3 text-sm font-medium text-primary hover:bg-emerald-50"
           >
             오늘
           </button>
@@ -75,7 +83,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
         {WEEKDAYS.map((w, i) => (
           <div
             key={w}
-            className={`pb-1 text-center text-xs font-medium ${i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : 'text-gray-500'}`}
+            className={`pb-1 text-center text-xs font-medium ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-500'}`}
           >
             {w}
           </div>
@@ -90,14 +98,22 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
               key={i}
               disabled={!cell}
               onClick={() => cell && setSelectedKey(toDateKey(cell))}
-              className={`flex min-h-12 flex-col rounded-lg border p-1 text-left transition sm:min-h-16 ${
+              className={`flex min-h-12 flex-col rounded-lg p-1 text-left transition sm:min-h-16 ${
                 isSelected
-                  ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-100 bg-white hover:border-gray-300'
-              }`}
+                  ? 'bg-emerald-50 ring-2 ring-primary'
+                  : 'hover:bg-gray-100'
+              } ${!cell ? '' : 'bg-white'}`}
             >
               <span
-                className={`text-xs font-medium ${!cell ? '' : isToday ? 'text-emerald-600' : 'text-gray-600'}`}
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium ${
+                  !cell
+                    ? ''
+                    : isSelected
+                      ? 'bg-primary font-bold text-white'
+                      : isToday
+                        ? 'bg-emerald-100 text-primary'
+                        : 'text-gray-600'
+                }`}
               >
                 {cell?.getDate()}
               </span>
@@ -127,7 +143,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
         })}
       </div>
 
-      <div>
+      <div className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
         <h3 className="mb-2 text-sm font-semibold text-gray-600">{selectedKey} 기록</h3>
         <RecordList records={dayRecords} cats={cats} onEdit={onEdit} onDelete={onDelete} />
       </div>
