@@ -29,7 +29,7 @@ export function RecordBrowser({ records, cats, onEdit, onDelete }: Props) {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom))] flex-col gap-4 sm:h-[calc(100dvh-6rem-env(safe-area-inset-bottom))]">
+    <div className="flex h-full flex-col gap-4">
       <FilterPanel cats={cats} filters={filters} onChange={changeFilters} resultCount={filtered.length} />
 
       <div className="min-h-0 flex-1 overflow-y-auto">

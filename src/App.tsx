@@ -102,12 +102,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <main
-        className={`mx-auto max-w-3xl px-4 pt-4 sm:pt-6 ${
-          tab === 'record' ? 'pb-0' : 'pb-32'
-        }`}
-      >
+    <div className="flex h-dvh flex-col overflow-hidden bg-gray-50 text-gray-900">
+      <main className="relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto px-4 pt-4 sm:pt-6">
         {tab === 'record' && (
           <RecordBrowser
             records={records}
@@ -136,6 +132,13 @@ export default function App() {
         {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
 
         {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} />}
+
+        <button
+          onClick={openAddFromFAB}
+          className="absolute bottom-4 right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
+        >
+          기록 추가
+        </button>
       </main>
 
       <RecordFormModal
@@ -151,14 +154,7 @@ export default function App() {
 
       <CatFormModal open={catModalOpen} onClose={() => setCatModalOpen(false)} onAdd={handleCatAdd} />
 
-      <button
-        onClick={openAddFromFAB}
-        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
-      >
-        기록 추가
-      </button>
-
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">
+      <nav className="shrink-0 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto grid max-w-3xl grid-cols-5">
           {TABS.map((t) => (
             <button
