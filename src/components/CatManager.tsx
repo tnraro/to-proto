@@ -18,12 +18,12 @@ export function CatManager({ cats, renameCat, updateCatPhoto, deleteCat, onAddCa
     <div className="space-y-4">
       <button
         onClick={onAddCat}
-        className="min-h-11 w-full rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50 font-medium text-emerald-700 hover:bg-emerald-100"
+        className="min-h-11 w-full rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 font-medium text-primary hover:bg-primary/10"
       >
         + 고양이 추가
       </button>
 
-      <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+      <ul className="divide-y divide-gray-100 rounded-card border border-gray-100 bg-white shadow-card">
         {cats.map((cat) => (
           <CatItem
             key={cat.id}

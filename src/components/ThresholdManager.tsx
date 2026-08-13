@@ -39,7 +39,7 @@ export function ThresholdManager({ cats, rules, alertLog, addRule, updateRule, d
       <section>
         <h2 className="mb-3 text-sm font-semibold text-gray-600">임계값 규칙</h2>
         <RuleForm cats={cats} editing={editing} onSubmit={handleSubmit} onCancel={() => setEditing(null)} />
-        <ul className="mt-3 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
+        <ul className="mt-3 divide-y divide-gray-100 rounded-card border border-gray-100 bg-white shadow-card">
           {rules.map((rule) => (
             <RuleItem key={rule.id} rule={rule} cats={cats} onUpdate={updateRule} onDelete={deleteRule} onEdit={setEditing} />
           ))}
@@ -66,7 +66,7 @@ export function ThresholdManager({ cats, rules, alertLog, addRule, updateRule, d
         {alertLog.length === 0 ? (
           <p className="py-8 text-center text-sm text-gray-400">경고 이력이 없습니다</p>
         ) : (
-          <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
+          <ul className="divide-y divide-gray-100 rounded-card border border-gray-100 bg-white shadow-card">
             {alertLog.map((a) => (
               <li key={a.id} className="flex items-center gap-3 px-4 py-3">
                 <span className="inline-block h-3 w-3 shrink-0 rounded-full bg-red-500" />
@@ -129,14 +129,14 @@ function RuleForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <form onSubmit={submit} className="space-y-3 rounded-card border border-gray-100 bg-white p-4 shadow-card">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-gray-600">고양이</span>
           <select
             value={catId}
             onChange={(e) => setCatId(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
           >
             <option value="all">전체 고양이</option>
             {cats.map((c) => (
@@ -151,7 +151,7 @@ function RuleForm({
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
           >
             <option value="all">종류 무관</option>
             {VOMIT_TYPE_KEYS.map((k) => (
@@ -166,7 +166,7 @@ function RuleForm({
           <select
             value={windowDays}
             onChange={(e) => setWindowDays(Number(e.target.value))}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
           >
             {WINDOWS.map((w) => (
               <option key={w.days} value={w.days}>
@@ -182,7 +182,7 @@ function RuleForm({
             min={1}
             value={maxCount}
             onChange={(e) => setMaxCount(Number(e.target.value))}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
           />
         </label>
       </div>
@@ -190,7 +190,7 @@ function RuleForm({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="submit"
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
         >
           {editing ? '규칙 수정' : '규칙 추가'}
         </button>
@@ -198,7 +198,7 @@ function RuleForm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600"
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600"
           >
             취소
           </button>
@@ -214,7 +214,7 @@ function RuleForm({
               setMaxCount(p.maxCount)
               setType(p.type ?? 'all')
             }}
-            className="rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-500 hover:bg-gray-50"
+            className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-500 hover:bg-gray-50"
           >
             {p.label}
           </button>
