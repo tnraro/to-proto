@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   FloatingFocusManager,
   FloatingPortal,
+  autoUpdate,
   useClick,
   useDismiss,
   useFloating,
@@ -61,6 +62,7 @@ function RecordListItem({
     placement: 'bottom-end',
     strategy: 'fixed',
     middleware: [offset(4), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
   })
   const click = useClick(context)
   const dismiss = useDismiss(context)
