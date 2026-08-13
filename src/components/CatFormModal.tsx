@@ -3,7 +3,7 @@ import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
 import { Modal } from './Modal'
 import { PhotoPreview } from './PhotoPreview'
-import { ImageEditorModal } from './ImageEditorModal'
+import { CatPhotoPicker } from './CatPhotoPicker'
 
 interface Props {
   open: boolean
@@ -14,15 +14,12 @@ interface Props {
 export function CatFormModal({ open, onClose, onAdd }: Props) {
   const [name, setName] = useState('')
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
-  const [editingBlob, setEditingBlob] = useState<Blob | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) {
       setName('')
       setPhotoBlob(null)
-      setEditingBlob(null)
       setTimeout(() => inputRef.current?.focus(), 0)
     }
   }, [open])
@@ -56,30 +53,24 @@ export function CatFormModal({ open, onClose, onAdd }: Props) {
           {photoBlob ? (
             <PhotoPreview blob={photoBlob} onRemove={() => setPhotoBlob(null)} />
           ) : (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-2xl text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
-            >
-              +
-            </button>
+            <CatPhotoPicker
+              onPhoto={setPhotoBlob}
+              renderTrigger={(open) => (
+                <button
+                  type="button"
+                  onClick={open}
+                  className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-2xl text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
+                >
+                  +
+                </button>
+              )}
+            />
           )}
           <div className="text-sm text-gray-500">
             <p>고양이 사진 (선택)</p>
             <p className="text-xs text-gray-400">없으면 기본 아바타가 표시됩니다</p>
           </div>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) setEditingBlob(file)
-            if (fileRef.current) fileRef.current.value = ''
-          }}
-        />
         <button
           type="submit"
           disabled={!name.trim()}
@@ -94,16 +85,6 @@ export function CatFormModal({ open, onClose, onAdd }: Props) {
       >
         취소
       </button>
-      <ImageEditorModal
-        open={editingBlob !== null}
-        image={editingBlob}
-        aspect={1}
-        onCancel={() => setEditingBlob(null)}
-        onApply={(blob) => {
-          setPhotoBlob(blob)
-          setEditingBlob(null)
-        }}
-      />
     </Modal>
   )
 }

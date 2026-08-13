@@ -52,8 +52,8 @@ export default function App() {
   if (cats.length === 0) {
     return (
       <Onboarding
-        onFinish={(names) => {
-          for (const n of names) addCat(n)
+        onFinish={(cats) => {
+          for (const c of cats) addCat(c.name, c.photoId)
         }}
       />
     )

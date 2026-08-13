@@ -1,24 +1,52 @@
 import { useRef, useState } from 'react'
+import { putPhoto, uid } from '../lib/storage'
+import { resizeImage } from '../lib/image'
+import { useObjectUrl } from '../lib/useObjectUrl'
+import { CatPhotoPicker } from './CatPhotoPicker'
 
 interface Props {
-  onFinish: (names: string[]) => void
+  onFinish: (cats: { name: string; photoId?: string }[]) => void
+}
+
+interface Item {
+  name: string
+  photoBlob: Blob | null
 }
 
 export function Onboarding({ onFinish }: Props) {
-  const [names, setNames] = useState<string[]>([])
+  const [items, setItems] = useState<Item[]>([])
   const [name, setName] = useState('')
+  const [starting, setStarting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const add = () => {
     const trimmed = name.trim()
     if (!trimmed) return
-    setNames((prev) => [...prev, trimmed])
+    setItems((prev) => [...prev, { name: trimmed, photoBlob: null }])
     setName('')
     inputRef.current?.focus()
   }
 
   const remove = (index: number) => {
-    setNames((prev) => prev.filter((_, i) => i !== index))
+    setItems((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const setPhoto = (index: number, blob: Blob) => {
+    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, photoBlob: blob } : it)))
+  }
+
+  const finish = async () => {
+    if (starting) return
+    setStarting(true)
+    const cats = await Promise.all(
+      items.map(async (it) => {
+        if (!it.photoBlob) return { name: it.name }
+        const photoId = uid()
+        await putPhoto(photoId, await resizeImage(it.photoBlob))
+        return { name: it.name, photoId }
+      }),
+    )
+    onFinish(cats)
   }
 
   return (
@@ -58,19 +86,23 @@ export function Onboarding({ onFinish }: Props) {
             </button>
           </div>
 
-          {names.length > 0 && (
+          {items.length > 0 && (
             <ul className="mt-4 flex flex-wrap justify-center gap-2">
-              {names.map((n, i) => (
+              {items.map((it, i) => (
                 <li
-                  key={`${n}-${i}`}
-                  className="flex items-center gap-1 rounded-full bg-primary/10 py-1.5 pl-3 pr-1.5 text-sm font-medium text-primary"
+                  key={`${it.name}-${i}`}
+                  className="flex items-center gap-1 rounded-full bg-primary/10 py-1 pl-1.5 pr-1.5 text-sm font-medium text-primary"
                 >
-                  {n}
+                  <CatPhotoPicker
+                    onPhoto={(blob) => setPhoto(i, blob)}
+                    renderTrigger={(open) => <ChipPhotoButton blob={it.photoBlob} open={open} name={it.name} />}
+                  />
+                  <span>{it.name}</span>
                   <button
                     type="button"
                     onClick={() => remove(i)}
                     className="flex h-6 w-6 items-center justify-center rounded-full text-xs text-primary hover:bg-primary/20"
-                    aria-label={`${n} 제거`}
+                    aria-label={`${it.name} 제거`}
                   >
                     ✕
                   </button>
@@ -81,17 +113,42 @@ export function Onboarding({ onFinish }: Props) {
 
           <button
             type="button"
-            onClick={() => onFinish(names)}
-            disabled={names.length === 0}
+            onClick={() => void finish()}
+            disabled={items.length === 0 || starting}
             className="mt-4 min-h-12 w-full rounded-xl bg-primary font-semibold text-white hover:bg-primary-hover disabled:opacity-40"
           >
-            {names.length > 0 ? `${names.length}마리 등록하고 시작하기` : '등록하고 시작하기'}
+            {starting
+              ? '등록 중...'
+              : items.length > 0
+                ? `${items.length}마리 등록하고 시작하기`
+                : '등록하고 시작하기'}
           </button>
         </div>
       </div>
       <p className="mt-6 text-xs text-gray-400">
-        나중에 설정에서 언제든 고양이를 추가할 수 있어요
+        사진은 선택이며, 나중에 설정에서 언제든 추가할 수 있어요
       </p>
     </div>
+  )
+}
+
+function ChipPhotoButton({ blob, name, open }: { blob: Blob | null; name: string; open: () => void }) {
+  const url = useObjectUrl(blob ?? undefined)
+  return (
+    <button
+      type="button"
+      onClick={open}
+      aria-label={`${name} 사진 등록`}
+      className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xs text-gray-400 ring-1 ring-primary/20 hover:text-primary"
+    >
+      {url ? (
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      )}
+    </button>
   )
 }
