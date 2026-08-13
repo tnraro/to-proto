@@ -4,7 +4,7 @@ export const STORES = ['cats', 'records', 'rules', 'alertLog', 'photos', 'draft'
 export type StoreName = (typeof STORES)[number]
 
 const DB_NAME = 'to-app'
-export const DB_VERSION = 3
+export const DB_VERSION = 1
 
 let dbPromise: Promise<IDBDatabase> | null = null
 

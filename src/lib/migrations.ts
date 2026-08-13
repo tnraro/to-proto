@@ -12,14 +12,11 @@ export interface Migration {
 
 /**
  * 버전별 스키마 히스토리.
- * - v2: 정규화 스토어 도입 (cats/records/rules/alertLog/photos, records.catId 인덱스)
- * - v3: draft 스토어 추가
- * 과거 버전은 이미 배포되어 데이터 이관 없음 정책(no-op)으로 기록만 남긴다.
- * 향후 스키마 변경 시: DB_VERSION을 올리고 이 배열에 새 항목을 추가할 것.
+ * - v1: 초기 스키마
+ * 향후 스키마 변경 시: db.ts의 DB_VERSION을 올리고 이 배열에 새 항목을 추가할 것.
  */
 export const MIGRATIONS: Migration[] = [
-  { version: 2, name: '정규화 스토어 도입', up: () => {} },
-  { version: 3, name: 'draft 스토어 추가', up: () => {} },
+  { version: 1, name: 'initial schema', up: () => {} },
 ]
 
 export function runMigrations(db: IDBDatabase, oldVersion: number, tx: IDBTransaction): void {

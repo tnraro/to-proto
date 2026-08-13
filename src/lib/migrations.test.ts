@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import 'fake-indexeddb/auto'
 import { dbGet, dbGetAll, dbPut, resetDbForTests } from './db'
-import { MIGRATIONS } from './migrations'
+import { MIGRATIONS, runMigrations } from './migrations'
 
 const DB_NAME = 'to-app'
 
@@ -26,24 +26,24 @@ describe('IndexedDB 마이그레이션', () => {
     expect((await dbGet<{ id: string }>('draft', 'x'))?.id).toBe('x')
   })
 
-  test('기존 설치(v2) → 현재 버전 업그레이드: 마이그레이션 실행 + 데이터 보존', async () => {
-    // v3 마이그레이션은 실제 배포 시 no-op이므로, 업그레이드 흐름을 검증하기 위해
-    // draft 스토어를 생성하는 마이그레이션을 임시 등록한다
+  test('기존 설치(v1) → 업그레이드: 마이그레이션 실행 + 데이터 보존', async () => {
+    // 현재 버전(v1)에 아직 다음 버전이 없으므로, 업그레이드 흐름을 검증하기 위한
+    // 임시 마이그레이션을 등록한다
     const originalLength = MIGRATIONS.length
     MIGRATIONS.push({
-      version: 3,
-      name: 'test: draft 스토어 추가',
+      version: 2,
+      name: 'test: extra 스토어 추가',
       up: (db) => {
-        db.createObjectStore('draft', { keyPath: 'id' })
+        db.createObjectStore('extra', { keyPath: 'id' })
       },
     })
 
     try {
       await resetDbForTests()
 
-      // 1) 구버전(v2) DB를 직접 생성하고 기록 데이터를 넣는다
-      const oldDb = await openAtVersion(2, (d) => {
-        for (const name of ['cats', 'records', 'rules', 'alertLog', 'photos']) {
+      // 1) 현재 버전(v1) DB를 직접 생성하고 기록 데이터를 넣는다
+      const oldDb = await openAtVersion(1, (d) => {
+        for (const name of ['cats', 'records', 'rules', 'alertLog', 'photos', 'draft']) {
           d.createObjectStore(name, { keyPath: 'id' })
         }
       })
@@ -64,14 +64,30 @@ describe('IndexedDB 마이그레이션', () => {
       })
       oldDb.close()
 
-      // 2) 앱 openDB(현재 버전) 호출 → 등록된 마이그레이션 실행
-      const records = await dbGetAll('records')
-      expect(records).toHaveLength(1)
-      expect(records[0].id).toBe('r1')
+      // 2) 더 높은 버전으로 수동 오픈 → 등록된 마이그레이션 실행
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 2)
+        req.onupgradeneeded = (e) => {
+          runMigrations(req.result, (e as IDBVersionChangeEvent).oldVersion, req.transaction!)
+        }
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => reject(req.error)
+      })
 
-      // 3) 마이그레이션이 새 스토어를 생성
-      await dbPut('draft', { id: 'record', applyTo: 'add', savedAt: Date.now() })
-      expect((await dbGet<{ id: string }>('draft', 'record'))?.id).toBe('record')
+      // 3) 기존 데이터 보존 + 새 스토어 생성 확인
+      const tx = db.transaction(['records', 'extra'], 'readwrite')
+      const got = await new Promise<Array<{ id: string }>>((resolve) => {
+        const r = tx.objectStore('records').getAll()
+        r.onsuccess = () => resolve(r.result as Array<{ id: string }>)
+      })
+      expect(got).toHaveLength(1)
+      expect(got[0].id).toBe('r1')
+      tx.objectStore('extra').put({ id: 'record', applyTo: 'add', savedAt: Date.now() })
+      await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+      })
+      db.close()
     } finally {
       MIGRATIONS.length = originalLength
     }
