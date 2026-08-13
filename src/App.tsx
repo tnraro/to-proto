@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useStore } from './hooks/useStore'
-import { RecordForm, type RecordInput } from './components/RecordForm'
+import { type RecordInput } from './components/RecordForm'
 import { RecordList } from './components/RecordList'
+import { RecordFormModal } from './components/RecordFormModal'
 import { CalendarView } from './components/CalendarView'
 import { StatsView } from './components/StatsView'
 import { AlertModal } from './components/AlertModal'
@@ -24,7 +25,9 @@ const TABS: { id: Tab; label: string }[] = [
 export default function App() {
   const store = useStore()
   const [tab, setTab] = useState<Tab>('record')
-  const [editing, setEditing] = useState<VomitRecord | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [formInitial, setFormInitial] = useState<VomitRecord | null>(null)
+  const [formPresetDate, setFormPresetDate] = useState<string | null>(null)
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
 
@@ -56,21 +59,31 @@ export default function App() {
 
   const catName = (id: string) => cats.find((c) => c.id === id)?.name ?? '?'
 
+  const openRecordForm = (initial: VomitRecord | null = null, presetDate: string | null = null) => {
+    setFormInitial(initial)
+    setFormPresetDate(presetDate)
+    setFormOpen(true)
+  }
+
+  const closeRecordForm = () => {
+    setFormOpen(false)
+    setFormInitial(null)
+    setFormPresetDate(null)
+  }
+
   const handleSubmit = async (input: RecordInput) => {
-    if (editing) {
-      await updateRecord(editing.id, input)
-      setEditing(null)
+    if (formInitial) {
+      await updateRecord(formInitial.id, input)
     } else {
       const newAlerts = await addRecord(input)
       if (newAlerts.length > 0) setModalAlerts(newAlerts)
     }
+    closeRecordForm()
     setTab('record')
   }
 
   const handleEdit = (r: VomitRecord) => {
-    setEditing(r)
-    setTab('record')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    openRecordForm(r)
   }
 
   const recent = records.slice(0, 30)
@@ -89,13 +102,6 @@ export default function App() {
       <main className="mx-auto max-w-3xl px-4 pb-32 pt-4 sm:pt-6">
         {tab === 'record' && (
           <div className="space-y-6">
-            <RecordForm
-              cats={cats}
-              initial={editing}
-              onSubmit={handleSubmit}
-              onCancel={editing ? () => setEditing(null) : undefined}
-              onAddCat={openCatModal}
-            />
             <section>
               <h2 className="mb-2 text-sm font-semibold text-gray-600">최근 기록</h2>
               <RecordList
@@ -112,7 +118,13 @@ export default function App() {
         )}
 
         {tab === 'calendar' && (
-          <CalendarView records={records} cats={cats} onEdit={handleEdit} onDelete={deleteRecord} />
+          <CalendarView
+            records={records}
+            cats={cats}
+            onEdit={handleEdit}
+            onDelete={deleteRecord}
+            onAddRecord={(dateKey) => openRecordForm(null, dateKey)}
+          />
         )}
 
         {tab === 'stats' && <StatsView records={records} cats={cats} />}
@@ -124,14 +136,22 @@ export default function App() {
 
       <CatFormModal open={catModalOpen} onClose={() => setCatModalOpen(false)} onAdd={handleCatAdd} />
 
-      {tab !== 'record' && (
-        <button
-          onClick={() => setTab('record')}
-          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
-        >
-          기록 추가
-        </button>
-      )}
+      <RecordFormModal
+        open={formOpen}
+        cats={cats}
+        initial={formInitial}
+        presetDate={formPresetDate}
+        onSubmit={handleSubmit}
+        onCancel={closeRecordForm}
+        onAddCat={openCatModal}
+      />
+
+      <button
+        onClick={() => openRecordForm()}
+        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
+      >
+        기록 추가
+      </button>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto grid max-w-3xl grid-cols-5">

@@ -14,6 +14,8 @@ const MAX_PHOTOS = 6
 interface Props {
   cats: Cat[]
   initial?: VomitRecord | null
+  /** YYYY-MM-DD: 캘린더에서 날짜 선택 시 프리셋 */
+  presetDate?: string | null
   onSubmit: (input: RecordInput) => void
   onCancel?: () => void
   onAddCat: () => void
@@ -24,11 +26,18 @@ interface ExistingPhoto {
   blob: Blob
 }
 
-export function RecordForm({ cats, initial, onSubmit, onCancel, onAddCat }: Props) {
+export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAddCat }: Props) {
   const now = new Date()
-  const [datetime, setDatetime] = useState(() =>
-    initial ? toLocalDateTimeInput(new Date(initial.datetime)) : toLocalDateTimeInput(now),
-  )
+  const initialDatetime = () => {
+    if (initial) return toLocalDateTimeInput(new Date(initial.datetime))
+    if (presetDate) {
+      const d = new Date(presetDate)
+      d.setHours(now.getHours(), now.getMinutes(), 0, 0)
+      return toLocalDateTimeInput(d)
+    }
+    return toLocalDateTimeInput(now)
+  }
+  const [datetime, setDatetime] = useState(initialDatetime)
   const [catId, setCatId] = useState(() => initial?.catId ?? cats[0]?.id ?? '')
   const [types, setTypes] = useState<VomitType[]>(() =>
     initial && initial.types.length > 0 ? initial.types : ['food'],
@@ -89,7 +98,7 @@ export function RecordForm({ cats, initial, onSubmit, onCancel, onAddCat }: Prop
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <form onSubmit={submit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-gray-600">날짜 · 시간</span>
