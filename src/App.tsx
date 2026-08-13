@@ -102,8 +102,8 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-gray-50 text-gray-900">
-      <main className="relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto">
+    <div className="flex h-dvh flex-col overflow-hidden bg-gray-100 text-gray-900">
+      <main className="no-scrollbar relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto">
         {tab === 'record' && (
           <RecordBrowser
             records={records}
@@ -136,8 +136,9 @@ export default function App() {
 
       <button
         onClick={openAddFromFAB}
-        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 active:scale-95"
+        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex items-center gap-1.5 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-pop active:scale-95"
       >
+        <span className="text-base leading-none">+</span>
         기록 추가
       </button>
 
@@ -160,10 +161,13 @@ export default function App() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
-                tab === t.id ? 'font-semibold text-emerald-600' : 'text-gray-500'
+              className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
+                tab === t.id ? 'font-semibold text-primary' : 'text-gray-500'
               }`}
             >
+              {tab === t.id && (
+                <span className="absolute top-1 h-1 w-5 rounded-full bg-primary" />
+              )}
               {t.label}
               {t.id === 'alert' && alertLog.length > 0 && (
                 <span className="rounded-full bg-red-100 px-1.5 py-px text-[10px] font-medium text-red-600">
