@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useFloating, offset, shift, autoUpdate } from '@floating-ui/react-dom'
 import type { Cat, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { formatRelativeTime } from '../lib/dates'
@@ -34,8 +35,6 @@ export function RecordList({ records, onEdit, onDelete, catNameFor, emptyText }:
   )
 }
 
-const MENU_WIDTH = 112
-
 function RecordListItem({
   record,
   catName,
@@ -48,42 +47,30 @@ function RecordListItem({
   onDelete: (id: string) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const { refs, floatingStyles } = useFloating<HTMLButtonElement>({
+    placement: 'bottom-end',
+    strategy: 'fixed',
+    middleware: [offset(4), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  })
 
   useEffect(() => {
     if (!menuOpen) return
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node
-      if (buttonRef.current?.contains(target) || dropdownRef.current?.contains(target)) return
+      if (refs.reference.current?.contains(target) || refs.floating.current?.contains(target)) return
       setMenuOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMenuOpen(false)
     }
-    const onScroll = () => setMenuOpen(false)
     document.addEventListener('pointerdown', onPointerDown)
     document.addEventListener('keydown', onKey)
-    window.addEventListener('scroll', onScroll, true)
     return () => {
       document.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('keydown', onKey)
-      window.removeEventListener('scroll', onScroll, true)
     }
-  }, [menuOpen])
-
-  const toggleMenu = () => {
-    if (menuOpen) {
-      setMenuOpen(false)
-      return
-    }
-    const rect = buttonRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const left = Math.max(8, Math.min(rect.left + rect.width - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8))
-    setMenuPos({ top: rect.bottom + 4, left })
-    setMenuOpen(true)
-  }
+  }, [menuOpen, refs.reference, refs.floating])
 
   return (
     <li className="flex gap-3 px-4 py-3">
@@ -112,9 +99,9 @@ function RecordListItem({
       </div>
 
       <button
-        ref={buttonRef}
+        ref={refs.reference}
         type="button"
-        onClick={toggleMenu}
+        onClick={() => setMenuOpen((v) => !v)}
         className="flex h-11 w-9 shrink-0 items-center justify-center self-start rounded text-gray-400 hover:bg-gray-100"
         aria-label="기록 메뉴"
       >
@@ -122,13 +109,8 @@ function RecordListItem({
       </button>
 
       {menuOpen &&
-        menuPos &&
         createPortal(
-          <div
-            ref={dropdownRef}
-            className="fixed z-50"
-            style={{ top: menuPos.top, left: menuPos.left }}
-          >
+          <div ref={refs.floating as React.Ref<HTMLDivElement>} className="z-50" style={floatingStyles}>
             <div className="w-28 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
               <button
                 onClick={() => {
