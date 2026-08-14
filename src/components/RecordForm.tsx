@@ -173,7 +173,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       window.removeEventListener('pointerup', onWindowPointerEnd)
       window.removeEventListener('pointercancel', onWindowPointerEnd)
     }
-  }, [])
+  }, [onWindowPointerMove, onWindowPointerEnd])
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
