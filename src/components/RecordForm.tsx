@@ -25,8 +25,6 @@ interface PhotoItem {
   /** 기존 사진의 id (새 사진은 undefined) */
   id?: string
   blob: Blob
-  /** 편집 전 원본 (새 사진만 존재) — 재편집 시 원본 기준 */
-  original?: Blob
 }
 
 export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAddCat }: Props) {
@@ -48,11 +46,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
   const [editingQueue, setEditingQueue] = useState<File[]>([])
-  const [editingKey, setEditingKey] = useState<string | null>(null)
-  const reeditItem = editingKey !== null ? photoItems.find((p) => p.key === editingKey) : undefined
-  // 재편집: 원본이 있으면 원본, 없으면 현재 편집본 (기존 사진)
-  const editingBlob =
-    editingKey !== null ? (reeditItem?.original ?? reeditItem?.blob ?? null) : (editingQueue[0] ?? null)
+  const editingBlob = editingQueue[0] ?? null
   const fileRef = useRef<HTMLInputElement>(null)
   const draftReady = useRef(false)
   const dragKeyRef = useRef<string | null>(null)
@@ -75,7 +69,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       }
       // 사진 목록 복원: 기존 사진(원래 순서, 제거된 것 제외) + 새 사진
       const newBlobs = validDraft ? draft.newPhotos.map((p) => p.blob) : []
-      const newOriginals = validDraft ? draft.newPhotos.map((p) => p.original) : []
       const removed = validDraft ? draft.removedPhotos : []
       if (initial) {
         const existing: PhotoItem[] = []
@@ -84,13 +77,9 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
           const blob = await getPhoto(id)
           if (blob) existing.push({ key: id, id, blob })
         }
-        if (!cancelled)
-          setPhotoItems([
-            ...existing,
-            ...newBlobs.map((blob, i) => ({ key: uid(), blob, original: newOriginals[i] })),
-          ])
+        if (!cancelled) setPhotoItems([...existing, ...newBlobs.map((blob) => ({ key: uid(), blob }))])
       } else if (!cancelled) {
-        setPhotoItems(newBlobs.map((blob, i) => ({ key: uid(), blob, original: newOriginals[i] })))
+        setPhotoItems(newBlobs.map((blob) => ({ key: uid(), blob })))
       }
       draftReady.current = true
     })()
@@ -109,7 +98,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       catId,
       types,
       memo,
-      newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob, original: p.original })),
+      newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
       removedPhotos,
       savedAt: Date.now(),
     }
@@ -140,34 +129,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     setPhotoItems((prev) => prev.filter((p) => p.key !== key))
   }
 
-  const startReedit = (key: string) => {
-    setEditingKey(key)
-  }
-
   const cancelEditing = () => {
-    if (editingKey !== null) {
-      setEditingKey(null)
-    } else {
-      setEditingQueue((prev) => prev.slice(1))
-    }
+    setEditingQueue((prev) => prev.slice(1))
   }
 
   const applyEdited = (blob: Blob) => {
-    if (editingKey !== null) {
-      // 재편집: 위치 유지, id 제거 → 제출 시 새 사진으로 저장된다.
-      // 원본이 없으면 편집 전 blob을 original로 승격해 반복 재편집 시 화질 저하 방지
-      setPhotoItems((prev) =>
-        prev.map((p) =>
-          p.key === editingKey ? { ...p, blob, id: undefined, original: p.original ?? p.blob } : p,
-        ),
-      )
-      setEditingKey(null)
-    } else {
-      // 새 사진: 원본(편집 전 파일)을 함께 보관
-      const original = editingQueue[0]
-      setPhotoItems((prev) => [...prev, { key: uid(), blob, original }])
-      setEditingQueue((prev) => prev.slice(1))
-    }
+    setPhotoItems((prev) => [...prev, { key: uid(), blob }])
+    setEditingQueue((prev) => prev.slice(1))
   }
 
   const onHandlePointerDown = (e: React.PointerEvent, key: string) => {
@@ -330,12 +298,11 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
               data-photo-key={p.key}
               className={`relative rounded-lg ${dragKey === p.key ? 'opacity-70 ring-2 ring-primary' : ''}`}
             >
-              <PhotoPreview blob={p.blob} onRemove={() => removePhoto(p.key)} onClick={() => startReedit(p.key)} />
+              <PhotoPreview blob={p.blob} onRemove={() => removePhoto(p.key)} />
               <button
                 type="button"
                 aria-label="사진 순서 변경"
                 onPointerDown={(e) => onHandlePointerDown(e, p.key)}
-                onClick={(e) => e.stopPropagation()}
                 className="absolute bottom-0.5 right-0.5 z-10 flex h-6 w-6 touch-none select-none items-center justify-center rounded-md bg-black/45 text-white"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
@@ -359,7 +326,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
             </button>
           )}
         </div>
-        <p className="mt-1 text-xs text-gray-400">썸네일을 클릭해 다시 편집하거나, 우하단 핸들로 순서를 변경하세요</p>
+        <p className="mt-1 text-xs text-gray-400">썸네일 우하단 핸들을 드래그해 순서를 변경하세요</p>
         <input
           ref={fileRef}
           type="file"
