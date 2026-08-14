@@ -23,7 +23,14 @@ export function SettingsView({
   deleteMarkerType,
   onAddCat,
   onNavigate,
-}: Store & { onAddCat: () => void; onNavigate: (tab: NavTab) => void }) {
+  showRecordCount,
+  onShowRecordCountChange,
+}: Store & {
+  onAddCat: () => void
+  onNavigate: (tab: NavTab) => void
+  showRecordCount: boolean
+  onShowRecordCountChange: (v: boolean) => void
+}) {
   const [confirming, setConfirming] = useState(false)
   const pwaStatus = usePwaStatus()
 
@@ -83,6 +90,28 @@ export function SettingsView({
         {pwaStatus === 'unsupported' && (
           <p className="text-sm text-gray-400">이 브라우저에서는 업데이트 확인을 지원하지 않습니다</p>
         )}
+      </Card>
+
+      <Card>
+        <h2 className="mb-3 text-sm font-semibold text-gray-700">실험</h2>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-gray-600">캘린더 일자 표시 — 토 N회 (실험)</p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showRecordCount}
+            onClick={() => onShowRecordCountChange(!showRecordCount)}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition ${
+              showRecordCount ? 'bg-primary' : 'bg-gray-300'
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+                showRecordCount ? 'left-[calc(100%-1.625rem)]' : 'left-0.5'
+              }`}
+            />
+          </button>
+        </div>
       </Card>
 
       <section className="rounded-card border border-red-200 bg-red-50 p-4">

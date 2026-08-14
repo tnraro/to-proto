@@ -16,6 +16,7 @@ import { SettingsView } from './components/SettingsView'
 import { AppHeader } from './components/AppHeader'
 import { DropdownMenu } from './components/DropdownMenu'
 import { deleteDraft } from './lib/storage'
+import { useFeatureFlag } from './hooks/useFeatureFlag'
 import type { AlertEntry, Marker, VomitRecord } from './types'
 
 type Tab = 'record' | 'calendar' | 'stats' | 'alert' | 'settings'
@@ -55,6 +56,8 @@ function Shell() {
   const [markerFormOpen, setMarkerFormOpen] = useState(false)
   const [markerFormInitial, setMarkerFormInitial] = useState<Marker | null>(null)
   const [markerPresetDate, setMarkerPresetDate] = useState<string | null>(null)
+  // 실험: 캘린더 일자 기록 표시를 '토 N회' 형식으로
+  const [showRecordCount, setShowRecordCount] = useFeatureFlag('calendar.recordCount', false)
 
   const {
     cats,
@@ -186,6 +189,7 @@ function Shell() {
       cats={cats}
       markers={catFilteredMarkers}
       markerTypes={markerTypes}
+      showRecordCount={showRecordCount}
       onEdit={handleEdit}
       onDelete={handleDelete}
       onEditMarker={handleEditMarker}
@@ -225,7 +229,13 @@ function Shell() {
           />
         )}
         {matchSettings && (
-          <SettingsView {...store} onAddCat={openCatModal} onNavigate={(t) => navigate(`/${t}`)} />
+          <SettingsView
+            {...store}
+            onAddCat={openCatModal}
+            onNavigate={(t) => navigate(`/${t}`)}
+            showRecordCount={showRecordCount}
+            onShowRecordCountChange={setShowRecordCount}
+          />
         )}
       </main>
 

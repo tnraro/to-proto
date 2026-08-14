@@ -13,6 +13,8 @@ interface Props {
   cats: Cat[]
   markers: Marker[]
   markerTypes: MarkerType[]
+  /** 실험: 일자 기록 표시를 '토 N회' 형식으로 */
+  showRecordCount?: boolean
   onEdit: (record: VomitRecord) => void
   onDelete: (id: string) => void
   onEditMarker: (marker: Marker) => void
@@ -26,6 +28,7 @@ export function CalendarView({
   cats,
   markers,
   markerTypes,
+  showRecordCount = false,
   onEdit,
   onDelete,
   onEditMarker,
@@ -143,24 +146,32 @@ export function CalendarView({
                   {markerCount > 1 ? ` 등 ${markerCount}` : ''}
                 </span>
               )}
-              {summary && (
-                <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                  {summary.slice(0, MAX_TYPE_PAIRS).map(({ type, count }) => (
-                    <span
-                      key={type}
-                      className="flex items-center gap-0.5"
-                      title={`${VOMIT_TYPES[type].label} ${count}회`}
-                    >
-                      <span className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[type].color}`} />
-                      {count > 1 && <span className="text-[10px] leading-none text-gray-500">{count}</span>}
-                    </span>
-                  ))}
-                  {summary.length > MAX_TYPE_PAIRS && (
-                    <span className="text-[10px] leading-none text-gray-400">
-                      +{summary.slice(MAX_TYPE_PAIRS).reduce((s, x) => s + x.count, 0)}
-                    </span>
-                  )}
-                </span>
+              {showRecordCount ? (
+                list && list.length > 0 ? (
+                  <span className="mt-0.5 block w-full truncate rounded bg-gray-100 px-1 text-[10px] leading-tight text-gray-600">
+                    토 {list.length}회
+                  </span>
+                ) : null
+              ) : (
+                summary && (
+                  <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                    {summary.slice(0, MAX_TYPE_PAIRS).map(({ type, count }) => (
+                      <span
+                        key={type}
+                        className="flex items-center gap-0.5"
+                        title={`${VOMIT_TYPES[type].label} ${count}회`}
+                      >
+                        <span className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[type].color}`} />
+                        {count > 1 && <span className="text-[10px] leading-none text-gray-500">{count}</span>}
+                      </span>
+                    ))}
+                    {summary.length > MAX_TYPE_PAIRS && (
+                      <span className="text-[10px] leading-none text-gray-400">
+                        +{summary.slice(MAX_TYPE_PAIRS).reduce((s, x) => s + x.count, 0)}
+                      </span>
+                    )}
+                  </span>
+                )
               )}
             </button>
           )
