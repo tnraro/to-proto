@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Cat, RecordDraft, RecordInput, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
@@ -131,12 +131,15 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
   const onHandlePointerDown = (e: React.PointerEvent, key: string) => {
     e.preventDefault()
-    e.currentTarget.setPointerCapture(e.pointerId)
     dragKeyRef.current = key
     setDragKey(key)
+    // 포인터가 핸들 밖으로 나가도 move/up을 받도록 window 레벨로 추적
+    window.addEventListener('pointermove', onWindowPointerMove)
+    window.addEventListener('pointerup', onWindowPointerEnd)
+    window.addEventListener('pointercancel', onWindowPointerEnd)
   }
 
-  const onHandlePointerMove = (e: React.PointerEvent) => {
+  const onWindowPointerMove = useCallback((e: PointerEvent) => {
     const fromKey = dragKeyRef.current
     if (!fromKey) return
     const hit = document
@@ -153,12 +156,24 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       next.splice(to, 0, moved)
       return next
     })
-  }
+  }, [])
 
-  const onHandlePointerEnd = () => {
+  const onWindowPointerEnd = useCallback(() => {
     dragKeyRef.current = null
     setDragKey(null)
-  }
+    window.removeEventListener('pointermove', onWindowPointerMove)
+    window.removeEventListener('pointerup', onWindowPointerEnd)
+    window.removeEventListener('pointercancel', onWindowPointerEnd)
+  }, [onWindowPointerMove])
+
+  useEffect(() => {
+    return () => {
+      // 드래그 중 컴포넌트 언마운트 시 리스너 정리
+      window.removeEventListener('pointermove', onWindowPointerMove)
+      window.removeEventListener('pointerup', onWindowPointerEnd)
+      window.removeEventListener('pointercancel', onWindowPointerEnd)
+    }
+  }, [])
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -279,9 +294,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
                 type="button"
                 aria-label="사진 순서 변경"
                 onPointerDown={(e) => onHandlePointerDown(e, p.key)}
-                onPointerMove={onHandlePointerMove}
-                onPointerUp={onHandlePointerEnd}
-                onPointerCancel={onHandlePointerEnd}
                 className="absolute bottom-0.5 right-0.5 z-10 flex h-6 w-6 touch-none select-none items-center justify-center rounded-md bg-black/45 text-white"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
