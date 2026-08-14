@@ -138,11 +138,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     setEditingQueue((prev) => prev.slice(1))
   }
 
-  const onHandlePointerDown = (e: React.PointerEvent, key: string) => {
+  const onThumbPointerDown = (e: React.PointerEvent, key: string) => {
+    // 제거 버튼에서 시작한 터치는 드래그로 취급하지 않는다
+    if ((e.target as HTMLElement).closest('button')) return
     e.preventDefault()
     dragKeyRef.current = key
     setDragKey(key)
-    // 포인터가 핸들 밖으로 나가도 move/up을 받도록 window 레벨로 추적
+    // 포인터가 썸네일 밖으로 나가도 move/up을 받도록 window 레벨로 추적
     window.addEventListener('pointermove', onWindowPointerMove)
     window.addEventListener('pointerup', onWindowPointerEnd)
     window.addEventListener('pointercancel', onWindowPointerEnd)
@@ -296,14 +298,15 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
             <div
               key={p.key}
               data-photo-key={p.key}
-              className={`relative rounded-lg ${dragKey === p.key ? 'opacity-70 ring-2 ring-primary' : ''}`}
+              onPointerDown={(e) => onThumbPointerDown(e, p.key)}
+              className={`relative touch-none select-none rounded-lg ${
+                dragKey === p.key ? 'opacity-70 ring-2 ring-primary' : ''
+              }`}
             >
               <PhotoPreview blob={p.blob} onRemove={() => removePhoto(p.key)} />
-              <button
-                type="button"
-                aria-label="사진 순서 변경"
-                onPointerDown={(e) => onHandlePointerDown(e, p.key)}
-                className="absolute bottom-0.5 right-0.5 z-10 flex h-6 w-6 touch-none select-none items-center justify-center rounded-md bg-black/45 text-white"
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-0.5 right-0.5 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/45 text-white"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
                   <circle cx="9" cy="6" r="1.4" />
@@ -313,7 +316,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
                   <circle cx="9" cy="18" r="1.4" />
                   <circle cx="15" cy="18" r="1.4" />
                 </svg>
-              </button>
+              </div>
             </div>
           ))}
           {photoItems.length < MAX_PHOTOS && (
@@ -326,7 +329,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
             </button>
           )}
         </div>
-        <p className="mt-1 text-xs text-gray-400">썸네일 우하단 핸들을 드래그해 순서를 변경하세요</p>
         <input
           ref={fileRef}
           type="file"
