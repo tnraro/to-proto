@@ -154,8 +154,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
   const applyEdited = (blob: Blob) => {
     if (editingKey !== null) {
-      // 재편집: 위치 유지, id 제거 → 제출 시 새 사진으로 저장된다 (original은 유지)
-      setPhotoItems((prev) => prev.map((p) => (p.key === editingKey ? { ...p, blob, id: undefined } : p)))
+      // 재편집: 위치 유지, id 제거 → 제출 시 새 사진으로 저장된다.
+      // 원본이 없으면 편집 전 blob을 original로 승격해 반복 재편집 시 화질 저하 방지
+      setPhotoItems((prev) =>
+        prev.map((p) =>
+          p.key === editingKey ? { ...p, blob, id: undefined, original: p.original ?? p.blob } : p,
+        ),
+      )
       setEditingKey(null)
     } else {
       // 새 사진: 원본(편집 전 파일)을 함께 보관
