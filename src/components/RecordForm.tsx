@@ -46,7 +46,9 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
   const [editingQueue, setEditingQueue] = useState<File[]>([])
-  const editingBlob = editingQueue[0] ?? null
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const editingBlob =
+    editingKey !== null ? (photoItems.find((p) => p.key === editingKey)?.blob ?? null) : (editingQueue[0] ?? null)
   const fileRef = useRef<HTMLInputElement>(null)
   const draftReady = useRef(false)
   const dragKeyRef = useRef<string | null>(null)
@@ -127,6 +129,29 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
   const removePhoto = (key: string) => {
     setPhotoItems((prev) => prev.filter((p) => p.key !== key))
+  }
+
+  const startReedit = (key: string) => {
+    setEditingKey(key)
+  }
+
+  const cancelEditing = () => {
+    if (editingKey !== null) {
+      setEditingKey(null)
+    } else {
+      setEditingQueue((prev) => prev.slice(1))
+    }
+  }
+
+  const applyEdited = (blob: Blob) => {
+    if (editingKey !== null) {
+      // 재편집: 위치 유지, id 제거 → 제출 시 새 사진으로 저장된다
+      setPhotoItems((prev) => prev.map((p) => (p.key === editingKey ? { ...p, blob, id: undefined } : p)))
+      setEditingKey(null)
+    } else {
+      setPhotoItems((prev) => [...prev, { key: uid(), blob }])
+      setEditingQueue((prev) => prev.slice(1))
+    }
   }
 
   const onHandlePointerDown = (e: React.PointerEvent, key: string) => {
@@ -289,11 +314,12 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
               data-photo-key={p.key}
               className={`relative rounded-lg ${dragKey === p.key ? 'opacity-70 ring-2 ring-primary' : ''}`}
             >
-              <PhotoPreview blob={p.blob} onRemove={() => removePhoto(p.key)} />
+              <PhotoPreview blob={p.blob} onRemove={() => removePhoto(p.key)} onClick={() => startReedit(p.key)} />
               <button
                 type="button"
                 aria-label="사진 순서 변경"
                 onPointerDown={(e) => onHandlePointerDown(e, p.key)}
+                onClick={(e) => e.stopPropagation()}
                 className="absolute bottom-0.5 right-0.5 z-10 flex h-6 w-6 touch-none select-none items-center justify-center rounded-md bg-black/45 text-white"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
@@ -317,7 +343,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
             </button>
           )}
         </div>
-        <p className="mt-1 text-xs text-gray-400">썸네일 우하단 핸들을 드래그해 순서를 변경하세요</p>
+        <p className="mt-1 text-xs text-gray-400">썸네일을 클릭해 다시 편집하거나, 우하단 핸들로 순서를 변경하세요</p>
         <input
           ref={fileRef}
           type="file"
@@ -345,11 +371,8 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       <ImageEditorModal
         open={editingBlob !== null}
         image={editingBlob}
-        onCancel={() => setEditingQueue((prev) => prev.slice(1))}
-        onApply={(blob) => {
-          setPhotoItems((prev) => [...prev, { key: uid(), blob }])
-          setEditingQueue((prev) => prev.slice(1))
-        }}
+        onCancel={cancelEditing}
+        onApply={applyEdited}
       />
     </form>
   )
