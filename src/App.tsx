@@ -79,6 +79,7 @@ function Shell() {
 
   // 캘린더·통계는 현재 선택된 고양이 기준으로 필터
   const catFilteredRecords = currentCatId ? records.filter((r) => r.catId === currentCatId) : records
+  const catFilteredMarkers = currentCatId ? markers.filter((m) => m.catIds.includes(currentCatId)) : markers
 
   const openCatModal = () => setCatModalOpen(true)
   const handleCatAdd = (name: string, photoId?: string) => {
@@ -183,8 +184,12 @@ function Shell() {
     <CalendarView
       records={catFilteredRecords}
       cats={cats}
+      markers={catFilteredMarkers}
+      markerTypes={markerTypes}
       onEdit={handleEdit}
       onDelete={handleDelete}
+      onEditMarker={handleEditMarker}
+      onDeleteMarker={handleDeleteMarker}
       onSelectedDateChange={setCalendarDate}
     />
   )

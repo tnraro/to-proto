@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Cat, VomitRecord, VomitType } from '../types'
+import type { Cat, Marker, MarkerType, TimelineItem, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { monthLabel, startOfMonth, toDateKey, groupByDay } from '../lib/dates'
 import { RecordList } from './RecordList'
@@ -11,13 +11,27 @@ const MAX_TYPE_PAIRS = 3
 interface Props {
   records: VomitRecord[]
   cats: Cat[]
+  markers: Marker[]
+  markerTypes: MarkerType[]
   onEdit: (record: VomitRecord) => void
   onDelete: (id: string) => void
+  onEditMarker: (marker: Marker) => void
+  onDeleteMarker: (id: string) => void
   /** 선택된 날짜(YYYY-MM-DD)를 상위로 보고 — FAB의 프리셋에 사용 */
   onSelectedDateChange: (dateKey: string) => void
 }
 
-export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateChange }: Props) {
+export function CalendarView({
+  records,
+  cats,
+  markers,
+  markerTypes,
+  onEdit,
+  onDelete,
+  onEditMarker,
+  onDeleteMarker,
+  onSelectedDateChange,
+}: Props) {
   const today = new Date()
   const [cursor, setCursor] = useState(() => startOfMonth(today))
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(today))
@@ -28,13 +42,18 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
 
   const cells = useMemo(() => buildMonthCells(cursor), [cursor])
 
-  const recordsByDay = useMemo(() => {
-    const map = groupByDay(records)
-    for (const list of map.values()) list.sort((a, b) => a.datetime.localeCompare(b.datetime))
-    return map
-  }, [records])
+  const recordsByDay = useMemo(() => groupByDay(records), [records])
+  const markersByDay = useMemo(() => groupByDay(markers), [markers])
 
-  const dayRecords = recordsByDay.get(selectedKey) ?? []
+  // 선택일의 기록+마커를 datetime 내림차순(최신순) 병합
+  const dayItems = useMemo<TimelineItem[]>(() => {
+    const recordsOfDay = recordsByDay.get(selectedKey) ?? []
+    const markersOfDay = markersByDay.get(selectedKey) ?? []
+    return [
+      ...recordsOfDay.map((r) => ({ kind: 'record' as const, payload: r })),
+      ...markersOfDay.map((m) => ({ kind: 'marker' as const, payload: m })),
+    ].sort((a, b) => b.payload.datetime.localeCompare(a.payload.datetime))
+  }, [recordsByDay, markersByDay, selectedKey])
 
   const move = (delta: number) => {
     const next = new Date(cursor)
@@ -86,6 +105,11 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
         {cells.map((cell, i) => {
           const key = cell ? toDateKey(cell) : null
           const list = key ? recordsByDay.get(key) : undefined
+          const dayMarkers = key ? markersByDay.get(key) : undefined
+          const markerCount = dayMarkers?.length ?? 0
+          const firstMarkerName = dayMarkers?.[0]
+            ? (markerTypes.find((t) => t.id === dayMarkers[0].typeId)?.name ?? '?')
+            : ''
           const summary = list ? summarizeByType(list) : null
           const isSelected = key === selectedKey
           const isToday = key === toDateKey(today)
@@ -113,6 +137,12 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
               >
                 {cell?.getDate()}
               </span>
+              {markerCount > 0 && (
+                <span className="mt-0.5 block w-full truncate rounded bg-blue-50 px-1 text-[10px] leading-tight text-blue-600">
+                  {firstMarkerName}
+                  {markerCount > 1 ? ` 외 ${markerCount - 1}` : ''}
+                </span>
+              )}
               {summary && (
                 <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                   {summary.slice(0, MAX_TYPE_PAIRS).map(({ type, count }) => (
@@ -140,10 +170,13 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
       <Card>
         <h3 className="mb-2 text-sm font-semibold text-gray-600">{selectedKey} 기록</h3>
         <RecordList
-          items={dayRecords.map((r) => ({ kind: 'record' as const, payload: r }))}
+          items={dayItems}
           cats={cats}
+          markerTypes={markerTypes}
           onEdit={onEdit}
           onDelete={onDelete}
+          onEditMarker={onEditMarker}
+          onDeleteMarker={onDeleteMarker}
         />
       </Card>
     </div>
