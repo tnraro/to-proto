@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from './hooks/useStore'
-import { type RecordInput } from './components/RecordForm'
+import { type RecordInput } from './types'
 import { RecordBrowser } from './components/RecordBrowser'
 import { RecordFormModal } from './components/RecordFormModal'
 import { CalendarView } from './components/CalendarView'

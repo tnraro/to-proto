@@ -1,15 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Cat, RecordDraft, VomitRecord, VomitType } from '../types'
+import type { Cat, RecordDraft, RecordInput, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
-import { deleteDraft, getPhoto, loadDraft, saveDraft } from '../lib/storage'
+import { deleteDraft, getPhoto, loadDraft, saveDraft, uid } from '../lib/storage'
 import { PhotoPreview } from './PhotoPreview'
 import { ImageEditorModal } from './ImageEditorModal'
-
-export type RecordInput = Omit<VomitRecord, 'id' | 'createdAt' | 'updatedAt' | 'photos'> & {
-  photos?: Blob[]
-  removedPhotos?: string[]
-}
 
 const MAX_PHOTOS = 6
 const DRAFT_TTL_MS = 30 * 60 * 1000
@@ -25,8 +20,10 @@ interface Props {
   onAddCat: () => void
 }
 
-interface ExistingPhoto {
-  id: string
+interface PhotoItem {
+  key: string
+  /** 기존 사진의 id (새 사진은 undefined) */
+  id?: string
   blob: Blob
 }
 
@@ -47,13 +44,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     initial && initial.types.length > 0 ? initial.types : [],
   )
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
-  const [newPhotos, setNewPhotos] = useState<Blob[]>([])
-  const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([])
-  const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([])
+  const [items, setItems] = useState<PhotoItem[]>([])
   const [editingQueue, setEditingQueue] = useState<File[]>([])
   const editingBlob = editingQueue[0] ?? null
   const fileRef = useRef<HTMLInputElement>(null)
   const draftReady = useRef(false)
+  const dragKeyRef = useRef<string | null>(null)
+  const [dragKey, setDragKey] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -61,15 +58,28 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       const draft = await loadDraft()
       if (cancelled) return
       const context = initial ? initial.id : 'add'
-      if (draft && draft.applyTo === context && Date.now() - draft.savedAt <= DRAFT_TTL_MS) {
+      const validDraft = draft && draft.applyTo === context && Date.now() - draft.savedAt <= DRAFT_TTL_MS
+      if (validDraft) {
         setDatetime(draft.datetime)
         setCatId(draft.catId)
         if (draft.types.length > 0) setTypes(draft.types)
         setMemo(draft.memo)
-        if (draft.newPhotos.length > 0) setNewPhotos(draft.newPhotos.map((p) => p.blob))
-        setRemovedPhotoIds(draft.removedPhotos)
       } else if (draft && Date.now() - draft.savedAt > DRAFT_TTL_MS) {
         void deleteDraft()
+      }
+      // 사진 목록 복원: 기존 사진(원래 순서, 제거된 것 제외) + 새 사진
+      const newBlobs = validDraft ? draft.newPhotos.map((p) => p.blob) : []
+      const removed = validDraft ? draft.removedPhotos : []
+      if (initial) {
+        const existing: PhotoItem[] = []
+        for (const id of initial.photos) {
+          if (removed.includes(id)) continue
+          const blob = await getPhoto(id)
+          if (blob) existing.push({ key: id, id, blob })
+        }
+        if (!cancelled) setItems([...existing, ...newBlobs.map((blob) => ({ key: uid(), blob }))])
+      } else if (!cancelled) {
+        setItems(newBlobs.map((blob) => ({ key: uid(), blob })))
       }
       draftReady.current = true
     })()
@@ -79,24 +89,8 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   }, [initial])
 
   useEffect(() => {
-    if (!initial || initial.photos.length === 0) return
-    let cancelled = false
-    void (async () => {
-      const loaded: ExistingPhoto[] = []
-      for (const id of initial.photos) {
-        if (removedPhotoIds.includes(id)) continue
-        const blob = await getPhoto(id)
-        if (blob) loaded.push({ id, blob })
-      }
-      if (!cancelled) setExistingPhotos(loaded)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [initial, removedPhotoIds])
-
-  useEffect(() => {
     if (!draftReady.current) return
+    const removedPhotos = initial ? initial.photos.filter((id) => !items.some((it) => it.id === id)) : []
     const draft: RecordDraft = {
       id: 'record',
       applyTo: initial ? initial.id : 'add',
@@ -104,13 +98,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       catId,
       types,
       memo,
-      newPhotos: newPhotos.map((blob, i) => ({ id: `d${i}`, blob })),
-      removedPhotos: removedPhotoIds,
+      newPhotos: items.filter((it) => !it.id).map((it, i) => ({ id: `d${i}`, blob: it.blob })),
+      removedPhotos,
       savedAt: Date.now(),
     }
     const t = setTimeout(() => void saveDraft(draft), DRAFT_SAVE_MS)
     return () => clearTimeout(t)
-  }, [datetime, catId, types, memo, newPhotos, removedPhotoIds, initial])
+  }, [datetime, catId, types, memo, items, initial])
 
   useEffect(() => {
     if (cats.length === 0) return
@@ -125,10 +119,45 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
   const onFiles = (files: FileList | null) => {
     if (!files) return
-    const added = Array.from(files).slice(0, MAX_PHOTOS - newPhotos.length - existingPhotos.length)
+    const added = Array.from(files).slice(0, MAX_PHOTOS - items.length)
     if (added.length === 0) return
     setEditingQueue((prev) => [...prev, ...added])
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const removePhoto = (key: string) => {
+    setItems((prev) => prev.filter((it) => it.key !== key))
+  }
+
+  const onHandlePointerDown = (e: React.PointerEvent, key: string) => {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragKeyRef.current = key
+    setDragKey(key)
+  }
+
+  const onHandlePointerMove = (e: React.PointerEvent) => {
+    const fromKey = dragKeyRef.current
+    if (!fromKey) return
+    const hit = document
+      .elementsFromPoint(e.clientX, e.clientY)
+      .find((n) => n instanceof HTMLElement && n.hasAttribute('data-photo-key')) as HTMLElement | undefined
+    const toKey = hit?.getAttribute('data-photo-key')
+    if (!toKey || toKey === fromKey) return
+    setItems((prev) => {
+      const from = prev.findIndex((it) => it.key === fromKey)
+      const to = prev.findIndex((it) => it.key === toKey)
+      if (from < 0 || to < 0 || from === to) return prev
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      return next
+    })
+  }
+
+  const onHandlePointerEnd = () => {
+    dragKeyRef.current = null
+    setDragKey(null)
   }
 
   const submit = (e: React.FormEvent) => {
@@ -139,8 +168,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       catId,
       types,
       memo: memo.trim(),
-      photos: newPhotos.length > 0 ? newPhotos : undefined,
-      removedPhotos: removedPhotoIds.length > 0 ? removedPhotoIds : undefined,
+      photos: items.length > 0 ? items.map((it) => (it.id ?? it.blob)) : undefined,
     })
   }
 
@@ -237,27 +265,37 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
       <div>
         <span className="mb-1 block text-sm font-medium text-gray-600">
-          사진 ({existingPhotos.length + newPhotos.length}/{MAX_PHOTOS})
+          사진 ({items.length}/{MAX_PHOTOS})
         </span>
         <div className="flex flex-wrap gap-2">
-          {existingPhotos.map((p) => (
-            <PhotoPreview
-              key={p.id}
-              blob={p.blob}
-              onRemove={() => {
-                setExistingPhotos((prev) => prev.filter((x) => x.id !== p.id))
-                setRemovedPhotoIds((prev) => (prev.includes(p.id) ? prev : [...prev, p.id]))
-              }}
-            />
+          {items.map((it) => (
+            <div
+              key={it.key}
+              data-photo-key={it.key}
+              className={`relative rounded-lg ${dragKey === it.key ? 'opacity-70 ring-2 ring-primary' : ''}`}
+            >
+              <PhotoPreview blob={it.blob} onRemove={() => removePhoto(it.key)} />
+              <button
+                type="button"
+                aria-label="사진 순서 변경"
+                onPointerDown={(e) => onHandlePointerDown(e, it.key)}
+                onPointerMove={onHandlePointerMove}
+                onPointerUp={onHandlePointerEnd}
+                onPointerCancel={onHandlePointerEnd}
+                className="absolute bottom-0.5 right-0.5 z-10 flex h-6 w-6 touch-none select-none items-center justify-center rounded-md bg-black/45 text-white"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+                  <circle cx="9" cy="6" r="1.4" />
+                  <circle cx="15" cy="6" r="1.4" />
+                  <circle cx="9" cy="12" r="1.4" />
+                  <circle cx="15" cy="12" r="1.4" />
+                  <circle cx="9" cy="18" r="1.4" />
+                  <circle cx="15" cy="18" r="1.4" />
+                </svg>
+              </button>
+            </div>
           ))}
-          {newPhotos.map((blob, i) => (
-            <PhotoPreview
-              key={i}
-              blob={blob}
-              onRemove={() => setNewPhotos((prev) => prev.filter((_, j) => j !== i))}
-            />
-          ))}
-          {existingPhotos.length + newPhotos.length < MAX_PHOTOS && (
+          {items.length < MAX_PHOTOS && (
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
@@ -267,6 +305,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
             </button>
           )}
         </div>
+        <p className="mt-1 text-xs text-gray-400">썸네일 우하단 핸들을 드래그해 순서를 변경하세요</p>
         <input
           ref={fileRef}
           type="file"
@@ -296,7 +335,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
         image={editingBlob}
         onCancel={() => setEditingQueue((prev) => prev.slice(1))}
         onApply={(blob) => {
-          setNewPhotos((prev) => [...prev, blob])
+          setItems((prev) => [...prev, { key: uid(), blob }])
           setEditingQueue((prev) => prev.slice(1))
         }}
       />

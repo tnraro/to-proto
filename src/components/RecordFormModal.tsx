@@ -1,5 +1,5 @@
-import type { Cat, VomitRecord } from '../types'
-import { RecordForm, type RecordInput } from './RecordForm'
+import type { Cat, RecordInput, VomitRecord } from '../types'
+import { RecordForm } from './RecordForm'
 import { Modal } from './Modal'
 
 interface Props {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { AlertEntry, Cat, ThresholdRule, VomitRecord } from '../types'
+import type { AlertEntry, Cat, RecordInput, ThresholdRule, VomitRecord } from '../types'
 import {
   clearAlertLog,
   clearAll,
@@ -23,12 +23,6 @@ import {
 import { evaluateRules, violationToAlertEntry } from '../lib/thresholds'
 import { resizeImage } from '../lib/image'
 
-export type RecordInput = Omit<VomitRecord, 'id' | 'createdAt' | 'updatedAt' | 'photos'> & {
-  /** 새로 추가할 이미지 (기록 폼에서 Blob 전달) */
-  photos?: Blob[]
-  /** 편집 중 제거한 기존 사진 id */
-  removedPhotos?: string[]
-}
 export type RuleInput = Omit<ThresholdRule, 'id'>
 
 export interface Store {
@@ -131,11 +125,24 @@ export function useStore(): Store {
     return ids
   }
 
+  /** 최종 순서의 사진 목록(string = 기존 id, Blob = 새 사진)을 id 배열로 해석 */
+  async function resolvePhotoIds(photos: Array<string | Blob>): Promise<string[]> {
+    const ids: string[] = []
+    for (const p of photos) {
+      if (typeof p === 'string') {
+        ids.push(p)
+      } else {
+        ids.push(...(await savePhotoBlobs([p])))
+      }
+    }
+    return ids
+  }
+
   const addRecord = useCallback(
     async (input: RecordInput): Promise<AlertEntry[]> => {
       const now = new Date()
       const { photos, ...rest } = input
-      const photoIds = await savePhotoBlobs(photos ?? [])
+      const photoIds = await resolvePhotoIds(photos ?? [])
       const created: VomitRecord = {
         ...rest,
         photos: photoIds,
@@ -162,13 +169,12 @@ export function useStore(): Store {
     async (id: string, input: RecordInput) => {
       const existing = records.find((r) => r.id === id)
       if (!existing) return
-      const { photos, removedPhotos, ...rest } = input
-      const kept = existing.photos.filter((p) => !(removedPhotos ?? []).includes(p))
-      const photoIds = await savePhotoBlobs(photos ?? [])
+      const { photos, ...rest } = input
+      const photoIds = await resolvePhotoIds(photos ?? [])
       const updated: VomitRecord = {
         ...existing,
         ...rest,
-        photos: [...kept, ...photoIds],
+        photos: photoIds,
         updatedAt: new Date().toISOString(),
       }
       setRecords((prev) =>

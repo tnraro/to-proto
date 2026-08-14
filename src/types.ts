@@ -70,6 +70,11 @@ export interface RecordDraft {
   savedAt: number
 }
 
+/** 기록 폼 입력. photos는 최종 순서: 기존 사진은 id, 새 사진은 blob (드래그 순서 반영) */
+export type RecordInput = Omit<VomitRecord, 'id' | 'createdAt' | 'updatedAt' | 'photos'> & {
+  photos?: Array<string | Blob>
+}
+
 export interface TypeMeta {
   label: string
   /** tailwind bg color class for chips */
