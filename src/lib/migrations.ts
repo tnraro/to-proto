@@ -34,6 +34,18 @@ export const MIGRATIONS: Migration[] = [
       }
     },
   },
+  {
+    version: 2,
+    name: 'markers and marker types',
+    up: (db) => {
+      const v2Stores = ['markers', 'markerTypes'] as const
+      for (const name of v2Stores) {
+        if (!db.objectStoreNames.contains(name)) {
+          db.createObjectStore(name, { keyPath: 'id' })
+        }
+      }
+    },
+  },
 ]
 
 export function runMigrations(db: IDBDatabase, oldVersion: number, tx: IDBTransaction): void {

@@ -1,9 +1,9 @@
 import { runMigrations } from './migrations'
 
-export type StoreName = 'cats' | 'records' | 'rules' | 'alertLog' | 'photos' | 'draft'
+export type StoreName = 'cats' | 'records' | 'rules' | 'alertLog' | 'photos' | 'draft' | 'markers' | 'markerTypes'
 
 const DB_NAME = 'to-app'
-export const DB_VERSION = 1
+export const DB_VERSION = 2
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
