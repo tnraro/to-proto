@@ -130,7 +130,7 @@ export default function App() {
 
         {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
 
-        {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} />}
+        {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} onNavigate={setTab} />}
       </main>
 
       <button

@@ -3,7 +3,20 @@ import type { Store } from '../hooks/useStore'
 import { CatManager } from './CatManager'
 import { applyUpdate, checkForUpdate, usePwaStatus } from '../lib/pwa'
 
-export function SettingsView({ cats, records, rules, alertLog, resetAll, renameCat, updateCatPhoto, deleteCat, onAddCat }: Store & { onAddCat: () => void }) {
+type NavTab = 'record' | 'calendar' | 'stats' | 'alert' | 'settings'
+
+export function SettingsView({
+  cats,
+  records,
+  rules,
+  alertLog,
+  resetAll,
+  renameCat,
+  updateCatPhoto,
+  deleteCat,
+  onAddCat,
+  onNavigate,
+}: Store & { onAddCat: () => void; onNavigate: (tab: NavTab) => void }) {
   const [confirming, setConfirming] = useState(false)
   const pwaStatus = usePwaStatus()
 
@@ -17,10 +30,10 @@ export function SettingsView({ cats, records, rules, alertLog, resetAll, renameC
       <section className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
         <h2 className="mb-3 text-sm font-semibold text-gray-700">데이터 현황</h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="고양이" value={cats.length} />
-          <Stat label="기록" value={records.length} />
-          <Stat label="규칙" value={rules.length} />
-          <Stat label="경고 이력" value={alertLog.length} />
+          <Stat label="고양이" value={cats.length} onClick={() => onNavigate('settings')} />
+          <Stat label="기록" value={records.length} onClick={() => onNavigate('record')} />
+          <Stat label="규칙" value={rules.length} onClick={() => onNavigate('alert')} />
+          <Stat label="경고 이력" value={alertLog.length} onClick={() => onNavigate('alert')} />
         </dl>
         <p className="mt-3 text-xs text-gray-400">데이터는 이 기기의 IndexedDB에 저장됩니다</p>
       </section>
@@ -90,11 +103,14 @@ export function SettingsView({ cats, records, rules, alertLog, resetAll, renameC
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, onClick }: { label: string; value: number; onClick: () => void }) {
   return (
-    <div className="rounded-lg bg-gray-50 px-3 py-2.5 text-center">
+    <button
+      onClick={onClick}
+      className="rounded-lg bg-gray-50 px-3 py-2.5 text-center hover:bg-gray-100"
+    >
       <div className="text-lg font-bold text-gray-800">{value}</div>
       <div className="text-xs text-gray-500">{label}</div>
-    </div>
+    </button>
   )
 }
