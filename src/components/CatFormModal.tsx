@@ -3,7 +3,7 @@ import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
 import { Modal } from './Modal'
 import { PhotoPreview } from './PhotoPreview'
-import { CatPhotoPicker } from './CatPhotoPicker'
+import { PhotoPicker } from './PhotoPicker'
 
 interface Props {
   open: boolean
@@ -53,7 +53,8 @@ export function CatFormModal({ open, onClose, onAdd }: Props) {
           {photoBlob ? (
             <PhotoPreview blob={photoBlob} onRemove={() => setPhotoBlob(null)} />
           ) : (
-            <CatPhotoPicker
+            <PhotoPicker
+              aspect={1}
               onPhoto={setPhotoBlob}
               renderTrigger={(open) => (
                 <button

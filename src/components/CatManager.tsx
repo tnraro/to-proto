@@ -4,6 +4,7 @@ import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
 import { CatAvatar } from './CatAvatar'
 import { DropdownMenu } from './DropdownMenu'
+import { PhotoPicker, type PhotoPickerHandle } from './PhotoPicker'
 
 interface Props {
   cats: Cat[]
@@ -53,20 +54,18 @@ function CatItem({
   deleteCat: (id: string) => void
 }) {
   const [editingName, setEditingName] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const pickerRef = useRef<PhotoPickerHandle>(null)
 
-  const onPhotoFile = async (file: File | undefined) => {
-    if (!file) return
+  const onPhoto = async (blob: Blob) => {
     const photoId = uid()
-    await putPhoto(photoId, await resizeImage(file))
+    await putPhoto(photoId, await resizeImage(blob))
     updateCatPhoto(cat.id, photoId)
-    if (fileRef.current) fileRef.current.value = ''
   }
 
   const items = [
     {
       label: cat.photoId ? '사진 변경' : '사진 추가',
-      onClick: () => fileRef.current?.click(),
+      onClick: () => pickerRef.current?.open(),
     },
     ...(cat.photoId
       ? [{ label: '사진 삭제', danger: true, onClick: () => updateCatPhoto(cat.id, undefined) }]
@@ -83,7 +82,12 @@ function CatItem({
 
   return (
     <li className="flex items-center gap-3 px-4 py-3">
-      <CatAvatar cat={cat} variant="photo" onClick={() => fileRef.current?.click()} />
+      <PhotoPicker
+        ref={pickerRef}
+        aspect={1}
+        onPhoto={onPhoto}
+        renderTrigger={(open) => <CatAvatar cat={cat} variant="photo" onClick={open} />}
+      />
       <div className="min-w-0 flex-1">
         {editingName ? (
           <EditCatName
@@ -99,13 +103,6 @@ function CatItem({
         )}
       </div>
       <DropdownMenu ariaLabel={`${cat.name} 메뉴`} items={items} />
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => void onPhotoFile(e.target.files?.[0])}
-      />
     </li>
   )
 }

@@ -50,7 +50,8 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [newPhotos, setNewPhotos] = useState<Blob[]>([])
   const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([])
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([])
-  const [editingBlob, setEditingBlob] = useState<Blob | null>(null)
+  const [editingQueue, setEditingQueue] = useState<File[]>([])
+  const editingBlob = editingQueue[0] ?? null
   const fileRef = useRef<HTMLInputElement>(null)
   const draftReady = useRef(false)
 
@@ -126,9 +127,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     if (!files) return
     const added = Array.from(files).slice(0, MAX_PHOTOS - newPhotos.length - existingPhotos.length)
     if (added.length === 0) return
-    const [first, ...rest] = added
-    setEditingBlob(first)
-    if (rest.length > 0) setNewPhotos((prev) => [...prev, ...rest])
+    setEditingQueue((prev) => [...prev, ...added])
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -295,10 +294,10 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       <ImageEditorModal
         open={editingBlob !== null}
         image={editingBlob}
-        onCancel={() => setEditingBlob(null)}
+        onCancel={() => setEditingQueue((prev) => prev.slice(1))}
         onApply={(blob) => {
           setNewPhotos((prev) => [...prev, blob])
-          setEditingBlob(null)
+          setEditingQueue((prev) => prev.slice(1))
         }}
       />
     </form>

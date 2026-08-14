@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
 import { useObjectUrl } from '../lib/useObjectUrl'
-import { CatPhotoPicker } from './CatPhotoPicker'
+import { PhotoPicker } from './PhotoPicker'
 
 interface Props {
   onFinish: (cats: { name: string; photoId?: string }[]) => void
@@ -93,7 +93,8 @@ export function Onboarding({ onFinish }: Props) {
                   key={`${it.name}-${i}`}
                   className="flex items-center gap-1 rounded-full bg-primary/10 py-1 pl-1.5 pr-1.5 text-sm font-medium text-primary"
                 >
-                  <CatPhotoPicker
+                  <PhotoPicker
+                    aspect={1}
                     onPhoto={(blob) => setPhoto(i, blob)}
                     renderTrigger={(open) => <ChipPhotoButton blob={it.photoBlob} open={open} name={it.name} />}
                   />
