@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useRoute, Router, useLocation } from 'wouter'
 import { useHashLocation } from 'wouter/use-hash-location'
 import { useStore } from './hooks/useStore'
-import { type RecordInput } from './types'
+import { type MarkerInput, type RecordInput } from './types'
 import { RecordBrowser } from './components/RecordBrowser'
 import { RecordFormModal } from './components/RecordFormModal'
+import { MarkerFormModal } from './components/MarkerFormModal'
 import { CalendarView } from './components/CalendarView'
 import { StatsView } from './components/StatsView'
 import { AlertModal } from './components/AlertModal'
@@ -13,8 +14,9 @@ import { Onboarding } from './components/Onboarding'
 import { ThresholdManager } from './components/ThresholdManager'
 import { SettingsView } from './components/SettingsView'
 import { AppHeader } from './components/AppHeader'
+import { DropdownMenu } from './components/DropdownMenu'
 import { deleteDraft } from './lib/storage'
-import type { AlertEntry, VomitRecord } from './types'
+import type { AlertEntry, Marker, VomitRecord } from './types'
 
 type Tab = 'record' | 'calendar' | 'stats' | 'alert' | 'settings'
 
@@ -50,9 +52,24 @@ function Shell() {
   const [calendarDate, setCalendarDate] = useState<string | null>(null)
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
+  const [markerFormOpen, setMarkerFormOpen] = useState(false)
+  const [markerFormInitial, setMarkerFormInitial] = useState<Marker | null>(null)
 
-  const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog, currentCatId, setCurrentCat } =
-    store
+  const {
+    cats,
+    records,
+    addCat,
+    addRecord,
+    updateRecord,
+    deleteRecord,
+    alertLog,
+    currentCatId,
+    setCurrentCat,
+    markerTypes,
+    addMarker,
+    updateMarker,
+    addMarkerType,
+  } = store
 
   // 잘못된/빈 경로는 캘린더로 폴백 (기본 탭)
   const activeTab: Tab = TABS.find((t) => `/${t.id}` === path)?.id ?? 'calendar'
@@ -96,6 +113,25 @@ function Shell() {
     } else {
       openRecordForm()
     }
+  }
+
+  const openMarkerForm = (initial: Marker | null = null) => {
+    setMarkerFormInitial(initial)
+    setMarkerFormOpen(true)
+  }
+
+  const closeMarkerForm = () => {
+    setMarkerFormOpen(false)
+    setMarkerFormInitial(null)
+  }
+
+  const handleMarkerSubmit = async (input: MarkerInput) => {
+    if (markerFormInitial) {
+      await updateMarker(markerFormInitial.id, input)
+    } else {
+      await addMarker(input)
+    }
+    closeMarkerForm()
   }
 
   const closeRecordForm = () => {
@@ -172,13 +208,24 @@ function Shell() {
       </main>
 
       {(activeTab === 'record' || activeTab === 'calendar') && (
-        <button
-          onClick={openAddFromFAB}
-          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex items-center gap-1.5 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(5,150,105,0.45),0_2px_6px_rgba(0,0,0,0.15)] active:scale-95 active:shadow-[0_4px_10px_rgba(5,150,105,0.35)]"
-        >
-          <span className="text-base leading-none">+</span>
-          기록 추가
-        </button>
+        <DropdownMenu
+          ariaLabel="추가 메뉴"
+          placement="top"
+          items={[
+            { label: '구토 기록 추가', onClick: openAddFromFAB },
+            { label: '마커 추가', onClick: () => openMarkerForm() },
+          ]}
+          renderTrigger={(toggle, ref) => (
+            <button
+              ref={ref}
+              type="button"
+              onClick={toggle}
+              className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-white shadow-[0_8px_20px_rgba(5,150,105,0.45),0_2px_6px_rgba(0,0,0,0.15)] active:scale-95 active:shadow-[0_4px_10px_rgba(5,150,105,0.35)]"
+            >
+              +
+            </button>
+          )}
+        />
       )}
 
       <RecordFormModal
@@ -190,6 +237,16 @@ function Shell() {
         onCancel={cancelRecordForm}
         onClose={closeRecordForm}
         onAddCat={openCatModal}
+      />
+
+      <MarkerFormModal
+        open={markerFormOpen}
+        markerTypes={markerTypes}
+        cats={cats}
+        initial={markerFormInitial}
+        onSubmit={handleMarkerSubmit}
+        onClose={closeMarkerForm}
+        onAddMarkerType={addMarkerType}
       />
 
       <CatFormModal open={catModalOpen} onClose={() => setCatModalOpen(false)} onAdd={handleCatAdd} />

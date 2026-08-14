@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface DropdownItem {
@@ -12,11 +12,15 @@ interface Props {
   /** 항목 선택 전 추가 동작 (예: 파일 선택기 열기) — 메뉴는 항상 닫음 */
   beforeClose?: () => void
   ariaLabel?: string
+  /** 메뉴 위치 (기본: 버튼 아래) */
+  placement?: 'bottom' | 'top'
+  /** 트리거 렌더러 — toggle()을 호출하면 메뉴가 열린다. ref는 위치 계산용 */
+  renderTrigger?: (toggle: () => void, ref: RefObject<HTMLButtonElement | null>) => ReactNode
 }
 
 const MENU_WIDTH = 128
 
-export function DropdownMenu({ items, beforeClose, ariaLabel = '메뉴' }: Props) {
+export function DropdownMenu({ items, beforeClose, ariaLabel = '메뉴', placement = 'bottom', renderTrigger }: Props) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -51,7 +55,8 @@ export function DropdownMenu({ items, beforeClose, ariaLabel = '메뉴' }: Props
     const rect = buttonRef.current?.getBoundingClientRect()
     if (!rect) return
     const left = Math.max(8, Math.min(rect.left + rect.width - MENU_WIDTH, window.innerWidth - MENU_WIDTH - 8))
-    setPos({ top: rect.bottom + 4, left })
+    const top = placement === 'top' ? rect.top - 4 : rect.bottom + 4
+    setPos({ top, left })
     setOpen(true)
   }
 
@@ -63,19 +68,31 @@ export function DropdownMenu({ items, beforeClose, ariaLabel = '메뉴' }: Props
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggle}
-        className="flex h-11 w-9 shrink-0 items-center justify-center self-start rounded text-gray-400 hover:bg-gray-100"
-        aria-label={ariaLabel}
-      >
-        ⋮
-      </button>
+      {renderTrigger ? (
+        renderTrigger(toggle, buttonRef)
+      ) : (
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={toggle}
+          className="flex h-11 w-9 shrink-0 items-center justify-center self-start rounded text-gray-400 hover:bg-gray-100"
+          aria-label={ariaLabel}
+        >
+          ⋮
+        </button>
+      )}
       {open &&
         pos &&
         createPortal(
-          <div ref={menuRef} className="fixed z-50" style={{ top: pos.top, left: pos.left }}>
+          <div
+            ref={menuRef}
+            className="fixed z-50"
+            style={{
+              top: pos.top,
+              left: pos.left,
+              transform: placement === 'top' ? 'translateY(-100%)' : undefined,
+            }}
+          >
             <div className="w-32 overflow-hidden rounded-xl border border-gray-100 bg-white py-1 shadow-pop">
               {items.map((item) => (
                 <button
