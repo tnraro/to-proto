@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getPhoto } from './storage'
 
-export function usePhotoUrl(photoId: string): string | undefined {
+export function usePhotoUrl(photoId?: string): string | undefined {
   const [url, setUrl] = useState<string>()
 
   useEffect(() => {

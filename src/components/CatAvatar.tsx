@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function CatAvatar({ cat, sizeClass = 'h-10 w-10', variant = 'plain', onClick }: Props) {
-  const url = usePhotoUrl(cat?.photoId ?? '')
+  const url = usePhotoUrl(cat?.photoId)
 
   const content = url ? (
     <img
