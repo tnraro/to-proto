@@ -67,7 +67,7 @@ export function RelativeTime({ iso, className = DEFAULT_CLASS }: Props) {
           <div
             className="pointer-events-none fixed z-50 rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-pop"
             style={{
-              top: pos.below ? pos.top : pos.top,
+              top: pos.top,
               left: pos.left,
               transform: pos.below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
               marginTop: pos.below ? 8 : -8,
