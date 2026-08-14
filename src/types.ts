@@ -62,8 +62,8 @@ export interface RecordDraft {
   catId: string
   types: VomitType[]
   memo: string
-  /** 새로 추가한 사진 Blob */
-  newPhotos: { id: string; blob: Blob }[]
+  /** 새로 추가한 사진 Blob (original = 편집 전 원본, 있으면 재편집 시 원본 기준) */
+  newPhotos: { id: string; blob: Blob; original?: Blob }[]
   /** 편집 중 제거한 기존 사진 id */
   removedPhotos: string[]
   /** 저장 시각(epoch ms) — 30분 만료 판정 */

@@ -25,6 +25,8 @@ interface PhotoItem {
   /** 기존 사진의 id (새 사진은 undefined) */
   id?: string
   blob: Blob
+  /** 편집 전 원본 (새 사진만 존재) — 재편집 시 원본 기준 */
+  original?: Blob
 }
 
 export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAddCat }: Props) {
@@ -47,8 +49,10 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
   const [editingQueue, setEditingQueue] = useState<File[]>([])
   const [editingKey, setEditingKey] = useState<string | null>(null)
+  const reeditItem = editingKey !== null ? photoItems.find((p) => p.key === editingKey) : undefined
+  // 재편집: 원본이 있으면 원본, 없으면 현재 편집본 (기존 사진)
   const editingBlob =
-    editingKey !== null ? (photoItems.find((p) => p.key === editingKey)?.blob ?? null) : (editingQueue[0] ?? null)
+    editingKey !== null ? (reeditItem?.original ?? reeditItem?.blob ?? null) : (editingQueue[0] ?? null)
   const fileRef = useRef<HTMLInputElement>(null)
   const draftReady = useRef(false)
   const dragKeyRef = useRef<string | null>(null)
@@ -71,6 +75,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       }
       // 사진 목록 복원: 기존 사진(원래 순서, 제거된 것 제외) + 새 사진
       const newBlobs = validDraft ? draft.newPhotos.map((p) => p.blob) : []
+      const newOriginals = validDraft ? draft.newPhotos.map((p) => p.original) : []
       const removed = validDraft ? draft.removedPhotos : []
       if (initial) {
         const existing: PhotoItem[] = []
@@ -79,9 +84,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
           const blob = await getPhoto(id)
           if (blob) existing.push({ key: id, id, blob })
         }
-        if (!cancelled) setPhotoItems([...existing, ...newBlobs.map((blob) => ({ key: uid(), blob }))])
+        if (!cancelled)
+          setPhotoItems([
+            ...existing,
+            ...newBlobs.map((blob, i) => ({ key: uid(), blob, original: newOriginals[i] })),
+          ])
       } else if (!cancelled) {
-        setPhotoItems(newBlobs.map((blob) => ({ key: uid(), blob })))
+        setPhotoItems(newBlobs.map((blob, i) => ({ key: uid(), blob, original: newOriginals[i] })))
       }
       draftReady.current = true
     })()
@@ -100,7 +109,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       catId,
       types,
       memo,
-      newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
+      newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob, original: p.original })),
       removedPhotos,
       savedAt: Date.now(),
     }
@@ -145,11 +154,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
   const applyEdited = (blob: Blob) => {
     if (editingKey !== null) {
-      // 재편집: 위치 유지, id 제거 → 제출 시 새 사진으로 저장된다
+      // 재편집: 위치 유지, id 제거 → 제출 시 새 사진으로 저장된다 (original은 유지)
       setPhotoItems((prev) => prev.map((p) => (p.key === editingKey ? { ...p, blob, id: undefined } : p)))
       setEditingKey(null)
     } else {
-      setPhotoItems((prev) => [...prev, { key: uid(), blob }])
+      // 새 사진: 원본(편집 전 파일)을 함께 보관
+      const original = editingQueue[0]
+      setPhotoItems((prev) => [...prev, { key: uid(), blob, original }])
       setEditingQueue((prev) => prev.slice(1))
     }
   }
