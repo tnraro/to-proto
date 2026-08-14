@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePhotoReorder } from '../hooks/usePhotoReorder'
+import { useFormDraft } from '../hooks/useFormDraft'
 import type { Cat, RecordDraft, RecordInput, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
-import { deleteDraft, getPhoto, loadDraft, saveDraft, uid } from '../lib/storage'
+import { getPhoto, uid } from '../lib/storage'
 import { PhotoPreview } from './PhotoPreview'
 
 const MAX_PHOTOS = 6
-const DRAFT_TTL_MS = 30 * 60 * 1000
-const DRAFT_SAVE_MS = 500
 
 interface Props {
   cats: Cat[]
@@ -46,26 +45,37 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
-  const draftReady = useRef(false)
+
+  const draftContext = initial ? initial.id : 'add'
+  const { ready: draftReady, restored: restoredDraft } = useFormDraft<RecordDraft>(
+    'record',
+    draftContext,
+    [datetime, catId, types, memo, photoItems, initial],
+    () => {
+      const removedPhotos = initial ? initial.photos.filter((id) => !photoItems.some((p) => p.id === id)) : []
+      return {
+        applyTo: draftContext,
+        datetime,
+        catId,
+        types,
+        memo,
+        newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
+        removedPhotos,
+      }
+    },
+  )
 
   useEffect(() => {
+    if (!draftReady || !restoredDraft) return
     let cancelled = false
     void (async () => {
-      const draft = await loadDraft()
-      if (cancelled) return
-      const context = initial ? initial.id : 'add'
-      const validDraft = draft && draft.applyTo === context && Date.now() - draft.savedAt <= DRAFT_TTL_MS
-      if (validDraft) {
-        setDatetime(draft.datetime)
-        setCatId(draft.catId)
-        if (draft.types.length > 0) setTypes(draft.types)
-        setMemo(draft.memo)
-      } else if (draft && Date.now() - draft.savedAt > DRAFT_TTL_MS) {
-        void deleteDraft()
-      }
+      setDatetime(restoredDraft.datetime)
+      setCatId(restoredDraft.catId)
+      if (restoredDraft.types.length > 0) setTypes(restoredDraft.types)
+      setMemo(restoredDraft.memo)
       // 사진 목록 복원: 기존 사진(원래 순서, 제거된 것 제외) + 새 사진
-      const newBlobs = validDraft ? draft.newPhotos.map((p) => p.blob) : []
-      const removed = validDraft ? draft.removedPhotos : []
+      const newBlobs = restoredDraft.newPhotos.map((p) => p.blob)
+      const removed = restoredDraft.removedPhotos
       if (initial) {
         const existing: PhotoItem[] = []
         for (const id of initial.photos) {
@@ -77,30 +87,11 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       } else if (!cancelled) {
         setPhotoItems(newBlobs.map((blob) => ({ key: uid(), blob })))
       }
-      draftReady.current = true
     })()
     return () => {
       cancelled = true
     }
-  }, [initial])
-
-  useEffect(() => {
-    if (!draftReady.current) return
-    const removedPhotos = initial ? initial.photos.filter((id) => !photoItems.some((p) => p.id === id)) : []
-    const draft: RecordDraft = {
-      id: 'record',
-      applyTo: initial ? initial.id : 'add',
-      datetime,
-      catId,
-      types,
-      memo,
-      newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
-      removedPhotos,
-      savedAt: Date.now(),
-    }
-    const t = setTimeout(() => void saveDraft(draft), DRAFT_SAVE_MS)
-    return () => clearTimeout(t)
-  }, [datetime, catId, types, memo, photoItems, initial])
+  }, [draftReady, restoredDraft, initial])
 
   useEffect(() => {
     if (cats.length === 0) return

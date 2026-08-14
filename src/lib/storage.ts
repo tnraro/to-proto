@@ -1,22 +1,20 @@
-import type { AlertEntry, Cat, Marker, MarkerType, RecordDraft, ThresholdRule, VomitRecord } from '../types'
+import type { AlertEntry, BaseDraft, Cat, Marker, MarkerType, ThresholdRule, VomitRecord } from '../types'
 import { dbClear, dbClearAll, dbDel, dbDelByIndex, dbGet, dbGetAll, dbGetAllByIndex, dbPut } from './db'
-
-const DRAFT_ID = 'record'
 
 export function uid(): string {
   return crypto.randomUUID()
 }
 
-export async function saveDraft(draft: RecordDraft): Promise<void> {
+export async function saveDraft<T extends BaseDraft>(draft: T & { id: string }): Promise<void> {
   await dbPut('draft', draft)
 }
 
-export async function loadDraft(): Promise<RecordDraft | undefined> {
-  return dbGet<RecordDraft>('draft', DRAFT_ID)
+export async function loadDraft<T extends BaseDraft>(id: string): Promise<(T & { id: string }) | undefined> {
+  return dbGet<(T & { id: string }) | undefined>('draft', id)
 }
 
-export async function deleteDraft(): Promise<void> {
-  await dbDel('draft', DRAFT_ID)
+export async function deleteDraft(id: string): Promise<void> {
+  await dbDel('draft', id)
 }
 
 export async function getAllCats(): Promise<Cat[]> {

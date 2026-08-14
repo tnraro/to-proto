@@ -89,11 +89,17 @@ export type MarkerInput = Omit<Marker, 'id' | 'createdAt' | 'updatedAt' | 'photo
   photos?: Array<string | Blob>
 }
 
-/** 기록 폼 실수 방지용 draft. 단일 엔트리(id='record') */
-export interface RecordDraft {
-  id: 'record'
-  /** 'add' 또는 수정 대상 기록 id — 복원 시 컨텍스트 가드 */
+/** draft 공통 기반 — 폼별 draft는 이 인터페이스를 상속하고 id를 폼 키로 쓴다 */
+export interface BaseDraft {
+  /** 'add' 또는 수정 대상 id — 복원 시 컨텍스트 가드 */
   applyTo: 'add' | string
+  /** 저장 시각(epoch ms) — 30분 만료 판정 */
+  savedAt: number
+}
+
+/** 기록 폼 실수 방지용 draft */
+export interface RecordDraft extends BaseDraft {
+  id: 'record'
   datetime: string
   catId: string
   types: VomitType[]
@@ -102,8 +108,19 @@ export interface RecordDraft {
   newPhotos: { id: string; blob: Blob }[]
   /** 편집 중 제거한 기존 사진 id */
   removedPhotos: string[]
-  /** 저장 시각(epoch ms) — 30분 만료 판정 */
-  savedAt: number
+}
+
+/** 마커 폼 실수 방지용 draft */
+export interface MarkerDraft extends BaseDraft {
+  id: 'marker'
+  datetime: string
+  typeId: string
+  catIds: string[]
+  memo: string
+  /** 새로 추가한 사진 Blob (무제한) */
+  newPhotos: { id: string; blob: Blob }[]
+  /** 편집 중 제거한 기존 사진 id */
+  removedPhotos: string[]
 }
 
 /** 기록 폼 입력. photos는 최종 순서: 기존 사진은 id, 새 사진은 blob (드래그 순서 반영) */

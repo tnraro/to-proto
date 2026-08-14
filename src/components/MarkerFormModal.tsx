@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Cat, Marker, MarkerInput, MarkerType } from '../types'
+import type { Cat, Marker, MarkerDraft, MarkerInput, MarkerType } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
 import { getPhoto, uid } from '../lib/storage'
 import { usePhotoReorder } from '../hooks/usePhotoReorder'
+import { useFormDraft } from '../hooks/useFormDraft'
 import { Modal } from './ui/Modal'
 import { PhotoPreview } from './PhotoPreview'
 
@@ -72,8 +73,25 @@ function MarkerFormContent({
   const fileRef = useRef<HTMLInputElement>(null)
   const newTypeRef = useRef<HTMLInputElement>(null)
 
+  const draftContext = initial ? initial.id : 'add'
+  const { ready: draftReady, restored: restoredDraft, deleteDraft: deleteMarkerDraft } = useFormDraft<MarkerDraft>(
+    'marker',
+    draftContext,
+    [datetime, typeId, catIds, memo, photoItems, initial],
+    () => ({
+      applyTo: draftContext,
+      datetime,
+      typeId,
+      catIds,
+      memo,
+      newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
+      removedPhotos: initial ? initial.photos.filter((id) => !photoItems.some((p) => p.id === id)) : [],
+    }),
+  )
+
+  // draft가 복원되는 경우가 아니면 수정 모드의 기존 사진을 로드
   useEffect(() => {
-    if (!initial) return
+    if (!initial || restoredDraft) return
     let cancelled = false
     void (async () => {
       const items: PhotoItem[] = []
@@ -86,7 +104,35 @@ function MarkerFormContent({
     return () => {
       cancelled = true
     }
-  }, [initial])
+  }, [initial, restoredDraft])
+
+  // draft 복원: 필드 + 기존 사진(제거분 제외) + 새 사진
+  useEffect(() => {
+    if (!draftReady || !restoredDraft) return
+    let cancelled = false
+    void (async () => {
+      setDatetime(restoredDraft.datetime)
+      setTypeId(restoredDraft.typeId)
+      setCatIds(restoredDraft.catIds)
+      setMemo(restoredDraft.memo)
+      const newBlobs = restoredDraft.newPhotos.map((p) => p.blob)
+      const removed = restoredDraft.removedPhotos
+      if (initial) {
+        const items: PhotoItem[] = []
+        for (const id of initial.photos) {
+          if (removed.includes(id)) continue
+          const blob = await getPhoto(id)
+          if (blob) items.push({ key: id, id, blob })
+        }
+        if (!cancelled) setPhotoItems([...items, ...newBlobs.map((blob) => ({ key: uid(), blob }))])
+      } else if (!cancelled) {
+        setPhotoItems(newBlobs.map((blob) => ({ key: uid(), blob })))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [draftReady, restoredDraft, initial])
 
   const toggleCat = (id: string) => {
     setCatIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
@@ -126,6 +172,7 @@ function MarkerFormContent({
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!datetime || !typeId) return
+    deleteMarkerDraft()
     void onSubmit({
       datetime: fromLocalDateTimeInput(datetime).toISOString(),
       typeId,

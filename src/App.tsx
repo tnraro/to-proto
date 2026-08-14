@@ -151,7 +151,7 @@ function Shell() {
 
   /** 취소 버튼: draft 삭제 후 닫기 */
   const cancelRecordForm = () => {
-    void deleteDraft()
+    void deleteDraft('record')
     closeRecordForm()
   }
 
@@ -162,7 +162,7 @@ function Shell() {
       const newAlerts = await addRecord(input)
       if (newAlerts.length > 0) setModalAlerts(newAlerts)
     }
-    void deleteDraft()
+    void deleteDraft('record')
     closeRecordForm()
   }
 
