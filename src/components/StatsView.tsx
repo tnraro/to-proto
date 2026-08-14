@@ -64,6 +64,7 @@ export function StatsView({ records }: Props) {
       for (const t of r.types) counts.set(t, (counts.get(t) ?? 0) + 1)
     }
     return VOMIT_TYPE_KEYS.filter((k) => counts.has(k)).map((k) => ({
+      key: k,
       name: VOMIT_TYPES[k].label,
       value: counts.get(k) ?? 0,
       color: VOMIT_TYPES[k].hex,
@@ -108,27 +109,7 @@ export function StatsView({ records }: Props) {
                 <BarChart data={dailyData}>
                   <XAxis dataKey="day" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={24} />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload?.length) return null
-                      const items = payload.filter((p) => Number(p.value) > 0)
-                      if (items.length === 0) return null
-                      return (
-                        <div className="rounded-lg border border-gray-100 bg-white px-2.5 py-1.5 text-xs shadow-pop">
-                          <div className="font-medium text-gray-900">{label}</div>
-                          {items.map((p) => (
-                            <div key={String(p.dataKey)} className="flex items-center gap-1.5 text-gray-600">
-                              <span
-                                className="inline-block h-2 w-2 rounded-full"
-                                style={{ backgroundColor: p.color }}
-                              />
-                              {p.name}: {p.value}회
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    }}
-                  />
+                  <Tooltip content={<ChartTooltip />} />
                   {stackedTypes.map((t) => (
                     <Bar
                       key={t}
@@ -143,7 +124,7 @@ export function StatsView({ records }: Props) {
               {stackedTypes.length > 0 && (
                 <Legend
                   items={stackedTypes.map((t) => {
-                    const total = typeData.find((x) => x.name === VOMIT_TYPES[t].label)?.value ?? 0
+                    const total = typeData.find((x) => x.key === t)?.value ?? 0
                     return { key: t, label: VOMIT_TYPES[t].label, value: total, color: VOMIT_TYPES[t].hex }
                   })}
                   hoverKey={hoverType}
@@ -160,29 +141,61 @@ export function StatsView({ records }: Props) {
                 <PieChart>
                   <Pie data={typeData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={80} paddingAngle={2}>
                     {typeData.map((t) => (
-                      <Cell key={t.name} fill={t.color} />
+                      <Cell
+                        key={t.key}
+                        fill={hoverType === null || hoverType === t.key ? t.color : '#e5e7eb'}
+                      />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-              <Legend items={typeData.map((t) => ({ label: t.name, value: t.value, color: t.color }))} />
+              <Legend
+                items={typeData.map((t) => ({ key: t.key, label: t.name, value: t.value, color: t.color }))}
+                hoverKey={hoverType}
+                onHover={(key) => setHoverType(key as VomitType | null)}
+              />
+            </Card>
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold text-gray-700">시간대별 분포</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={hourData}>
+                  <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={24} />
+                  <Tooltip />
+                  <Bar dataKey="count" name="횟수" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </Card>
           </div>
-
-          <Card>
-            <h3 className="mb-3 text-sm font-semibold text-gray-700">시간대별 분포</h3>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={hourData}>
-                <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={24} />
-                <Tooltip />
-                <Bar dataKey="count" name="횟수" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
         </>
       )}
+    </div>
+  )
+}
+
+/** 공용 차트 툴팁 — 0인 항목은 생략 */
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: Array<{ name?: string; value?: number | string; color?: string; dataKey?: string | number }>
+  label?: string | number
+}) {
+  if (!active || !payload?.length) return null
+  const items = payload.filter((p) => Number(p.value) > 0)
+  if (items.length === 0) return null
+  return (
+    <div className="rounded-lg border border-gray-100 bg-white px-2.5 py-1.5 text-xs shadow-pop">
+      <div className="font-medium text-gray-900">{label}</div>
+      {items.map((p) => (
+        <div key={String(p.dataKey)} className="flex items-center gap-1.5 text-gray-600">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+          {p.name}: {p.value}회
+        </div>
+      ))}
     </div>
   )
 }
