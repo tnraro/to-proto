@@ -140,7 +140,7 @@ export function CalendarView({
               {markerCount > 0 && (
                 <span className="mt-0.5 block w-full truncate rounded bg-blue-50 px-1 text-[10px] leading-tight text-blue-600">
                   {firstMarkerName}
-                  {markerCount > 1 ? ` 외 ${markerCount - 1}` : ''}
+                  {markerCount > 1 ? ` 등 ${markerCount}` : ''}
                 </span>
               )}
               {summary && (
