@@ -12,7 +12,7 @@ import { CatFormModal } from './components/CatFormModal'
 import { Onboarding } from './components/Onboarding'
 import { ThresholdManager } from './components/ThresholdManager'
 import { SettingsView } from './components/SettingsView'
-import { CatSwitcher } from './components/CatSwitcher'
+import { AppHeader } from './components/AppHeader'
 import { deleteDraft } from './lib/storage'
 import type { AlertEntry, VomitRecord } from './types'
 
@@ -142,9 +142,7 @@ function Shell() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-gray-100 text-gray-900">
-      {cats.length > 1 && (
-        <CatSwitcher cats={cats} currentCatId={currentCatId} onChange={setCurrentCat} />
-      )}
+      <AppHeader cats={cats} currentCatId={currentCatId} onChange={setCurrentCat} />
       <main className="no-scrollbar relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto">
         {matchRecord && (
           <RecordBrowser
