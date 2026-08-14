@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type Ref } from 'react'
+import { useImperativeHandle } from 'react'
 import type { Cat, Marker, MarkerDraft, MarkerInput, MarkerType } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
 import { getPhoto, uid } from '../lib/storage'
@@ -15,9 +16,7 @@ interface Props {
   /** YYYY-MM-DD: 캘린더에서 날짜 선택 시 프리셋 */
   presetDate?: string | null
   onSubmit: (input: MarkerInput) => void | Promise<void>
-  /** 취소 버튼: draft 삭제 후 닫기 */
-  onCancel: () => void
-  /** Esc/백드롭 닫기 (draft 유지) */
+  /** 취소/닫기: confirm 후 draft 폐기 */
   onClose: () => void
   /** 마커 종류 인라인 추가 (새 id 반환) */
   onAddMarkerType: (name: string) => string
@@ -29,6 +28,10 @@ interface PhotoItem {
   blob: Blob
 }
 
+interface MarkerFormHandle {
+  requestClose: () => void
+}
+
 export function MarkerFormModal({
   open,
   markerTypes,
@@ -36,21 +39,23 @@ export function MarkerFormModal({
   initial,
   presetDate,
   onSubmit,
-  onCancel,
   onClose,
   onAddMarkerType,
 }: Props) {
+  const contentRef = useRef<MarkerFormHandle | null>(null)
+
   return (
-    <Modal open={open} onClose={onClose} contentClassName="max-h-[85vh] overflow-y-auto">
+    <Modal open={open} onClose={() => contentRef.current?.requestClose()} contentClassName="max-h-[85vh] overflow-y-auto">
       {open && (
         <MarkerFormContent
           key={initial?.id ?? 'new'}
+          ref={contentRef}
           markerTypes={markerTypes}
           cats={cats}
           initial={initial}
           presetDate={presetDate}
           onSubmit={onSubmit}
-          onCancel={onCancel}
+          onClose={onClose}
           onAddMarkerType={onAddMarkerType}
         />
       )}
@@ -64,9 +69,10 @@ function MarkerFormContent({
   initial,
   presetDate,
   onSubmit,
-  onCancel,
+  onClose,
   onAddMarkerType,
-}: Omit<Props, 'open' | 'onClose'>) {
+  ref,
+}: Omit<Props, 'open'> & { ref?: Ref<MarkerFormHandle> }) {
   const now = new Date()
   const initialDatetime = () => {
     if (initial) return toLocalDateTimeInput(new Date(initial.datetime))
@@ -88,10 +94,17 @@ function MarkerFormContent({
   const newTypeRef = useRef<HTMLInputElement>(null)
 
   const draftContext = initial ? initial.id : 'add'
-  const { ready: draftReady, restored: restoredDraft, deleteDraft: deleteMarkerDraft } = useFormDraft<MarkerDraft>(
+  const {
+    ready: draftReady,
+    restored: restoredDraft,
+    deleteDraft: deleteMarkerDraft,
+    discard: discardMarkerDraft,
+    hasDraft: draftHasDraft,
+    onStateChange,
+  } = useFormDraft<MarkerDraft>(
     'marker',
     draftContext,
-    [datetime, typeId, catIds, memo, photoItems, initial],
+    [datetime, typeId, catIds, memo, photoItems],
     () => ({
       applyTo: draftContext,
       datetime,
@@ -102,6 +115,20 @@ function MarkerFormContent({
       removedPhotos: initial ? initial.photos.filter((id) => !photoItems.some((p) => p.id === id)) : [],
     }),
   )
+
+  // 상태 변경 시 draft 저장 (실변경 감지는 훅 내부 스냅샷 비교가 담당)
+  useEffect(() => {
+    onStateChange()
+  }, [datetime, typeId, catIds, memo, photoItems, onStateChange])
+
+  const requestClose = () => {
+    // 이번 세션에 draft가 있으면 확인 — 없으면 즉시 닫기
+    if (draftHasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
+    discardMarkerDraft()
+    onClose()
+  }
+
+  useImperativeHandle(ref, () => ({ requestClose }))
 
   // draft가 복원되는 경우가 아니면 수정 모드의 기존 사진을 로드
   useEffect(() => {
@@ -354,7 +381,7 @@ function MarkerFormContent({
         >
           {initial ? '수정 저장' : '마커 추가'}
         </button>
-        <button type="button" onClick={onCancel} className="rounded-lg border border-gray-200 px-4 py-2 text-gray-600">
+        <button type="button" onClick={requestClose} className="rounded-lg border border-gray-200 px-4 py-2 text-gray-600">
           취소
         </button>
       </div>

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type Ref } from 'react'
+import { useImperativeHandle } from 'react'
 import { usePhotoReorder } from '../hooks/usePhotoReorder'
 import { useFormDraft } from '../hooks/useFormDraft'
 import type { Cat, RecordDraft, RecordInput, VomitRecord, VomitType } from '../types'
@@ -15,8 +16,13 @@ interface Props {
   /** YYYY-MM-DD: 캘린더에서 날짜 선택 시 프리셋 */
   presetDate?: string | null
   onSubmit: (input: RecordInput) => void
-  onCancel?: () => void
+  /** 취소/닫기 완료 콜백 (confirm·draft 폐기는 폼 내부에서 처리) */
+  onClose: () => void
   onAddCat: () => void
+}
+
+export interface RecordFormHandle {
+  requestClose: () => void
 }
 
 interface PhotoItem {
@@ -26,7 +32,7 @@ interface PhotoItem {
   blob: Blob
 }
 
-export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAddCat }: Props) {
+export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAddCat, ref }: Props & { ref?: Ref<RecordFormHandle> }) {
   const now = new Date()
   const initialDatetime = () => {
     if (initial) return toLocalDateTimeInput(new Date(initial.datetime))
@@ -47,10 +53,16 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const fileRef = useRef<HTMLInputElement>(null)
 
   const draftContext = initial ? initial.id : 'add'
-  const { ready: draftReady, restored: restoredDraft } = useFormDraft<RecordDraft>(
+  const {
+    ready: draftReady,
+    restored: restoredDraft,
+    discard: discardDraft,
+    hasDraft: draftHasDraft,
+    onStateChange,
+  } = useFormDraft<RecordDraft>(
     'record',
     draftContext,
-    [datetime, catId, types, memo, photoItems, initial],
+    [datetime, catId, types, memo, photoItems],
     () => {
       const removedPhotos = initial ? initial.photos.filter((id) => !photoItems.some((p) => p.id === id)) : []
       return {
@@ -64,6 +76,20 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       }
     },
   )
+
+  // 상태 변경 시 draft 저장 (실변경 감지는 훅 내부 스냅샷 비교가 담당)
+  useEffect(() => {
+    onStateChange()
+  }, [datetime, catId, types, memo, photoItems, onStateChange])
+
+  const requestClose = () => {
+    // 이번 세션에 draft가 있으면 확인 — 없으면 즉시 닫기
+    if (draftHasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
+    discardDraft()
+    onClose()
+  }
+
+  useImperativeHandle(ref, () => ({ requestClose }))
 
   useEffect(() => {
     if (!draftReady || !restoredDraft) return
@@ -133,6 +159,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!datetime || !catId || types.length === 0) return
+    discardDraft()
     onSubmit({
       datetime: fromLocalDateTimeInput(datetime).toISOString(),
       catId,
@@ -291,11 +318,9 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
         >
           {initial ? '수정 저장' : '기록 추가'}
         </button>
-        {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-lg border border-gray-200 px-4 py-2 text-gray-600">
-            취소
-          </button>
-        )}
+        <button type="button" onClick={requestClose} className="rounded-lg border border-gray-200 px-4 py-2 text-gray-600">
+          취소
+        </button>
       </div>
     </form>
   )

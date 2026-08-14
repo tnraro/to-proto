@@ -15,7 +15,6 @@ import { ThresholdManager } from './components/ThresholdManager'
 import { SettingsView } from './components/SettingsView'
 import { AppHeader } from './components/AppHeader'
 import { DropdownMenu } from './components/ui/DropdownMenu'
-import { deleteDraft } from './lib/storage'
 import { useFeatureFlag } from './hooks/useFeatureFlag'
 import type { AlertEntry, Marker, VomitRecord } from './types'
 
@@ -134,12 +133,6 @@ function Shell() {
     setMarkerPresetDate(null)
   }
 
-  /** 취소 버튼: draft 삭제 후 닫기 */
-  const cancelMarkerForm = () => {
-    void deleteDraft('marker')
-    closeMarkerForm()
-  }
-
   const handleMarkerSubmit = async (input: MarkerInput) => {
     if (markerFormInitial) {
       await updateMarker(markerFormInitial.id, input)
@@ -149,16 +142,11 @@ function Shell() {
     closeMarkerForm()
   }
 
+  /** 취소/닫기: RecordForm 내부에서 confirm·draft 폐기 후 호출 */
   const closeRecordForm = () => {
     setFormOpen(false)
     setFormInitial(null)
     setFormPresetDate(null)
-  }
-
-  /** 취소 버튼: draft 삭제 후 닫기 */
-  const cancelRecordForm = () => {
-    void deleteDraft('record')
-    closeRecordForm()
   }
 
   const handleSubmit = async (input: RecordInput) => {
@@ -168,7 +156,6 @@ function Shell() {
       const newAlerts = await addRecord(input)
       if (newAlerts.length > 0) setModalAlerts(newAlerts)
     }
-    void deleteDraft('record')
     closeRecordForm()
   }
 
@@ -272,7 +259,6 @@ function Shell() {
         initial={formInitial}
         presetDate={formPresetDate}
         onSubmit={handleSubmit}
-        onCancel={cancelRecordForm}
         onClose={closeRecordForm}
         onAddCat={openCatModal}
       />
@@ -284,7 +270,6 @@ function Shell() {
         initial={markerFormInitial}
         presetDate={markerPresetDate}
         onSubmit={handleMarkerSubmit}
-        onCancel={cancelMarkerForm}
         onClose={closeMarkerForm}
         onAddMarkerType={addMarkerType}
       />
