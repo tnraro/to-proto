@@ -74,6 +74,11 @@ export interface Marker {
   updatedAt: string
 }
 
+/** 마커 입력. photos는 최종 순서: 기존 사진은 id, 새 사진은 blob */
+export type MarkerInput = Omit<Marker, 'id' | 'createdAt' | 'updatedAt' | 'photos'> & {
+  photos?: Array<string | Blob>
+}
+
 /** 기록 폼 실수 방지용 draft. 단일 엔트리(id='record') */
 export interface RecordDraft {
   id: 'record'

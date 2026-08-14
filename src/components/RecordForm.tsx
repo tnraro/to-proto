@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { usePhotoReorder } from '../hooks/usePhotoReorder'
 import type { Cat, RecordDraft, RecordInput, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
@@ -46,8 +47,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const draftReady = useRef(false)
-  const dragKeyRef = useRef<string | null>(null)
-  const [dragKey, setDragKey] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -127,26 +126,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     setPhotoItems((prev) => prev.filter((p) => p.key !== key))
   }
 
-  const onThumbPointerDown = (e: React.PointerEvent, key: string) => {
-    // 제거 버튼에서 시작한 터치는 드래그로 취급하지 않는다
-    if ((e.target as HTMLElement).closest('button')) return
-    e.preventDefault()
-    dragKeyRef.current = key
-    setDragKey(key)
-    // 포인터가 썸네일 밖으로 나가도 move/up을 받도록 window 레벨로 추적
-    window.addEventListener('pointermove', onWindowPointerMove)
-    window.addEventListener('pointerup', onWindowPointerEnd)
-    window.addEventListener('pointercancel', onWindowPointerEnd)
-  }
-
-  const onWindowPointerMove = useCallback((e: PointerEvent) => {
-    const fromKey = dragKeyRef.current
-    if (!fromKey) return
-    const hit = document
-      .elementsFromPoint(e.clientX, e.clientY)
-      .find((n) => n instanceof HTMLElement && n.hasAttribute('data-photo-key')) as HTMLElement | undefined
-    const toKey = hit?.getAttribute('data-photo-key')
-    if (!toKey || toKey === fromKey) return
+  const reorderPhoto = useCallback((fromKey: string, toKey: string) => {
     setPhotoItems((prev) => {
       const from = prev.findIndex((p) => p.key === fromKey)
       const to = prev.findIndex((p) => p.key === toKey)
@@ -157,23 +137,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       return next
     })
   }, [])
-
-  const onWindowPointerEnd = useCallback(() => {
-    dragKeyRef.current = null
-    setDragKey(null)
-    window.removeEventListener('pointermove', onWindowPointerMove)
-    window.removeEventListener('pointerup', onWindowPointerEnd)
-    window.removeEventListener('pointercancel', onWindowPointerEnd)
-  }, [onWindowPointerMove])
-
-  useEffect(() => {
-    return () => {
-      // 드래그 중 컴포넌트 언마운트 시 리스너 정리
-      window.removeEventListener('pointermove', onWindowPointerMove)
-      window.removeEventListener('pointerup', onWindowPointerEnd)
-      window.removeEventListener('pointercancel', onWindowPointerEnd)
-    }
-  }, [onWindowPointerMove, onWindowPointerEnd])
+  const { dragKey, onThumbPointerDown } = usePhotoReorder(reorderPhoto)
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()

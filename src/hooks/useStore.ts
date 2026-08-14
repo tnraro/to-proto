@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { AlertEntry, Cat, Marker, MarkerType, RecordInput, ThresholdRule, VomitRecord } from '../types'
+import type {
+  AlertEntry,
+  Cat,
+  Marker,
+  MarkerInput,
+  MarkerType,
+  RecordInput,
+  ThresholdRule,
+  VomitRecord,
+} from '../types'
 import {
   clearAlertLog,
   clearAll,
@@ -30,7 +39,6 @@ import { evaluateNewRecord, violationToAlertEntry } from '../lib/thresholds'
 import { resizeImage } from '../lib/image'
 
 export type RuleInput = Omit<ThresholdRule, 'id'>
-export type MarkerInput = Omit<Marker, 'id' | 'createdAt' | 'updatedAt'>
 
 export interface Store {
   hydrated: boolean
@@ -50,10 +58,10 @@ export interface Store {
   addRecord: (input: RecordInput) => Promise<AlertEntry[]>
   updateRecord: (id: string, input: RecordInput) => Promise<void>
   deleteRecord: (id: string) => void
-  addMarker: (input: MarkerInput) => void
-  updateMarker: (id: string, input: MarkerInput) => void
+  addMarker: (input: MarkerInput) => Promise<void>
+  updateMarker: (id: string, input: MarkerInput) => Promise<void>
   deleteMarker: (id: string) => void
-  addMarkerType: (name: string) => void
+  addMarkerType: (name: string) => string
   renameMarkerType: (id: string, name: string) => void
   deleteMarkerType: (id: string) => void
   addRule: (input: RuleInput) => void
@@ -242,23 +250,30 @@ export function useStore(): Store {
     })()
   }, [records])
 
-  const addMarker = useCallback((input: MarkerInput) => {
-    const now = new Date().toISOString()
-    const marker: Marker = { ...input, id: uid(), createdAt: now, updatedAt: now }
-    setMarkers((prev) => [...prev, marker].sort((a, b) => b.datetime.localeCompare(a.datetime)))
-    void putMarker(marker)
-  }, [])
+  const addMarker = useCallback(
+    async (input: MarkerInput) => {
+      const now = new Date().toISOString()
+      const { photos, ...rest } = input
+      const photoIds = await resolvePhotoIds(photos ?? [])
+      const marker: Marker = { ...rest, photos: photoIds, id: uid(), createdAt: now, updatedAt: now }
+      setMarkers((prev) => [...prev, marker].sort((a, b) => b.datetime.localeCompare(a.datetime)))
+      await putMarker(marker)
+    },
+    [],
+  )
 
   const updateMarker = useCallback(
-    (id: string, input: MarkerInput) => {
+    async (id: string, input: MarkerInput) => {
       const existing = markers.find((m) => m.id === id)
       if (!existing) return
-      const updated: Marker = { ...existing, ...input, updatedAt: new Date().toISOString() }
+      const { photos, ...rest } = input
+      const photoIds = await resolvePhotoIds(photos ?? [])
+      const updated: Marker = { ...existing, ...rest, photos: photoIds, updatedAt: new Date().toISOString() }
       setMarkers((prev) =>
         prev.map((m) => (m.id === id ? updated : m)).sort((a, b) => b.datetime.localeCompare(a.datetime)),
       )
-      void putMarker(updated)
-      void delPhotos(existing.photos.filter((p) => !updated.photos.includes(p)))
+      await putMarker(updated)
+      await delPhotos(existing.photos.filter((p) => !photoIds.includes(p)))
     },
     [markers],
   )
@@ -273,10 +288,11 @@ export function useStore(): Store {
     [markers],
   )
 
-  const addMarkerType = useCallback((name: string) => {
+  const addMarkerType = useCallback((name: string): string => {
     const markerType: MarkerType = { id: uid(), name: name.trim() }
     setMarkerTypes((prev) => [...prev, markerType])
     void putMarkerType(markerType)
+    return markerType.id
   }, [])
 
   const renameMarkerType = useCallback((id: string, name: string) => {
