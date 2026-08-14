@@ -208,7 +208,7 @@ function Shell() {
           />
         )}
         {(matchCalendar || isDefaultTab) && calendarView}
-        {matchStats && <StatsView records={catFilteredRecords} cats={cats} />}
+        {matchStats && <StatsView records={catFilteredRecords} />}
         {matchAlert && (
           <ThresholdManager
             cats={cats}

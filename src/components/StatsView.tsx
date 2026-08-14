@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { Cat, VomitRecord, VomitType } from '../types'
+import type { VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES, VOMIT_TYPE_KEYS } from '../types'
 import { toDateKey, DAY_MS } from '../lib/dates'
 import { Card } from './ui/Card'
@@ -14,11 +14,11 @@ const PERIODS = [
 
 interface Props {
   records: VomitRecord[]
-  cats: Cat[]
 }
 
-export function StatsView({ records, cats }: Props) {
+export function StatsView({ records }: Props) {
   const [periodDays, setPeriodDays] = useState(30)
+  const [hoverType, setHoverType] = useState<VomitType | null>(null)
 
   const filtered = useMemo(() => {
     if (periodDays === Infinity) return records
@@ -28,22 +28,35 @@ export function StatsView({ records, cats }: Props) {
 
   const total = filtered.length
 
+  // 기간 내 등장한 종류 (누적 바의 스택 순서 기준)
+  const stackedTypes = useMemo(() => {
+    const set = new Set<VomitType>()
+    for (const r of filtered) {
+      for (const t of r.types) set.add(t)
+    }
+    return VOMIT_TYPE_KEYS.filter((k) => set.has(k))
+  }, [filtered])
+
   const dailyData = useMemo(() => {
     if (periodDays === Infinity) return []
-    const counts = new Map<string, number>()
+    const days: string[] = []
     for (let i = periodDays - 1; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000)
-      counts.set(toDateKey(d), 0)
+      days.push(toDateKey(new Date(Date.now() - i * DAY_MS)))
     }
-    for (const r of filtered) {
-      const key = toDateKey(new Date(r.datetime))
-      if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1)
-    }
-    return [...counts.entries()].map(([day, count]) => ({
+    const index = new Map(days.map((d, i) => [d, i]))
+    const rows: Record<string, string | number>[] = days.map((day) => ({
       day: day.slice(5),
-      count,
+      ...Object.fromEntries(stackedTypes.map((t) => [t, 0])),
     }))
-  }, [filtered, periodDays])
+    for (const r of filtered) {
+      const i = index.get(toDateKey(new Date(r.datetime)))
+      if (i === undefined) continue
+      for (const t of r.types) {
+        rows[i][t] = (rows[i][t] as number) + 1
+      }
+    }
+    return rows
+  }, [filtered, periodDays, stackedTypes])
 
   const typeData = useMemo(() => {
     const counts = new Map<VomitType, number>()
@@ -56,15 +69,6 @@ export function StatsView({ records, cats }: Props) {
       color: VOMIT_TYPES[k].hex,
     }))
   }, [filtered])
-
-  const catData = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const r of filtered) counts.set(r.catId, (counts.get(r.catId) ?? 0) + 1)
-    return [...counts.entries()].map(([catId, count]) => ({
-      name: cats.find((c) => c.id === catId)?.name ?? '?',
-      count,
-    }))
-  }, [filtered, cats])
 
   const hourData = useMemo(() => {
     const counts = new Array(24).fill(0)
@@ -104,10 +108,48 @@ export function StatsView({ records, cats }: Props) {
                 <BarChart data={dailyData}>
                   <XAxis dataKey="day" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={24} />
-                  <Tooltip />
-                  <Bar dataKey="count" name="횟수" fill="#059669" radius={[3, 3, 0, 0]} />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null
+                      const items = payload.filter((p) => Number(p.value) > 0)
+                      if (items.length === 0) return null
+                      return (
+                        <div className="rounded-lg border border-gray-100 bg-white px-2.5 py-1.5 text-xs shadow-pop">
+                          <div className="font-medium text-gray-900">{label}</div>
+                          {items.map((p) => (
+                            <div key={String(p.dataKey)} className="flex items-center gap-1.5 text-gray-600">
+                              <span
+                                className="inline-block h-2 w-2 rounded-full"
+                                style={{ backgroundColor: p.color }}
+                              />
+                              {p.name}: {p.value}회
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }}
+                  />
+                  {stackedTypes.map((t) => (
+                    <Bar
+                      key={t}
+                      dataKey={t}
+                      stackId="daily"
+                      fill={hoverType === null || hoverType === t ? VOMIT_TYPES[t].hex : '#e5e7eb'}
+                      name={VOMIT_TYPES[t].label}
+                    />
+                  ))}
                 </BarChart>
               </ResponsiveContainer>
+              {stackedTypes.length > 0 && (
+                <Legend
+                  items={stackedTypes.map((t) => {
+                    const total = typeData.find((x) => x.name === VOMIT_TYPES[t].label)?.value ?? 0
+                    return { key: t, label: VOMIT_TYPES[t].label, value: total, color: VOMIT_TYPES[t].hex }
+                  })}
+                  hoverKey={hoverType}
+                  onHover={(key) => setHoverType(key as VomitType | null)}
+                />
+              )}
             </Card>
           )}
 
@@ -126,25 +168,6 @@ export function StatsView({ records, cats }: Props) {
               </ResponsiveContainer>
               <Legend items={typeData.map((t) => ({ label: t.name, value: t.value, color: t.color }))} />
             </Card>
-
-            {cats.length >= 2 && (
-              <Card>
-                <h3 className="mb-3 text-sm font-semibold text-gray-700">고양이별 횟수</h3>
-                {catData.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-gray-400">고양이 기록 없음</p>
-                ) : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={catData}>
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={24} />
-                      <Tooltip />
-                      <Bar dataKey="count" name="횟수" fill="#0ea5e9" radius={[3, 3, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </Card>
-            )}
-
           </div>
 
           <Card>
@@ -164,15 +187,36 @@ export function StatsView({ records, cats }: Props) {
   )
 }
 
-function Legend({ items }: { items: { label: string; value: number; color: string }[] }) {
+function Legend({
+  items,
+  hoverKey,
+  onHover,
+}: {
+  items: { key?: string; label: string; value: number; color: string }[]
+  hoverKey?: string | null
+  onHover?: (key: string | null) => void
+}) {
   return (
     <ul className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
-      {items.map((it) => (
-        <li key={it.label} className="flex items-center gap-1.5 text-xs text-gray-600">
-          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: it.color }} />
-          {it.label} {it.value}회
-        </li>
-      ))}
+      {items.map((it) => {
+        const dimmed = hoverKey !== undefined && hoverKey !== null && hoverKey !== (it.key ?? it.label)
+        return (
+          <li
+            key={it.key ?? it.label}
+            onPointerEnter={() => onHover?.(it.key ?? it.label)}
+            onPointerLeave={() => onHover?.(null)}
+            className={`flex cursor-default items-center gap-1.5 text-xs transition ${
+              dimmed ? 'text-gray-300' : 'text-gray-600'
+            }`}
+          >
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: dimmed ? '#d1d5db' : it.color }}
+            />
+            {it.label} {it.value}회
+          </li>
+        )
+      })}
     </ul>
   )
 }
