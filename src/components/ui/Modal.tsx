@@ -99,7 +99,7 @@ export function Modal({
 
   const overlay = (
     <div
-      className={`fixed inset-0 z-50 flex justify-center bg-black/40 ${
+      className={`fixed inset-0 z-50 flex justify-center overflow-x-hidden bg-black/40 ${
         drawer ? 'items-end sm:items-center sm:p-4' : 'items-center p-4'
       }`}
       onPointerDown={(e) => {
@@ -115,7 +115,7 @@ export function Modal({
     >
       <div
         ref={sheetRef}
-        className={`bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-pop ${
+        className={`overflow-x-hidden bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-pop ${
           drawer
             ? 'flex max-h-[85vh] w-full flex-col rounded-t-2xl sm:max-w-md sm:rounded-2xl sm:pb-5'
             : 'w-full max-w-md rounded-2xl sm:pb-5'
@@ -141,7 +141,9 @@ export function Modal({
             >
               <div className="mx-auto h-1.5 w-12 rounded-full bg-gray-300" />
             </div>
-            <div className={`min-h-0 flex-1 overflow-y-auto px-2 -mx-2 ${contentClassName ?? ''}`}>
+            <div
+              className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 -mx-2 ${contentClassName ?? ''}`}
+            >
               {children}
             </div>
           </>

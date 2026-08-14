@@ -26,6 +26,11 @@
     font-size: 16px;
   }
 
+  /* Safari의 datetime-local 내장 최소 너비가 컨테이너를 밀어내지 않도록 */
+  input[type='datetime-local'] {
+    min-width: 0;
+  }
+
   @media (min-width: 640px) {
     input,
     select,
