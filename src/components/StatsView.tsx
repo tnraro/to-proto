@@ -72,10 +72,18 @@ export function StatsView({ records }: Props) {
   }, [filtered])
 
   const hourData = useMemo(() => {
-    const counts = new Array(24).fill(0)
-    for (const r of filtered) counts[new Date(r.datetime).getHours()]++
-    return counts.map((count, hour) => ({ hour: `${String(hour).padStart(2, '0')}시`, count }))
-  }, [filtered])
+    const rows: Record<string, string | number>[] = Array.from({ length: 24 }, (_, hour) => ({
+      hour: `${String(hour).padStart(2, '0')}시`,
+      ...Object.fromEntries(stackedTypes.map((t) => [t, 0])),
+    }))
+    for (const r of filtered) {
+      const hour = new Date(r.datetime).getHours()
+      for (const t of r.types) {
+        rows[hour][t] = (rows[hour][t] as number) + 1
+      }
+    }
+    return rows
+  }, [filtered, stackedTypes])
 
   return (
     <div className="space-y-4 p-4">
@@ -162,10 +170,28 @@ export function StatsView({ records }: Props) {
                 <BarChart data={hourData}>
                   <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10 }} width={24} />
-                  <Tooltip />
-                  <Bar dataKey="count" name="횟수" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+                  <Tooltip content={<ChartTooltip />} />
+                  {stackedTypes.map((t) => (
+                    <Bar
+                      key={t}
+                      dataKey={t}
+                      stackId="hourly"
+                      fill={hoverType === null || hoverType === t ? VOMIT_TYPES[t].hex : '#e5e7eb'}
+                      name={VOMIT_TYPES[t].label}
+                    />
+                  ))}
                 </BarChart>
               </ResponsiveContainer>
+              {stackedTypes.length > 0 && (
+                <Legend
+                  items={stackedTypes.map((t) => {
+                    const total = typeData.find((x) => x.key === t)?.value ?? 0
+                    return { key: t, label: VOMIT_TYPES[t].label, value: total, color: VOMIT_TYPES[t].hex }
+                  })}
+                  hoverKey={hoverType}
+                  onHover={(key) => setHoverType(key as VomitType | null)}
+                />
+              )}
             </Card>
           </div>
         </>
