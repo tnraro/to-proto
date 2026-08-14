@@ -206,7 +206,7 @@ function MarkerFormContent({
       </div>
 
       <div>
-        <span className="mb-1 block text-sm font-medium text-gray-600">연관 고양이 (선택, 복수 가능)</span>
+        <span className="mb-1 block text-sm font-medium text-gray-600">연관 고양이 (복수 선택 가능)</span>
         <div className="flex flex-wrap gap-2">
           {cats.map((c) => {
             const selected = catIds.includes(c.id)
