@@ -28,6 +28,7 @@ export function Modal({
 }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null)
   const dragStart = useRef<number | null>(null)
+  const downOnBackdrop = useRef(false)
   const [dragY, setDragY] = useState<number | null>(null)
 
   useEffect(() => {
@@ -101,8 +102,13 @@ export function Modal({
       className={`fixed inset-0 z-50 flex justify-center bg-black/40 ${
         drawer ? 'items-end sm:items-center sm:p-4' : 'items-center p-4'
       }`}
-      onClick={(e) => {
-        if (closeOnBackdrop && e.target === e.currentTarget) onClose()
+      onPointerDown={(e) => {
+        downOnBackdrop.current = e.target === e.currentTarget
+      }}
+      onPointerUp={(e) => {
+        // 백드롭 닫기는 pointerdown/pointerup이 모두 백드롭에서 일어난 경우에만 동작한다
+        // (시트 안 down → 바깥 up 같은 불일치 제스처로 닫히지 않도록)
+        if (closeOnBackdrop && downOnBackdrop.current && e.target === e.currentTarget) onClose()
       }}
       role="dialog"
       aria-modal="true"
