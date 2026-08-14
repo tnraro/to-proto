@@ -8,6 +8,10 @@ export interface RecordFilters {
   types: VomitType[]
   /** 빈 배열 = 전체 (내부 OR) */
   catIds: string[]
+  /** 표시할 타임라인 종류 (빈 배열 = 전체) */
+  kinds: Array<'record' | 'marker'>
+  /** 마커 종류 id (마커 필터에만 적용, 빈 배열 = 전체) */
+  markerTypeIds: string[]
   dateMode: DateMode
   /** 이전: 기록일 < dateBefore (제외) */
   dateBefore?: string
@@ -23,6 +27,8 @@ export interface RecordFilters {
 export const EMPTY_FILTERS: RecordFilters = {
   types: [],
   catIds: [],
+  kinds: [],
+  markerTypeIds: [],
   dateMode: 'all',
   memo: '',
 }
@@ -61,6 +67,7 @@ export function filterRecords(records: VomitRecord[], f: RecordFilters): VomitRe
 export function filterMarkers(markers: Marker[], f: RecordFilters): Marker[] {
   const memoQuery = f.memo.trim().toLowerCase()
   return markers.filter((m) => {
+    if (f.markerTypeIds.length > 0 && !f.markerTypeIds.includes(m.typeId)) return false
     if (f.catIds.length > 0 && !m.catIds.some((c) => f.catIds.includes(c))) return false
     if (!matchesDate(f, toDayKey(m.datetime))) return false
     if (memoQuery && !(m.memo ?? '').toLowerCase().includes(memoQuery)) return false

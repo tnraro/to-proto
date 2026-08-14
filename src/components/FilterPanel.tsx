@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Cat, VomitType } from '../types'
+import type { Cat, MarkerType, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { EMPTY_FILTERS, type DateMode, type RecordFilters } from '../lib/filters'
 import { toDateKey } from '../lib/dates'
@@ -29,12 +29,13 @@ const inputClass =
 
 interface Props {
   cats: Cat[]
+  markerTypes: MarkerType[]
   filters: RecordFilters
   onChange: (f: RecordFilters) => void
   resultCount: number
 }
 
-export function FilterPanel({ cats, filters, onChange, resultCount }: Props) {
+export function FilterPanel({ cats, markerTypes, filters, onChange, resultCount }: Props) {
   const [open, setOpen] = useState(false)
 
   const toggleType = (t: VomitType) => {
@@ -55,8 +56,29 @@ export function FilterPanel({ cats, filters, onChange, resultCount }: Props) {
     })
   }
 
+  const toggleKind = (k: 'record' | 'marker') => {
+    onChange({
+      ...filters,
+      kinds: filters.kinds.includes(k) ? filters.kinds.filter((x) => x !== k) : [...filters.kinds, k],
+    })
+  }
+
+  const toggleMarkerType = (id: string) => {
+    onChange({
+      ...filters,
+      markerTypeIds: filters.markerTypeIds.includes(id)
+        ? filters.markerTypeIds.filter((x) => x !== id)
+        : [...filters.markerTypeIds, id],
+    })
+  }
+
   const activeCount =
-    filters.types.length + filters.catIds.length + (filters.dateMode !== 'all' ? 1 : 0) + (filters.memo.trim() ? 1 : 0)
+    filters.types.length +
+    filters.catIds.length +
+    (filters.kinds.length === 1 ? 1 : 0) +
+    filters.markerTypeIds.length +
+    (filters.dateMode !== 'all' ? 1 : 0) +
+    (filters.memo.trim() ? 1 : 0)
 
   return (
     <div className="border-b border-gray-200 bg-white">
@@ -81,6 +103,22 @@ export function FilterPanel({ cats, filters, onChange, resultCount }: Props) {
 
       {open && (
         <div className="space-y-4 border-t border-gray-100 px-4 py-4">
+          <div>
+            <span className="mb-2 block text-xs font-medium text-gray-500">표시 항목</span>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { id: 'record', label: '기록' },
+                  { id: 'marker', label: '마커' },
+                ] as const
+              ).map((k) => (
+                <Chip key={k.id} selected={filters.kinds.includes(k.id)} onClick={() => toggleKind(k.id)}>
+                  {k.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
           <div>
             <span className="mb-2 block text-xs font-medium text-gray-500">토의 종류</span>
             <div className="flex flex-wrap gap-2">
@@ -111,6 +149,23 @@ export function FilterPanel({ cats, filters, onChange, resultCount }: Props) {
               ))}
             </div>
           </div>
+
+          {markerTypes.length > 0 && (
+            <div>
+              <span className="mb-2 block text-xs font-medium text-gray-500">마커 종류</span>
+              <div className="flex flex-wrap gap-2">
+                {markerTypes.map((t) => (
+                  <Chip
+                    key={t.id}
+                    selected={filters.markerTypeIds.includes(t.id)}
+                    onClick={() => toggleMarkerType(t.id)}
+                  >
+                    {t.name}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <span className="mb-2 block text-xs font-medium text-gray-500">날짜</span>

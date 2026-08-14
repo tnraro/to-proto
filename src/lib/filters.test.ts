@@ -159,4 +159,24 @@ describe('filterMarkers', () => {
     }
     expect(filterMarkers(markers, f)).toHaveLength(1)
   })
+
+  test('마커 종류 필터: 선택한 종류만 (빈 배열 = 전체)', () => {
+    const t1 = marker('2026-08-13T11:00:00', ['c1'], '검진')
+    const t2 = marker('2026-08-13T12:00:00', ['c1'], '사료 교체')
+    t2.typeId = 't2'
+    const f: RecordFilters = { ...EMPTY_FILTERS, markerTypeIds: ['t1'] }
+    expect(filterMarkers([t1, t2], f)).toHaveLength(1)
+    expect(filterMarkers([t1, t2], { ...EMPTY_FILTERS, markerTypeIds: [] })).toHaveLength(2)
+  })
+
+  test('마커 종류 + 고양이 + 날짜 조합', () => {
+    const f: RecordFilters = {
+      ...EMPTY_FILTERS,
+      markerTypeIds: ['t1'],
+      catIds: ['c2'],
+      dateMode: 'after',
+      dateAfter: '2026-08-01',
+    }
+    expect(filterMarkers(markers, f)).toHaveLength(1)
+  })
 })

@@ -34,9 +34,11 @@ export function RecordBrowser({
 
   // 기록과 마커를 같은 필터로 거르고 datetime 내림차순 병합 — 페이지네이션은 타입을 모른다
   const timeline = useMemo<TimelineItem[]>(() => {
+    const includeRecords = filters.kinds.length === 0 || filters.kinds.includes('record')
+    const includeMarkers = filters.kinds.length === 0 || filters.kinds.includes('marker')
     const items: TimelineItem[] = [
-      ...filtered.map((r) => ({ kind: 'record' as const, payload: r })),
-      ...filterMarkers(markers, filters).map((m) => ({ kind: 'marker' as const, payload: m })),
+      ...(includeRecords ? filtered.map((r) => ({ kind: 'record' as const, payload: r })) : []),
+      ...(includeMarkers ? filterMarkers(markers, filters).map((m) => ({ kind: 'marker' as const, payload: m })) : []),
     ]
     return items.sort((a, b) => b.payload.datetime.localeCompare(a.payload.datetime))
   }, [filtered, markers, filters])
@@ -52,7 +54,13 @@ export function RecordBrowser({
 
   return (
     <div className="flex h-full flex-col">
-      <FilterPanel cats={cats} filters={filters} onChange={changeFilters} resultCount={filtered.length} />
+      <FilterPanel
+        cats={cats}
+        markerTypes={markerTypes}
+        filters={filters}
+        onChange={changeFilters}
+        resultCount={filtered.length}
+      />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {records.length === 0 && markers.length === 0 ? (
