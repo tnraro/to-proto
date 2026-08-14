@@ -1,20 +1,26 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { AlertEntry, Cat, RecordInput, ThresholdRule, VomitRecord } from '../types'
+import type { AlertEntry, Cat, Marker, MarkerType, RecordInput, ThresholdRule, VomitRecord } from '../types'
 import {
   clearAlertLog,
   clearAll,
   delAlertEntry,
   delCat,
+  delMarker,
+  delMarkerType,
   delPhotos,
   delRecord,
   delRecordsByCat,
   delRule,
   getAllAlertLog,
   getAllCats,
+  getAllMarkerTypes,
+  getAllMarkers,
   getAllRecords,
   getAllRules,
   putAlertEntry,
   putCat,
+  putMarker,
+  putMarkerType,
   putPhoto,
   putRecord,
   putRule,
@@ -24,6 +30,7 @@ import { evaluateNewRecord, violationToAlertEntry } from '../lib/thresholds'
 import { resizeImage } from '../lib/image'
 
 export type RuleInput = Omit<ThresholdRule, 'id'>
+export type MarkerInput = Omit<Marker, 'id' | 'createdAt' | 'updatedAt'>
 
 export interface Store {
   hydrated: boolean
@@ -31,6 +38,8 @@ export interface Store {
   records: VomitRecord[]
   rules: ThresholdRule[]
   alertLog: AlertEntry[]
+  markers: Marker[]
+  markerTypes: MarkerType[]
   addCat: (name: string, photoId?: string) => void
   renameCat: (id: string, name: string) => void
   updateCatPhoto: (id: string, photoId?: string) => void
@@ -41,6 +50,12 @@ export interface Store {
   addRecord: (input: RecordInput) => Promise<AlertEntry[]>
   updateRecord: (id: string, input: RecordInput) => Promise<void>
   deleteRecord: (id: string) => void
+  addMarker: (input: MarkerInput) => void
+  updateMarker: (id: string, input: MarkerInput) => void
+  deleteMarker: (id: string) => void
+  addMarkerType: (name: string) => void
+  renameMarkerType: (id: string, name: string) => void
+  deleteMarkerType: (id: string) => void
   addRule: (input: RuleInput) => void
   updateRule: (id: string, input: RuleInput) => void
   deleteRule: (id: string) => void
@@ -55,22 +70,29 @@ export function useStore(): Store {
   const [records, setRecords] = useState<VomitRecord[]>([])
   const [rules, setRules] = useState<ThresholdRule[]>([])
   const [alertLog, setAlertLog] = useState<AlertEntry[]>([])
+  const [markers, setMarkers] = useState<Marker[]>([])
+  const [markerTypes, setMarkerTypes] = useState<MarkerType[]>([])
   const [currentCatId, setCurrentCat] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const [loadedCats, loadedRecords, loadedRules, loadedAlerts] = await Promise.all([
-        getAllCats(),
-        getAllRecords(),
-        getAllRules(),
-        getAllAlertLog(),
-      ])
+      const [loadedCats, loadedRecords, loadedRules, loadedAlerts, loadedMarkers, loadedMarkerTypes] =
+        await Promise.all([
+          getAllCats(),
+          getAllRecords(),
+          getAllRules(),
+          getAllAlertLog(),
+          getAllMarkers(),
+          getAllMarkerTypes(),
+        ])
       if (cancelled) return
       setCats(loadedCats)
       setRecords(loadedRecords.sort((a, b) => b.datetime.localeCompare(a.datetime)))
       setRules(loadedRules)
       setAlertLog(loadedAlerts)
+      setMarkers(loadedMarkers.sort((a, b) => b.datetime.localeCompare(a.datetime)))
+      setMarkerTypes(loadedMarkerTypes)
       setHydrated(true)
     })()
     return () => {
@@ -113,6 +135,22 @@ export function useStore(): Store {
     // 삭제된 고양이가 선택 중이면 전체로 리셋
     setCurrentCat((cur) => (cur === id ? null : cur))
     setRecords((prev) => prev.filter((r) => r.catId !== id))
+    // 마커에서는 해당 고양이만 제거 (마커는 유지), 연관 고양이가 0이 되면 마커 삭제
+    setMarkers((prev) => {
+      const removed: Marker[] = []
+      const next = prev.flatMap((m) => {
+        if (!m.catIds.includes(id)) return [m]
+        const catIds = m.catIds.filter((c) => c !== id)
+        if (catIds.length === 0) {
+          removed.push(m)
+          return []
+        }
+        void putMarker({ ...m, catIds })
+        return [{ ...m, catIds }]
+      })
+      if (removed.length > 0) void delPhotos(removed.flatMap((m) => m.photos))
+      return next
+    })
     void (async () => {
       const photoIds = await delRecordsByCat(id)
       await delCat(id)
@@ -204,6 +242,67 @@ export function useStore(): Store {
     })()
   }, [records])
 
+  const addMarker = useCallback((input: MarkerInput) => {
+    const now = new Date().toISOString()
+    const marker: Marker = { ...input, id: uid(), createdAt: now, updatedAt: now }
+    setMarkers((prev) => [...prev, marker].sort((a, b) => b.datetime.localeCompare(a.datetime)))
+    void putMarker(marker)
+  }, [])
+
+  const updateMarker = useCallback(
+    (id: string, input: MarkerInput) => {
+      const existing = markers.find((m) => m.id === id)
+      if (!existing) return
+      const updated: Marker = { ...existing, ...input, updatedAt: new Date().toISOString() }
+      setMarkers((prev) =>
+        prev.map((m) => (m.id === id ? updated : m)).sort((a, b) => b.datetime.localeCompare(a.datetime)),
+      )
+      void putMarker(updated)
+      void delPhotos(existing.photos.filter((p) => !updated.photos.includes(p)))
+    },
+    [markers],
+  )
+
+  const deleteMarker = useCallback(
+    (id: string) => {
+      setMarkers((prev) => prev.filter((m) => m.id !== id))
+      const target = markers.find((m) => m.id === id)
+      void delMarker(id)
+      if (target) void delPhotos(target.photos)
+    },
+    [markers],
+  )
+
+  const addMarkerType = useCallback((name: string) => {
+    const markerType: MarkerType = { id: uid(), name: name.trim() }
+    setMarkerTypes((prev) => [...prev, markerType])
+    void putMarkerType(markerType)
+  }, [])
+
+  const renameMarkerType = useCallback((id: string, name: string) => {
+    setMarkerTypes((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, name: name.trim() } : t))
+      const target = next.find((t) => t.id === id)
+      if (target) void putMarkerType(target)
+      return next
+    })
+  }, [])
+
+  /** 종류 삭제: 해당 종류의 마커와 그 사진을 캐스케이드 삭제 (confirm은 UI에서) */
+  const deleteMarkerType = useCallback(
+    (id: string) => {
+      setMarkerTypes((prev) => prev.filter((t) => t.id !== id))
+      setMarkers((prev) => {
+        const removed = prev.filter((m) => m.typeId === id)
+        if (removed.length > 0) void delPhotos(removed.flatMap((m) => m.photos))
+        for (const m of removed) void delMarker(m.id)
+        return prev.filter((m) => m.typeId !== id)
+      })
+      void delMarkerType(id)
+    },
+    [],
+  )
+
   const addRule = useCallback((input: RuleInput) => {
     const rule: ThresholdRule = { ...input, id: uid() }
     setRules((prev) => [...prev, rule])
@@ -239,6 +338,8 @@ export function useStore(): Store {
     setRecords([])
     setRules([])
     setAlertLog([])
+    setMarkers([])
+    setMarkerTypes([])
     setCurrentCat(null)
     void clearAll()
   }, [])
@@ -249,6 +350,8 @@ export function useStore(): Store {
     records,
     rules,
     alertLog,
+    markers,
+    markerTypes,
     addCat,
     renameCat,
     updateCatPhoto,
@@ -258,6 +361,12 @@ export function useStore(): Store {
     addRecord,
     updateRecord,
     deleteRecord,
+    addMarker,
+    updateMarker,
+    deleteMarker,
+    addMarkerType,
+    renameMarkerType,
+    deleteMarkerType,
     addRule,
     updateRule,
     deleteRule,
