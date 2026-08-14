@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Cat, ThresholdRule, VomitType } from '../types'
 import { VOMIT_TYPES, VOMIT_TYPE_KEYS } from '../types'
 import { RULE_PRESETS } from '../lib/thresholds'
@@ -38,7 +38,13 @@ export function ThresholdManager({ cats, rules, alertLog, addRule, updateRule, d
     <div className="space-y-8 p-4">
       <section>
         <h2 className="mb-3 text-sm font-semibold text-gray-600">임계값 규칙</h2>
-        <RuleForm cats={cats} editing={editing} onSubmit={handleSubmit} onCancel={() => setEditing(null)} />
+        <RuleForm
+          key={editing?.id ?? 'new'}
+          cats={cats}
+          editing={editing}
+          onSubmit={handleSubmit}
+          onCancel={() => setEditing(null)}
+        />
         <ul className="mt-3 divide-y divide-gray-100 rounded-card border border-gray-100 bg-white shadow-card">
           {rules.map((rule) => (
             <RuleItem key={rule.id} rule={rule} cats={cats} onUpdate={updateRule} onDelete={deleteRule} onEdit={setEditing} />
@@ -106,13 +112,6 @@ function RuleForm({
   const [windowDays, setWindowDays] = useState<number>(editing?.windowDays ?? 1)
   const [maxCount, setMaxCount] = useState<number>(editing?.maxCount ?? 3)
   const [type, setType] = useState<'all' | VomitType>(editing?.type ?? 'all')
-
-  useEffect(() => {
-    setCatId(editing?.catId ?? 'all')
-    setWindowDays(editing?.windowDays ?? 1)
-    setMaxCount(editing?.maxCount ?? 3)
-    setType(editing?.type ?? 'all')
-  }, [editing])
 
   const toInput = (): RuleInput => ({
     catId: catId === 'all' ? null : catId,
