@@ -1,3 +1,5 @@
+import type { TimeSeriesItem } from '../types'
+
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
@@ -50,6 +52,23 @@ export function formatAbsoluteTime(iso: string): string {
 /** ISO 문자열의 날짜 키(YYYY-MM-DD, 로컬 타임존) */
 export function toDayKey(iso: string): string {
   return toDateKey(new Date(iso))
+}
+
+/** 시간축 데이터를 datetime 내림차순(최신순)으로 정렬 — 원본 배열은 변경하지 않음 */
+export function sortByDatetimeDesc<T extends TimeSeriesItem>(items: T[]): T[] {
+  return [...items].sort((a, b) => b.datetime.localeCompare(a.datetime))
+}
+
+/** 시간축 데이터를 로컬 날짜 키(YYYY-MM-DD) 기준으로 그룹화 */
+export function groupByDay<T extends TimeSeriesItem>(items: T[]): Map<string, T[]> {
+  const map = new Map<string, T[]>()
+  for (const item of items) {
+    const key = toDayKey(item.datetime)
+    const list = map.get(key) ?? []
+    list.push(item)
+    map.set(key, list)
+  }
+  return map
 }
 
 export function startOfMonth(d: Date): Date {

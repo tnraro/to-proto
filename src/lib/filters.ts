@@ -1,4 +1,4 @@
-import type { VomitRecord, VomitType } from '../types'
+import type { Marker, VomitRecord, VomitType } from '../types'
 import { toDayKey } from './dates'
 
 export type DateMode = 'all' | 'before' | 'after' | 'range'
@@ -49,6 +49,21 @@ export function filterRecords(records: VomitRecord[], f: RecordFilters): VomitRe
     if (f.catIds.length > 0 && !f.catIds.includes(r.catId)) return false
     if (!matchesDate(f, toDayKey(r.datetime))) return false
     if (memoQuery && !r.memo.toLowerCase().includes(memoQuery)) return false
+    return true
+  })
+}
+
+/**
+ * 마커 필터링 (기록과 동일 RecordFilters).
+ * - types: 마커는 토 종류 속성이 없으므로 무시
+ * - catIds: 고양이 선택 시 연관 고양이가 있어야 표시, 미선택 시 모두 표시
+ */
+export function filterMarkers(markers: Marker[], f: RecordFilters): Marker[] {
+  const memoQuery = f.memo.trim().toLowerCase()
+  return markers.filter((m) => {
+    if (f.catIds.length > 0 && !m.catIds.some((c) => f.catIds.includes(c))) return false
+    if (!matchesDate(f, toDayKey(m.datetime))) return false
+    if (memoQuery && !(m.memo ?? '').toLowerCase().includes(memoQuery)) return false
     return true
   })
 }

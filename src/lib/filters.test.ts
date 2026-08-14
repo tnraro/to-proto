@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import type { VomitRecord } from '../types'
-import { EMPTY_FILTERS, filterRecords, type RecordFilters } from './filters'
+import type { Marker, VomitRecord } from '../types'
+import { EMPTY_FILTERS, filterMarkers, filterRecords, type RecordFilters } from './filters'
 
 function rec(datetime: string, catId: string, types: VomitRecord['types'], memo = ''): VomitRecord {
   return {
@@ -8,6 +8,19 @@ function rec(datetime: string, catId: string, types: VomitRecord['types'], memo 
     datetime,
     catId,
     types,
+    memo,
+    photos: [],
+    createdAt: datetime,
+    updatedAt: datetime,
+  }
+}
+
+function marker(datetime: string, catIds: string[], memo?: string): Marker {
+  return {
+    id: `${datetime}-${catIds.join('')}`,
+    datetime,
+    typeId: 't1',
+    catIds,
     memo,
     photos: [],
     createdAt: datetime,
@@ -94,5 +107,56 @@ describe('filterRecords', () => {
     expect(filterRecords(records, f)).toHaveLength(0)
     const f2: RecordFilters = { ...EMPTY_FILTERS, memo: '토', types: ['food'] }
     expect(filterRecords(records, f2)).toHaveLength(1)
+  })
+})
+
+const markers = [
+  marker('2026-08-13T11:00:00', ['c1', 'c2'], '건강 검진 다녀옴'),
+  marker('2026-08-10T12:00:00', ['c1']),
+  marker('2026-07-30T09:00:00', [], '사료 교체'),
+]
+
+describe('filterMarkers', () => {
+  test('빈 필터 = 전체 반환', () => {
+    expect(filterMarkers(markers, EMPTY_FILTERS)).toHaveLength(3)
+  })
+
+  test('고양이 선택: 연관 고양이가 있는 마커만 (빈 catIds는 제외)', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, catIds: ['c1'] }
+    const result = filterMarkers(markers, f)
+    expect(result).toHaveLength(2)
+    expect(result.every((m) => m.catIds.includes('c1'))).toBe(true)
+  })
+
+  test('고양이 미선택: 모두 표시', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, catIds: [] }
+    expect(filterMarkers(markers, f)).toHaveLength(3)
+  })
+
+  test('types 필터는 무시', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, types: ['food'] }
+    expect(filterMarkers(markers, f)).toHaveLength(3)
+  })
+
+  test('날짜 필터 적용 (이후)', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, dateMode: 'after', dateAfter: '2026-08-10' }
+    expect(filterMarkers(markers, f)).toHaveLength(2) // 08-13, 08-10
+  })
+
+  test('메모: 대소문자 무시 부분 문자열 (없으면 통과)', () => {
+    const f: RecordFilters = { ...EMPTY_FILTERS, memo: '검진' }
+    expect(filterMarkers(markers, f)).toHaveLength(1)
+    const f2: RecordFilters = { ...EMPTY_FILTERS, memo: '없는단어' }
+    expect(filterMarkers(markers, f2)).toHaveLength(0)
+  })
+
+  test('고양이 + 날짜 조합', () => {
+    const f: RecordFilters = {
+      ...EMPTY_FILTERS,
+      catIds: ['c2'],
+      dateMode: 'after',
+      dateAfter: '2026-08-01',
+    }
+    expect(filterMarkers(markers, f)).toHaveLength(1)
   })
 })

@@ -66,9 +66,11 @@ function Shell() {
     alertLog,
     currentCatId,
     setCurrentCat,
+    markers,
     markerTypes,
     addMarker,
     updateMarker,
+    deleteMarker,
     addMarkerType,
   } = store
 
@@ -168,6 +170,14 @@ function Shell() {
     if (confirm('기록을 삭제할까요?')) deleteRecord(id)
   }
 
+  const handleEditMarker = (marker: Marker) => {
+    openMarkerForm(marker)
+  }
+
+  const handleDeleteMarker = (id: string) => {
+    if (confirm('마커를 삭제할까요?')) deleteMarker(id)
+  }
+
   // 기본 탭(캘린더) 폴백과 /calendar 라우트가 같은 뷰를 공유
   const calendarView = (
     <CalendarView
@@ -187,8 +197,12 @@ function Shell() {
           <RecordBrowser
             records={records}
             cats={cats}
+            markers={markers}
+            markerTypes={markerTypes}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onEditMarker={handleEditMarker}
+            onDeleteMarker={handleDeleteMarker}
           />
         )}
         {(matchCalendar || isDefaultTab) && calendarView}

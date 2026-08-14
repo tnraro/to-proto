@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Cat, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
-import { monthLabel, startOfMonth, toDateKey } from '../lib/dates'
+import { monthLabel, startOfMonth, toDateKey, groupByDay } from '../lib/dates'
 import { RecordList } from './RecordList'
 import { Card } from './ui/Card'
 
@@ -29,13 +29,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
   const cells = useMemo(() => buildMonthCells(cursor), [cursor])
 
   const recordsByDay = useMemo(() => {
-    const map = new Map<string, VomitRecord[]>()
-    for (const r of records) {
-      const key = toDateKey(new Date(r.datetime))
-      const list = map.get(key) ?? []
-      list.push(r)
-      map.set(key, list)
-    }
+    const map = groupByDay(records)
     for (const list of map.values()) list.sort((a, b) => a.datetime.localeCompare(b.datetime))
     return map
   }, [records])
@@ -145,7 +139,12 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
 
       <Card>
         <h3 className="mb-2 text-sm font-semibold text-gray-600">{selectedKey} 기록</h3>
-        <RecordList records={dayRecords} cats={cats} onEdit={onEdit} onDelete={onDelete} />
+        <RecordList
+          items={dayRecords.map((r) => ({ kind: 'record' as const, payload: r }))}
+          cats={cats}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       </Card>
     </div>
   )

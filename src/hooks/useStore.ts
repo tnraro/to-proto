@@ -36,6 +36,7 @@ import {
   uid,
 } from '../lib/storage'
 import { evaluateNewRecord, violationToAlertEntry } from '../lib/thresholds'
+import { sortByDatetimeDesc } from '../lib/dates'
 import { resizeImage } from '../lib/image'
 
 export type RuleInput = Omit<ThresholdRule, 'id'>
@@ -96,10 +97,10 @@ export function useStore(): Store {
         ])
       if (cancelled) return
       setCats(loadedCats)
-      setRecords(loadedRecords.sort((a, b) => b.datetime.localeCompare(a.datetime)))
+      setRecords(sortByDatetimeDesc(loadedRecords))
       setRules(loadedRules)
       setAlertLog(loadedAlerts)
-      setMarkers(loadedMarkers.sort((a, b) => b.datetime.localeCompare(a.datetime)))
+      setMarkers(sortByDatetimeDesc(loadedMarkers))
       setMarkerTypes(loadedMarkerTypes)
       setHydrated(true)
     })()
@@ -202,7 +203,7 @@ export function useStore(): Store {
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       }
-      const nextRecords = [...records, created].sort((a, b) => b.datetime.localeCompare(a.datetime))
+      const nextRecords = sortByDatetimeDesc([...records, created])
 
       // 이번 기록이 임계값을 넘게 만든 규칙만 경고 (이미 위반 중인 규칙은 제외)
       const newAlerts = evaluateNewRecord(rules, records, cats, created, now).map(violationToAlertEntry)
@@ -230,11 +231,7 @@ export function useStore(): Store {
         photos: photoIds,
         updatedAt: new Date().toISOString(),
       }
-      setRecords((prev) =>
-        prev
-          .map((r) => (r.id === id ? updated : r))
-          .sort((a, b) => b.datetime.localeCompare(a.datetime)),
-      )
+      setRecords((prev) => sortByDatetimeDesc(prev.map((r) => (r.id === id ? updated : r))))
       await putRecord(updated)
       await delPhotos(existing.photos.filter((p) => !updated.photos.includes(p)))
     },
@@ -256,7 +253,7 @@ export function useStore(): Store {
       const { photos, ...rest } = input
       const photoIds = await resolvePhotoIds(photos ?? [])
       const marker: Marker = { ...rest, photos: photoIds, id: uid(), createdAt: now, updatedAt: now }
-      setMarkers((prev) => [...prev, marker].sort((a, b) => b.datetime.localeCompare(a.datetime)))
+      setMarkers((prev) => sortByDatetimeDesc([...prev, marker]))
       await putMarker(marker)
     },
     [],
@@ -269,9 +266,7 @@ export function useStore(): Store {
       const { photos, ...rest } = input
       const photoIds = await resolvePhotoIds(photos ?? [])
       const updated: Marker = { ...existing, ...rest, photos: photoIds, updatedAt: new Date().toISOString() }
-      setMarkers((prev) =>
-        prev.map((m) => (m.id === id ? updated : m)).sort((a, b) => b.datetime.localeCompare(a.datetime)),
-      )
+      setMarkers((prev) => sortByDatetimeDesc(prev.map((m) => (m.id === id ? updated : m))))
       await putMarker(updated)
       await delPhotos(existing.photos.filter((p) => !photoIds.includes(p)))
     },

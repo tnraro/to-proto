@@ -53,6 +53,16 @@ export interface AlertEntry {
   count: number
 }
 
+/** 시간축 데이터의 공통 속성 — 시간 기반 정렬/그룹/필터는 이 인터페이스로 공유 */
+export interface TimeSeriesItem {
+  datetime: string // ISO
+}
+
+/** 타임라인 렌더링용 유니언 — datetime은 payload에만 존재 (단일 진실) */
+export type TimelineItem =
+  | { kind: 'record'; payload: VomitRecord }
+  | { kind: 'marker'; payload: Marker }
+
 /** 사용자가 자유롭게 CRUD하는 마커 종류 */
 export interface MarkerType {
   id: string
