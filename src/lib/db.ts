@@ -1,7 +1,6 @@
-import { runMigrations, type StoreName } from './migrations'
+import { runMigrations } from './migrations'
 
-export { STORES } from './migrations'
-export type { StoreName } from './migrations'
+export type StoreName = 'cats' | 'records' | 'rules' | 'alertLog' | 'photos' | 'draft'
 
 const DB_NAME = 'to-app'
 export const DB_VERSION = 1
@@ -84,6 +83,18 @@ export async function dbClear(store: StoreName): Promise<void> {
   const tx = db.transaction(store, 'readwrite')
   tx.objectStore(store).clear()
   await txDone(tx)
+}
+
+/** 현재 DB의 모든 스토어를 비운다 (objectStoreNames가 진실 공급원) */
+export async function dbClearAll(): Promise<void> {
+  const db = await openDB()
+  await Promise.all(
+    Array.from(db.objectStoreNames).map((name) => {
+      const tx = db.transaction(name, 'readwrite')
+      tx.objectStore(name).clear()
+      return txDone(tx)
+    }),
+  )
 }
 
 /** 테스트 전용: 연결을 닫고 DB를 삭제해 마이그레이션 시나리오를 재현할 수 있게 한다 */

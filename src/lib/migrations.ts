@@ -10,21 +10,20 @@ export interface Migration {
   up: (db: IDBDatabase, tx: IDBTransaction) => void | Promise<void>
 }
 
-export const STORES = ['cats', 'records', 'rules', 'alertLog', 'photos', 'draft'] as const
-export type StoreName = (typeof STORES)[number]
-
 /**
- * 버전별 스키마 히스토리.
- * - v1: 초기 스키마 (정규화 스토어, records.catId 인덱스)
  * 향후 스키마 변경 시: db.ts의 DB_VERSION을 올리고 이 배열에 새 항목을 추가할 것.
  * 신규 설치(oldVersion 0)도 v1부터 순차 적용되므로 기준 스키마는 v1이 담당한다.
+ * 각 마이그레이션은 자신의 버전 스냅샷 목록을 인라인으로 고정한다 (STORES 공유 없음).
+ * 이미 배포된 과거 마이그레이션의 스냅샷은 절대 변경하지 않는다 — 변경이 필요하면
+ * 새 버전 마이그레이션으로 처리할 것.
  */
 export const MIGRATIONS: Migration[] = [
   {
     version: 1,
     name: 'initial schema',
     up: (db, tx) => {
-      for (const name of STORES) {
+      const v1Stores = ['cats', 'records', 'rules', 'alertLog', 'photos', 'draft'] as const
+      for (const name of v1Stores) {
         if (!db.objectStoreNames.contains(name)) {
           db.createObjectStore(name, { keyPath: 'id' })
         }

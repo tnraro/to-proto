@@ -1,5 +1,5 @@
 import type { AlertEntry, Cat, RecordDraft, ThresholdRule, VomitRecord } from '../types'
-import { dbClear, dbDel, dbDelByIndex, dbGet, dbGetAll, dbGetAllByIndex, dbPut, STORES } from './db'
+import { dbClear, dbClearAll, dbDel, dbDelByIndex, dbGet, dbGetAll, dbGetAllByIndex, dbPut } from './db'
 
 const DRAFT_ID = 'record'
 
@@ -92,5 +92,5 @@ export async function delPhotos(ids: string[]): Promise<void> {
 }
 
 export async function clearAll(): Promise<void> {
-  await Promise.all(STORES.map((s) => dbClear(s)))
+  await dbClearAll()
 }
