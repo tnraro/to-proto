@@ -42,7 +42,7 @@ function txDone(tx: IDBTransaction): Promise<void> {
 export async function dbPut(store: StoreName, value: unknown): Promise<void> {
   const db = await openDB()
   const tx = db.transaction(store, 'readwrite')
-  tx.objectStore(store).put(value as never)
+  tx.objectStore(store).put(value)
   await txDone(tx)
 }
 
