@@ -54,6 +54,7 @@ function Shell() {
   const [catModalOpen, setCatModalOpen] = useState(false)
   const [markerFormOpen, setMarkerFormOpen] = useState(false)
   const [markerFormInitial, setMarkerFormInitial] = useState<Marker | null>(null)
+  const [markerPresetDate, setMarkerPresetDate] = useState<string | null>(null)
 
   const {
     cats,
@@ -115,14 +116,16 @@ function Shell() {
     }
   }
 
-  const openMarkerForm = (initial: Marker | null = null) => {
+  const openMarkerForm = (initial: Marker | null = null, presetDate: string | null = null) => {
     setMarkerFormInitial(initial)
+    setMarkerPresetDate(presetDate)
     setMarkerFormOpen(true)
   }
 
   const closeMarkerForm = () => {
     setMarkerFormOpen(false)
     setMarkerFormInitial(null)
+    setMarkerPresetDate(null)
   }
 
   const handleMarkerSubmit = async (input: MarkerInput) => {
@@ -213,7 +216,7 @@ function Shell() {
           placement="top"
           items={[
             { label: '구토 기록 추가', onClick: openAddFromFAB },
-            { label: '마커 추가', onClick: () => openMarkerForm() },
+            { label: '마커 추가', onClick: () => openMarkerForm(null, activeTab === 'calendar' ? calendarDate : null) },
           ]}
           renderTrigger={(toggle, ref) => (
             <button
@@ -244,6 +247,7 @@ function Shell() {
         markerTypes={markerTypes}
         cats={cats}
         initial={markerFormInitial}
+        presetDate={markerPresetDate}
         onSubmit={handleMarkerSubmit}
         onClose={closeMarkerForm}
         onAddMarkerType={addMarkerType}

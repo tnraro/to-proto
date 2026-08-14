@@ -11,6 +11,8 @@ interface Props {
   markerTypes: MarkerType[]
   cats: Cat[]
   initial?: Marker | null
+  /** YYYY-MM-DD: 캘린더에서 날짜 선택 시 프리셋 */
+  presetDate?: string | null
   onSubmit: (input: MarkerInput) => void | Promise<void>
   /** Esc/백드롭 닫기 */
   onClose: () => void
@@ -24,7 +26,7 @@ interface PhotoItem {
   blob: Blob
 }
 
-export function MarkerFormModal({ open, markerTypes, cats, initial, onSubmit, onClose, onAddMarkerType }: Props) {
+export function MarkerFormModal({ open, markerTypes, cats, initial, presetDate, onSubmit, onClose, onAddMarkerType }: Props) {
   return (
     <Modal open={open} onClose={onClose} contentClassName="max-h-[85vh] overflow-y-auto">
       {open && (
@@ -33,6 +35,7 @@ export function MarkerFormModal({ open, markerTypes, cats, initial, onSubmit, on
           markerTypes={markerTypes}
           cats={cats}
           initial={initial}
+          presetDate={presetDate}
           onSubmit={onSubmit}
           onAddMarkerType={onAddMarkerType}
         />
@@ -45,12 +48,21 @@ function MarkerFormContent({
   markerTypes,
   cats,
   initial,
+  presetDate,
   onSubmit,
   onAddMarkerType,
 }: Omit<Props, 'open' | 'onClose'>) {
-  const [datetime, setDatetime] = useState(() =>
-    initial ? toLocalDateTimeInput(new Date(initial.datetime)) : toLocalDateTimeInput(new Date()),
-  )
+  const now = new Date()
+  const initialDatetime = () => {
+    if (initial) return toLocalDateTimeInput(new Date(initial.datetime))
+    if (presetDate) {
+      const d = new Date(presetDate)
+      d.setHours(now.getHours(), now.getMinutes(), 0, 0)
+      return toLocalDateTimeInput(d)
+    }
+    return toLocalDateTimeInput(now)
+  }
+  const [datetime, setDatetime] = useState(initialDatetime)
   const [typeId, setTypeId] = useState(initial?.typeId ?? markerTypes[0]?.id ?? '')
   const [catIds, setCatIds] = useState<string[]>(initial?.catIds ?? [])
   const [memo, setMemo] = useState(initial?.memo ?? '')
@@ -113,7 +125,7 @@ function MarkerFormContent({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!datetime || !typeId || catIds.length === 0) return
+    if (!datetime || !typeId) return
     void onSubmit({
       datetime: fromLocalDateTimeInput(datetime).toISOString(),
       typeId,
@@ -194,7 +206,7 @@ function MarkerFormContent({
       </div>
 
       <div>
-        <span className="mb-1 block text-sm font-medium text-gray-600">연관 고양이 (복수 선택)</span>
+        <span className="mb-1 block text-sm font-medium text-gray-600">연관 고양이 (선택, 복수 가능)</span>
         <div className="flex flex-wrap gap-2">
           {cats.map((c) => {
             const selected = catIds.includes(c.id)
@@ -214,7 +226,6 @@ function MarkerFormContent({
             )
           })}
         </div>
-        {catIds.length === 0 && <p className="mt-1 text-xs text-red-500">연관 고양이를 1마리 이상 선택하세요</p>}
       </div>
 
       <label className="block">
@@ -277,7 +288,7 @@ function MarkerFormContent({
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={!datetime || !typeId || catIds.length === 0}
+          disabled={!datetime || !typeId}
           className="rounded-lg bg-primary px-5 py-2 font-medium text-white hover:bg-primary-hover disabled:opacity-40"
         >
           {initial ? '수정 저장' : '마커 추가'}
