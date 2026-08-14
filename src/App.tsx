@@ -25,7 +25,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function App() {
   const store = useStore()
-  const [tab, setTab] = useState<Tab>('record')
+  const [tab, setTab] = useState<Tab>('calendar')
   const [formOpen, setFormOpen] = useState(false)
   const [formInitial, setFormInitial] = useState<VomitRecord | null>(null)
   const [formPresetDate, setFormPresetDate] = useState<string | null>(null)
