@@ -16,9 +16,11 @@ export function ImageEditorModal({ open, image, aspect, onCancel, onApply }: Pro
   const [imageUrl, setImageUrl] = useState<string>()
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
-  const [rotation, setRotation] = useState(0)
   const [cropArea, setCropArea] = useState<Area | null>(null)
   const [applying, setApplying] = useState(false)
+
+  // 자유 비율 모드는 크롭 없이 원본 그대로 저장, 비율 지정 모드는 크롭 편집
+  const noCrop = aspect === undefined
 
   useEffect(() => {
     if (!open || !image) return
@@ -26,7 +28,6 @@ export function ImageEditorModal({ open, image, aspect, onCancel, onApply }: Pro
     setImageUrl(url)
     setCrop({ x: 0, y: 0 })
     setZoom(1)
-    setRotation(0)
     setCropArea(null)
     setApplying(false)
     return () => URL.revokeObjectURL(url)
@@ -35,33 +36,45 @@ export function ImageEditorModal({ open, image, aspect, onCancel, onApply }: Pro
   if (!open || !imageUrl) return null
 
   const apply = async () => {
-    if (!cropArea || applying) return
+    if (applying) return
     setApplying(true)
-    const blob = await cropImage(image as Blob, cropArea, rotation)
-    onApply(blob)
+    if (noCrop) {
+      // 원본 그대로 저장 (크롭·회전 없음)
+      onApply(image as Blob)
+    } else {
+      if (!cropArea) return
+      const blob = await cropImage(image as Blob, cropArea)
+      onApply(blob)
+    }
   }
 
   return (
     <Modal open={open} onClose={onCancel} drawer={false}>
       <h2 className="text-lg font-bold">사진 편집</h2>
-      <p className="mt-1 text-sm text-gray-500">크롭 영역을 드래그하고 확대/회전을 조절하세요</p>
+      <p className="mt-1 text-sm text-gray-500">
+        {noCrop ? '사진이 원본 그대로 저장됩니다' : '크롭 영역을 드래그하고 확대를 조절하세요'}
+      </p>
 
-      <div className="relative mt-4 h-72 w-full overflow-hidden rounded-card bg-gray-900">
-        <Cropper
-          image={imageUrl}
-          crop={crop}
-          zoom={zoom}
-          rotation={rotation}
-          aspect={aspect}
-          onCropChange={setCrop}
-          onZoomChange={setZoom}
-          onRotationChange={setRotation}
-          onCropComplete={(_, area) => setCropArea(area)}
-        />
-      </div>
+      {noCrop ? (
+        <div className="relative mt-4 h-72 w-full overflow-hidden rounded-card bg-gray-900">
+          <img src={imageUrl} alt="원본 사진" className="h-full w-full object-contain" />
+        </div>
+      ) : (
+        <div className="relative mt-4 h-72 w-full overflow-hidden rounded-card bg-gray-900">
+          <Cropper
+            image={imageUrl}
+            crop={crop}
+            zoom={zoom}
+            aspect={aspect}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={(_, area) => setCropArea(area)}
+          />
+        </div>
+      )}
 
-      <div className="mt-4 space-y-3">
-        <div className="flex items-center gap-3">
+      {!noCrop && (
+        <div className="mt-4 flex items-center gap-3">
           <span className="w-14 shrink-0 text-xs text-gray-500">확대/축소</span>
           <input
             type="range"
@@ -74,37 +87,7 @@ export function ImageEditorModal({ open, image, aspect, onCancel, onApply }: Pro
           />
           <span className="w-8 text-right text-xs text-gray-400">{zoom.toFixed(1)}x</span>
         </div>
-
-        <div className="flex items-center gap-3">
-          <span className="w-14 shrink-0 text-xs text-gray-500">회전</span>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
-              className="min-h-9 rounded-full border border-gray-200 px-3 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              ⟲ 90°
-            </button>
-            <button
-              type="button"
-              onClick={() => setRotation((r) => (r + 90) % 360)}
-              className="min-h-9 rounded-full border border-gray-200 px-3 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              ⟳ 90°
-            </button>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={360}
-            step={1}
-            value={rotation}
-            onChange={(e) => setRotation(Number(e.target.value))}
-            className="flex-1 accent-emerald-600"
-          />
-          <span className="w-8 text-right text-xs text-gray-400">{rotation}°</span>
-        </div>
-      </div>
+      )}
 
       <div className="mt-5 flex gap-2">
         <button

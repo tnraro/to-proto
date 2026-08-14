@@ -26,23 +26,28 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
+/** 회전을 적용한 이미지가 그려진 캔버스 (크롭 없음) */
+function drawRotated(img: HTMLImageElement, rotation: number): HTMLCanvasElement | null {
+  const { width: bBoxWidth, height: bBoxHeight } = rotateSize(img.width, img.height, rotation)
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(bBoxWidth)
+  canvas.height = Math.round(bBoxHeight)
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.translate(bBoxWidth / 2, bBoxHeight / 2)
+  ctx.rotate(getRadianAngle(rotation))
+  ctx.translate(-img.width / 2, -img.height / 2)
+  ctx.drawImage(img, 0, 0)
+  return canvas
+}
+
 /** 회전(자유 각도) → 크롭 → JPEG Blob 변환 */
 export async function cropImage(image: Blob, pixelCrop: CropArea, rotation = 0): Promise<Blob> {
   const imageSrc = URL.createObjectURL(image)
   try {
     const img = await loadImage(imageSrc)
-    const rotRad = getRadianAngle(rotation)
-    const { width: bBoxWidth, height: bBoxHeight } = rotateSize(img.width, img.height, rotation)
-
-    const canvas = document.createElement('canvas')
-    canvas.width = bBoxWidth
-    canvas.height = bBoxHeight
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return image
-    ctx.translate(bBoxWidth / 2, bBoxHeight / 2)
-    ctx.rotate(rotRad)
-    ctx.translate(-img.width / 2, -img.height / 2)
-    ctx.drawImage(img, 0, 0)
+    const canvas = drawRotated(img, rotation)
+    if (!canvas) return image
 
     const croppedCanvas = document.createElement('canvas')
     croppedCanvas.width = Math.round(pixelCrop.width)
