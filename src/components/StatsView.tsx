@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Cat, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES, VOMIT_TYPE_KEYS } from '../types'
-import { toDateKey } from '../lib/dates'
+import { toDateKey, DAY_MS } from '../lib/dates'
 import { Card } from './ui/Card'
 
 const PERIODS = [
@@ -22,7 +22,7 @@ export function StatsView({ records, cats }: Props) {
 
   const filtered = useMemo(() => {
     if (periodDays === Infinity) return records
-    const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000
+    const cutoff = Date.now() - periodDays * DAY_MS
     return records.filter((r) => new Date(r.datetime).getTime() >= cutoff)
   }, [records, periodDays])
 

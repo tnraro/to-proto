@@ -1,17 +1,13 @@
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
 export function toDateKey(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
 export function toLocalDateTimeInput(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const h = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${y}-${m}-${day}T${h}:${min}`
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
 export function fromLocalDateTimeInput(value: string): Date {
@@ -23,18 +19,14 @@ function resolveLocale(): string {
 }
 
 const rtf = new Intl.RelativeTimeFormat(resolveLocale(), { numeric: 'auto' })
-const absFmt = new Intl.DateTimeFormat(resolveLocale(), {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 const absFullFmt = new Intl.DateTimeFormat(resolveLocale(), {
   dateStyle: 'medium',
   timeStyle: 'short',
 })
+
+/** 하루 = 86,400,000ms */
+export const DAY_MS = 24 * 60 * 60 * 1000
 
 const MINUTE = 60
 const HOUR = 60 * MINUTE
@@ -43,7 +35,7 @@ const DAY = 24 * HOUR
 /** 기록 시각을 사용자 로케일 기반 상대 시간("n시간 전")으로 표시. 7일 초과/미래는 절대 시각 폴백 */
 export function formatRelativeTime(iso: string, now = new Date()): string {
   const diffSec = Math.round((now.getTime() - new Date(iso).getTime()) / 1000)
-  if (diffSec < 0 || diffSec >= 7 * DAY) return absFmt.format(new Date(iso))
+  if (diffSec < 0 || diffSec >= 7 * DAY) return absFullFmt.format(new Date(iso))
   if (diffSec < MINUTE) return rtf.format(-diffSec, 'second')
   if (diffSec < HOUR) return rtf.format(-Math.round(diffSec / MINUTE), 'minute')
   if (diffSec < DAY) return rtf.format(-Math.round(diffSec / HOUR), 'hour')

@@ -1,5 +1,6 @@
 import type { AlertEntry, Cat, ThresholdRule, VomitRecord } from '../types'
 import { VOMIT_TYPES } from '../types'
+import { DAY_MS } from './dates'
 import { uid } from './storage'
 
 export interface Violation {
@@ -7,8 +8,6 @@ export interface Violation {
   catName: string
   count: number
 }
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000
 
 export function evaluateRules(
   rules: ThresholdRule[],
@@ -19,7 +18,7 @@ export function evaluateRules(
   const violations: Violation[] = []
   for (const rule of rules) {
     if (!rule.enabled) continue
-    const cutoff = now.getTime() - rule.windowDays * MS_PER_DAY
+    const cutoff = now.getTime() - rule.windowDays * DAY_MS
     let count = 0
     for (const r of records) {
       const t = new Date(r.datetime).getTime()
