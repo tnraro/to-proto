@@ -35,7 +35,7 @@ export function SettingsView({
           <Stat label="규칙" value={rules.length} onClick={() => onNavigate('alert')} />
           <Stat label="경고 이력" value={alertLog.length} onClick={() => onNavigate('alert')} />
         </dl>
-        <p className="mt-3 text-xs text-gray-400">데이터는 이 기기의 IndexedDB에 저장됩니다</p>
+        <p className="mt-3 text-xs text-gray-400">데이터는 이 기기에만 저장됩니다</p>
       </section>
 
       <section className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
