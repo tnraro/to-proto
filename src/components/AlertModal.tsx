@@ -1,5 +1,5 @@
 import type { AlertEntry } from '../types'
-import { Modal } from './Modal'
+import { Modal } from './ui/Modal'
 
 interface Props {
   alerts: AlertEntry[]

@@ -3,8 +3,8 @@ import type { Cat } from '../types'
 import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
 import { CatAvatar } from './CatAvatar'
-import { DropdownMenu } from './DropdownMenu'
-import { PhotoPicker, type PhotoPickerHandle } from './PhotoPicker'
+import { DropdownMenu } from './ui/DropdownMenu'
+import { PhotoPicker, type PhotoPickerHandle } from './ui/PhotoPicker'
 
 interface Props {
   cats: Cat[]

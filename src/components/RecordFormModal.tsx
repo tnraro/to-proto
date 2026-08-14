@@ -1,6 +1,6 @@
 import type { Cat, RecordInput, VomitRecord } from '../types'
 import { RecordForm } from './RecordForm'
-import { Modal } from './Modal'
+import { Modal } from './ui/Modal'
 
 interface Props {
   open: boolean

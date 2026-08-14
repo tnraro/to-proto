@@ -3,7 +3,7 @@ import type { Cat, Marker, MarkerInput, MarkerType } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
 import { getPhoto, uid } from '../lib/storage'
 import { usePhotoReorder } from '../hooks/usePhotoReorder'
-import { Modal } from './Modal'
+import { Modal } from './ui/Modal'
 import { PhotoPreview } from './PhotoPreview'
 
 interface Props {

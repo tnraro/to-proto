@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
-import { Modal } from './Modal'
+import { Modal } from './ui/Modal'
 import { PhotoPreview } from './PhotoPreview'
-import { PhotoPicker } from './PhotoPicker'
+import { PhotoPicker } from './ui/PhotoPicker'
 
 interface Props {
   open: boolean

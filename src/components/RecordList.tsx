@@ -2,7 +2,7 @@ import type { Cat, Marker, MarkerType, TimelineItem, VomitRecord } from '../type
 import { VOMIT_TYPES } from '../types'
 import { PhotoThumb } from './PhotoThumb'
 import { CatAvatar } from './CatAvatar'
-import { DropdownMenu } from './DropdownMenu'
+import { DropdownMenu } from './ui/DropdownMenu'
 import { RelativeTime } from './ui/RelativeTime'
 
 interface Props {

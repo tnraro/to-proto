@@ -1,5 +1,5 @@
 import { useImperativeHandle, useRef, useState, type ReactNode, type Ref } from 'react'
-import { ImageEditorModal } from './ImageEditorModal'
+import { ImageEditorModal } from '../ImageEditorModal'
 
 export interface PhotoPickerHandle {
   open: () => void

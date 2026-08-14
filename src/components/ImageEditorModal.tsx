@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Cropper, { type Area, type Point } from 'react-easy-crop'
-import { Modal } from './Modal'
+import { Modal } from './ui/Modal'
 import { cropImage } from '../lib/cropImage'
 
 interface Props {

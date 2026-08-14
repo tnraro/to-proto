@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
 import { useObjectUrl } from '../lib/useObjectUrl'
-import { PhotoPicker } from './PhotoPicker'
+import { PhotoPicker } from './ui/PhotoPicker'
 import { Card } from './ui/Card'
 
 interface Props {
