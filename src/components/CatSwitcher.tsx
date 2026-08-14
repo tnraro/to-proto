@@ -30,14 +30,14 @@ export function CatSwitcher({ cats, currentCatId, onChange }: Props) {
               key={cat.id}
               type="button"
               onClick={() => onChange(cat.id)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-sm transition ${
+              className={`flex max-w-14 shrink-0 items-center gap-1 rounded-full border py-1 pl-1 pr-2 text-sm transition ${
                 selected
                   ? 'border-primary bg-primary/10 font-medium text-primary'
                   : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
               <CatAvatar cat={cat} sizeClass="h-7 w-7" />
-              <span className="max-w-24 truncate">{cat.name}</span>
+              <span className="min-w-0 truncate">{cat.name}</span>
             </button>
           )
         })}
