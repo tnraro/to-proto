@@ -109,10 +109,6 @@ export function CalendarView({
           const key = cell ? toDateKey(cell) : null
           const list = key ? recordsByDay.get(key) : undefined
           const dayMarkers = key ? markersByDay.get(key) : undefined
-          const markerCount = dayMarkers?.length ?? 0
-          const firstMarkerName = dayMarkers?.[0]
-            ? (markerTypes.find((t) => t.id === dayMarkers[0].typeId)?.name ?? '?')
-            : ''
           const summary = list ? summarizeByType(list) : null
           const isSelected = key === selectedKey
           const isToday = key === toDateKey(today)
@@ -140,16 +136,20 @@ export function CalendarView({
               >
                 {cell?.getDate()}
               </span>
-              {markerCount > 0 && (
-                <span className="mt-0.5 block w-full truncate rounded bg-blue-50 px-1 text-[10px] leading-tight text-blue-600">
-                  {firstMarkerName}
-                  {markerCount > 1 ? ` 등 ${markerCount}` : ''}
+              {dayMarkers?.map((m) => (
+                <span
+                  key={m.id}
+                  className="mt-0.5 block w-full truncate rounded bg-blue-50 px-1 text-[10px] leading-tight text-blue-600"
+                  title={markerTypes.find((t) => t.id === m.typeId)?.name}
+                >
+                  {markerTypes.find((t) => t.id === m.typeId)?.name ?? '?'}
                 </span>
-              )}
+              ))}
               {showRecordCount ? (
                 list && list.length > 0 ? (
-                  <span className="mt-0.5 block w-full truncate rounded bg-gray-100 px-1 text-[10px] leading-tight text-gray-600">
-                    토 {list.length}회
+                  <span className="mt-0.5 flex items-center gap-1">
+                    <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
+                    <span className="text-[10px] leading-none text-gray-500">{list.length}</span>
                   </span>
                 ) : null
               ) : (
