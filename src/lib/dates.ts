@@ -50,11 +50,6 @@ export function formatRelativeTime(iso: string, now = new Date()): string {
   return rtf.format(-Math.round(diffSec / DAY), 'day')
 }
 
-export function formatDateTime(iso: string): string {
-  const d = new Date(iso)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
 /** 로케일 기반 보기 좋은 절대 시각 (툴팁용) — 예: 2026. 8. 13. 오후 4:47 */
 export function formatAbsoluteTime(iso: string): string {
   return absFullFmt.format(new Date(iso))
@@ -73,7 +68,3 @@ export function monthLabel(d: Date): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월`
 }
 
-export function formatTime(iso: string): string {
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
