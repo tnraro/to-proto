@@ -44,7 +44,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     initial && initial.types.length > 0 ? initial.types : [],
   )
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
-  const [items, setItems] = useState<PhotoItem[]>([])
+  const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
   const [editingQueue, setEditingQueue] = useState<File[]>([])
   const editingBlob = editingQueue[0] ?? null
   const fileRef = useRef<HTMLInputElement>(null)
@@ -77,9 +77,9 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
           const blob = await getPhoto(id)
           if (blob) existing.push({ key: id, id, blob })
         }
-        if (!cancelled) setItems([...existing, ...newBlobs.map((blob) => ({ key: uid(), blob }))])
+        if (!cancelled) setPhotoItems([...existing, ...newBlobs.map((blob) => ({ key: uid(), blob }))])
       } else if (!cancelled) {
-        setItems(newBlobs.map((blob) => ({ key: uid(), blob })))
+        setPhotoItems(newBlobs.map((blob) => ({ key: uid(), blob })))
       }
       draftReady.current = true
     })()
@@ -90,7 +90,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
   useEffect(() => {
     if (!draftReady.current) return
-    const removedPhotos = initial ? initial.photos.filter((id) => !items.some((it) => it.id === id)) : []
+    const removedPhotos = initial ? initial.photos.filter((id) => !photoItems.some((p) => p.id === id)) : []
     const draft: RecordDraft = {
       id: 'record',
       applyTo: initial ? initial.id : 'add',
@@ -98,13 +98,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       catId,
       types,
       memo,
-      newPhotos: items.filter((it) => !it.id).map((it, i) => ({ id: `d${i}`, blob: it.blob })),
+      newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
       removedPhotos,
       savedAt: Date.now(),
     }
     const t = setTimeout(() => void saveDraft(draft), DRAFT_SAVE_MS)
     return () => clearTimeout(t)
-  }, [datetime, catId, types, memo, items, initial])
+  }, [datetime, catId, types, memo, photoItems, initial])
 
   useEffect(() => {
     if (cats.length === 0) return
@@ -119,14 +119,14 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
   const onFiles = (files: FileList | null) => {
     if (!files) return
-    const added = Array.from(files).slice(0, MAX_PHOTOS - items.length)
+    const added = Array.from(files).slice(0, MAX_PHOTOS - photoItems.length)
     if (added.length === 0) return
     setEditingQueue((prev) => [...prev, ...added])
     if (fileRef.current) fileRef.current.value = ''
   }
 
   const removePhoto = (key: string) => {
-    setItems((prev) => prev.filter((it) => it.key !== key))
+    setPhotoItems((prev) => prev.filter((p) => p.key !== key))
   }
 
   const onHandlePointerDown = (e: React.PointerEvent, key: string) => {
@@ -144,9 +144,9 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       .find((n) => n instanceof HTMLElement && n.hasAttribute('data-photo-key')) as HTMLElement | undefined
     const toKey = hit?.getAttribute('data-photo-key')
     if (!toKey || toKey === fromKey) return
-    setItems((prev) => {
-      const from = prev.findIndex((it) => it.key === fromKey)
-      const to = prev.findIndex((it) => it.key === toKey)
+    setPhotoItems((prev) => {
+      const from = prev.findIndex((p) => p.key === fromKey)
+      const to = prev.findIndex((p) => p.key === toKey)
       if (from < 0 || to < 0 || from === to) return prev
       const next = [...prev]
       const [moved] = next.splice(from, 1)
@@ -168,7 +168,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
       catId,
       types,
       memo: memo.trim(),
-      photos: items.length > 0 ? items.map((it) => (it.id ?? it.blob)) : undefined,
+      photos: photoItems.length > 0 ? photoItems.map((p) => (p.id ?? p.blob)) : undefined,
     })
   }
 
@@ -265,20 +265,20 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
 
       <div>
         <span className="mb-1 block text-sm font-medium text-gray-600">
-          사진 ({items.length}/{MAX_PHOTOS})
+          사진 ({photoItems.length}/{MAX_PHOTOS})
         </span>
         <div className="flex flex-wrap gap-2">
-          {items.map((it) => (
+          {photoItems.map((p) => (
             <div
-              key={it.key}
-              data-photo-key={it.key}
-              className={`relative rounded-lg ${dragKey === it.key ? 'opacity-70 ring-2 ring-primary' : ''}`}
+              key={p.key}
+              data-photo-key={p.key}
+              className={`relative rounded-lg ${dragKey === p.key ? 'opacity-70 ring-2 ring-primary' : ''}`}
             >
-              <PhotoPreview blob={it.blob} onRemove={() => removePhoto(it.key)} />
+              <PhotoPreview blob={p.blob} onRemove={() => removePhoto(p.key)} />
               <button
                 type="button"
                 aria-label="사진 순서 변경"
-                onPointerDown={(e) => onHandlePointerDown(e, it.key)}
+                onPointerDown={(e) => onHandlePointerDown(e, p.key)}
                 onPointerMove={onHandlePointerMove}
                 onPointerUp={onHandlePointerEnd}
                 onPointerCancel={onHandlePointerEnd}
@@ -295,7 +295,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
               </button>
             </div>
           ))}
-          {items.length < MAX_PHOTOS && (
+          {photoItems.length < MAX_PHOTOS && (
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
@@ -335,7 +335,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
         image={editingBlob}
         onCancel={() => setEditingQueue((prev) => prev.slice(1))}
         onApply={(blob) => {
-          setItems((prev) => [...prev, { key: uid(), blob }])
+          setPhotoItems((prev) => [...prev, { key: uid(), blob }])
           setEditingQueue((prev) => prev.slice(1))
         }}
       />
