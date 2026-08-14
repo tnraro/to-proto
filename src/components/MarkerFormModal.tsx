@@ -147,9 +147,15 @@ function MarkerFormContent({
     }
   }, [initial, restoredDraft])
 
-  // draft 복원: 필드 + 기존 사진(제거분 제외) + 새 사진
+  // draft 복원: 1회 질문 후 복원 또는 폐기 (StrictMode 이중 실행은 ref로 1회만)
+  const restoreAskedRef = useRef(false)
   useEffect(() => {
-    if (!draftReady || !restoredDraft) return
+    if (!draftReady || !restoredDraft || restoreAskedRef.current) return
+    restoreAskedRef.current = true
+    if (!confirm('이전에 작성 중이던 내용이 있습니다. 불러올까요?')) {
+      discardMarkerDraft()
+      return
+    }
     let cancelled = false
     void (async () => {
       setDatetime(restoredDraft.datetime)
@@ -173,7 +179,7 @@ function MarkerFormContent({
     return () => {
       cancelled = true
     }
-  }, [draftReady, restoredDraft, initial])
+  }, [draftReady, restoredDraft, initial, discardMarkerDraft])
 
   const toggleCat = (id: string) => {
     setCatIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))

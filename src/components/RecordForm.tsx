@@ -91,8 +91,15 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
 
   useImperativeHandle(ref, () => ({ requestClose }))
 
+  // draft 복원: 1회 질문 후 복원 또는 폐기 (StrictMode 이중 실행은 ref로 1회만)
+  const restoreAskedRef = useRef(false)
   useEffect(() => {
-    if (!draftReady || !restoredDraft) return
+    if (!draftReady || !restoredDraft || restoreAskedRef.current) return
+    restoreAskedRef.current = true
+    if (!confirm('이전에 작성 중이던 내용이 있습니다. 불러올까요?')) {
+      discardDraft()
+      return
+    }
     let cancelled = false
     void (async () => {
       setDatetime(restoredDraft.datetime)
@@ -117,7 +124,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
     return () => {
       cancelled = true
     }
-  }, [draftReady, restoredDraft, initial])
+  }, [draftReady, restoredDraft, initial, discardDraft])
 
   useEffect(() => {
     if (cats.length === 0) return
