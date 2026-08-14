@@ -3,6 +3,7 @@ import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis
 import type { Cat, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES, VOMIT_TYPE_KEYS } from '../types'
 import { toDateKey } from '../lib/dates'
+import { Card } from './ui/Card'
 
 const PERIODS = [
   { label: '7일', days: 7 },
@@ -97,7 +98,8 @@ export function StatsView({ records, cats }: Props) {
       ) : (
         <>
           {dailyData.length > 0 && (
-            <Card title="일별 횟수">
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold text-gray-700">일별 횟수</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={dailyData}>
                   <XAxis dataKey="day" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
@@ -110,7 +112,8 @@ export function StatsView({ records, cats }: Props) {
           )}
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card title="종류별 분포">
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold text-gray-700">종류별 분포</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={typeData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={80} paddingAngle={2}>
@@ -125,7 +128,8 @@ export function StatsView({ records, cats }: Props) {
             </Card>
 
             {cats.length >= 2 && (
-              <Card title="고양이별 횟수">
+              <Card>
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">고양이별 횟수</h3>
                 {catData.length === 0 ? (
                   <p className="py-8 text-center text-sm text-gray-400">고양이 기록 없음</p>
                 ) : (
@@ -143,7 +147,8 @@ export function StatsView({ records, cats }: Props) {
 
           </div>
 
-          <Card title="시간대별 분포">
+          <Card>
+            <h3 className="mb-3 text-sm font-semibold text-gray-700">시간대별 분포</h3>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={hourData}>
                 <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
@@ -155,15 +160,6 @@ export function StatsView({ records, cats }: Props) {
           </Card>
         </>
       )}
-    </div>
-  )
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">{title}</h3>
-      {children}
     </div>
   )
 }

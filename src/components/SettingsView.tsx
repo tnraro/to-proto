@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Store } from '../hooks/useStore'
 import { CatManager } from './CatManager'
+import { Card } from './ui/Card'
 import { applyUpdate, checkForUpdate, usePwaStatus } from '../lib/pwa'
 
 type NavTab = 'record' | 'calendar' | 'stats' | 'alert' | 'settings'
@@ -27,7 +28,7 @@ export function SettingsView({
         <CatManager cats={cats} renameCat={renameCat} updateCatPhoto={updateCatPhoto} deleteCat={deleteCat} onAddCat={onAddCat} />
       </section>
 
-      <section className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
+      <Card>
         <h2 className="mb-3 text-sm font-semibold text-gray-700">데이터 현황</h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="고양이" value={cats.length} onClick={() => onNavigate('settings')} />
@@ -36,9 +37,9 @@ export function SettingsView({
           <Stat label="경고 이력" value={alertLog.length} onClick={() => onNavigate('alert')} />
         </dl>
         <p className="mt-3 text-xs text-gray-400">데이터는 이 기기에만 저장됩니다</p>
-      </section>
+      </Card>
 
-      <section className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
+      <Card>
         <h2 className="mb-3 text-sm font-semibold text-gray-700">업데이트</h2>
         {pwaStatus === 'update-ready' && (
           <div className="flex items-center justify-between gap-3">
@@ -65,7 +66,7 @@ export function SettingsView({
         {pwaStatus === 'unsupported' && (
           <p className="text-sm text-gray-400">이 브라우저에서는 업데이트 확인을 지원하지 않습니다</p>
         )}
-      </section>
+      </Card>
 
       <section className="rounded-card border border-red-200 bg-red-50 p-4">
         <h2 className="mb-1 text-sm font-semibold text-red-700">데이터 초기화</h2>

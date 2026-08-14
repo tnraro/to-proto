@@ -3,6 +3,7 @@ import { putPhoto, uid } from '../lib/storage'
 import { resizeImage } from '../lib/image'
 import { useObjectUrl } from '../lib/useObjectUrl'
 import { PhotoPicker } from './PhotoPicker'
+import { Card } from './ui/Card'
 
 interface Props {
   onFinish: (cats: { name: string; photoId?: string }[]) => void
@@ -60,7 +61,7 @@ export function Onboarding({ onFinish }: Props) {
       </p>
 
       <div className="mt-8 w-full max-w-sm">
-        <div className="rounded-card border border-gray-100 bg-white p-5 shadow-card">
+        <Card>
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -124,7 +125,7 @@ export function Onboarding({ onFinish }: Props) {
                 ? `${items.length}마리 등록하고 시작하기`
                 : '등록하고 시작하기'}
           </button>
-        </div>
+        </Card>
       </div>
       <p className="mt-6 text-xs text-gray-400">
         사진은 선택이며, 나중에 설정에서 언제든 추가할 수 있어요

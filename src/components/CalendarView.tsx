@@ -3,6 +3,7 @@ import type { Cat, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { monthLabel, startOfMonth, toDateKey } from '../lib/dates'
 import { RecordList } from './RecordList'
+import { Card } from './ui/Card'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MAX_TYPE_PAIRS = 3
@@ -143,10 +144,10 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
         })}
       </div>
 
-      <div className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
+      <Card>
         <h3 className="mb-2 text-sm font-semibold text-gray-600">{selectedKey} 기록</h3>
         <RecordList records={dayRecords} cats={cats} onEdit={onEdit} onDelete={onDelete} />
-      </div>
+      </Card>
     </div>
   )
 }
