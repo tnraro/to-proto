@@ -20,7 +20,7 @@ import {
   putRule,
   uid,
 } from '../lib/storage'
-import { evaluateRules, violationToAlertEntry } from '../lib/thresholds'
+import { evaluateNewRecord, violationToAlertEntry } from '../lib/thresholds'
 import { resizeImage } from '../lib/image'
 
 export type RuleInput = Omit<ThresholdRule, 'id'>
@@ -152,7 +152,8 @@ export function useStore(): Store {
       }
       const nextRecords = [...records, created].sort((a, b) => b.datetime.localeCompare(a.datetime))
 
-      const newAlerts = evaluateRules(rules, nextRecords, cats, now).map(violationToAlertEntry)
+      // 이번 기록이 임계값을 넘게 만든 규칙만 경고 (이미 위반 중인 규칙은 제외)
+      const newAlerts = evaluateNewRecord(rules, records, cats, created, now).map(violationToAlertEntry)
 
       setRecords(nextRecords)
       await putRecord(created)
