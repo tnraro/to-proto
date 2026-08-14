@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Store } from '../hooks/useStore'
 import { CatManager } from './CatManager'
+import { MarkerTypeManager } from './MarkerTypeManager'
 import { Card } from './ui/Card'
 import { applyUpdate, checkForUpdate, usePwaStatus } from '../lib/pwa'
 
@@ -11,10 +12,15 @@ export function SettingsView({
   records,
   rules,
   alertLog,
+  markers,
+  markerTypes,
   resetAll,
   renameCat,
   updateCatPhoto,
   deleteCat,
+  addMarkerType,
+  renameMarkerType,
+  deleteMarkerType,
   onAddCat,
   onNavigate,
 }: Store & { onAddCat: () => void; onNavigate: (tab: NavTab) => void }) {
@@ -26,6 +32,17 @@ export function SettingsView({
       <section>
         <h2 className="mb-3 text-sm font-semibold text-gray-600">고양이 관리</h2>
         <CatManager cats={cats} renameCat={renameCat} updateCatPhoto={updateCatPhoto} deleteCat={deleteCat} onAddCat={onAddCat} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold text-gray-600">마커 종류 관리</h2>
+        <MarkerTypeManager
+          markerTypes={markerTypes}
+          markersCountByType={(typeId) => markers.filter((m) => m.typeId === typeId).length}
+          addMarkerType={addMarkerType}
+          renameMarkerType={renameMarkerType}
+          deleteMarkerType={deleteMarkerType}
+        />
       </section>
 
       <Card>
