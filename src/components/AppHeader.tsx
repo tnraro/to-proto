@@ -11,7 +11,7 @@ export function AppHeader({ cats, currentCatId, onChange }: Props) {
   return (
     <header className="shrink-0 border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
-        <h1 className="truncate text-base font-bold text-gray-900">고양이 토 기록</h1>
+        <img src="./icon.svg" alt="" className="h-8 w-8 rounded-lg" />
         {cats.length > 1 && (
           <select
             value={currentCatId ?? ''}
