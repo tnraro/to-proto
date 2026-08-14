@@ -53,6 +53,27 @@ export interface AlertEntry {
   count: number
 }
 
+/** 사용자가 자유롭게 CRUD하는 마커 종류 */
+export interface MarkerType {
+  id: string
+  name: string
+}
+
+/** 인과 관계 파악용 마커 (건강 검진, 사료 교체 등) */
+export interface Marker {
+  id: string
+  datetime: string // ISO
+  typeId: string
+  /** 연관 고양이 (복수) */
+  catIds: string[]
+  /** 선택 */
+  memo?: string
+  /** 사진 id 배열 (0개 이상, 제한 없음 — 본체는 photos 스토어) */
+  photos: string[]
+  createdAt: string
+  updatedAt: string
+}
+
 /** 기록 폼 실수 방지용 draft. 단일 엔트리(id='record') */
 export interface RecordDraft {
   id: 'record'

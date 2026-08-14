@@ -1,4 +1,4 @@
-import type { AlertEntry, Cat, RecordDraft, ThresholdRule, VomitRecord } from '../types'
+import type { AlertEntry, Cat, Marker, MarkerType, RecordDraft, ThresholdRule, VomitRecord } from '../types'
 import { dbClear, dbClearAll, dbDel, dbDelByIndex, dbGet, dbGetAll, dbGetAllByIndex, dbPut } from './db'
 
 const DRAFT_ID = 'record'
@@ -80,6 +80,30 @@ export async function clearAlertLog(): Promise<void> {
 
 export async function putPhoto(id: string, blob: Blob): Promise<void> {
   await dbPut('photos', { id, blob })
+}
+
+export async function getAllMarkers(): Promise<Marker[]> {
+  return dbGetAll<Marker>('markers')
+}
+
+export async function putMarker(marker: Marker): Promise<void> {
+  await dbPut('markers', marker)
+}
+
+export async function delMarker(id: string): Promise<void> {
+  await dbDel('markers', id)
+}
+
+export async function getAllMarkerTypes(): Promise<MarkerType[]> {
+  return dbGetAll<MarkerType>('markerTypes')
+}
+
+export async function putMarkerType(markerType: MarkerType): Promise<void> {
+  await dbPut('markerTypes', markerType)
+}
+
+export async function delMarkerType(id: string): Promise<void> {
+  await dbDel('markerTypes', id)
 }
 
 export async function getPhoto(id: string): Promise<Blob | undefined> {
