@@ -15,7 +15,9 @@ interface Props {
   /** YYYY-MM-DD: 캘린더에서 날짜 선택 시 프리셋 */
   presetDate?: string | null
   onSubmit: (input: MarkerInput) => void | Promise<void>
-  /** Esc/백드롭 닫기 */
+  /** 취소 버튼: draft 삭제 후 닫기 */
+  onCancel: () => void
+  /** Esc/백드롭 닫기 (draft 유지) */
   onClose: () => void
   /** 마커 종류 인라인 추가 (새 id 반환) */
   onAddMarkerType: (name: string) => string
@@ -27,7 +29,17 @@ interface PhotoItem {
   blob: Blob
 }
 
-export function MarkerFormModal({ open, markerTypes, cats, initial, presetDate, onSubmit, onClose, onAddMarkerType }: Props) {
+export function MarkerFormModal({
+  open,
+  markerTypes,
+  cats,
+  initial,
+  presetDate,
+  onSubmit,
+  onCancel,
+  onClose,
+  onAddMarkerType,
+}: Props) {
   return (
     <Modal open={open} onClose={onClose} contentClassName="max-h-[85vh] overflow-y-auto">
       {open && (
@@ -38,6 +50,7 @@ export function MarkerFormModal({ open, markerTypes, cats, initial, presetDate, 
           initial={initial}
           presetDate={presetDate}
           onSubmit={onSubmit}
+          onCancel={onCancel}
           onAddMarkerType={onAddMarkerType}
         />
       )}
@@ -51,6 +64,7 @@ function MarkerFormContent({
   initial,
   presetDate,
   onSubmit,
+  onCancel,
   onAddMarkerType,
 }: Omit<Props, 'open' | 'onClose'>) {
   const now = new Date()
@@ -339,6 +353,9 @@ function MarkerFormContent({
           className="rounded-lg bg-primary px-5 py-2 font-medium text-white hover:bg-primary-hover disabled:opacity-40"
         >
           {initial ? '수정 저장' : '마커 추가'}
+        </button>
+        <button type="button" onClick={onCancel} className="rounded-lg border border-gray-200 px-4 py-2 text-gray-600">
+          취소
         </button>
       </div>
     </form>

@@ -134,6 +134,12 @@ function Shell() {
     setMarkerPresetDate(null)
   }
 
+  /** 취소 버튼: draft 삭제 후 닫기 */
+  const cancelMarkerForm = () => {
+    void deleteDraft('marker')
+    closeMarkerForm()
+  }
+
   const handleMarkerSubmit = async (input: MarkerInput) => {
     if (markerFormInitial) {
       await updateMarker(markerFormInitial.id, input)
@@ -278,6 +284,7 @@ function Shell() {
         initial={markerFormInitial}
         presetDate={markerPresetDate}
         onSubmit={handleMarkerSubmit}
+        onCancel={cancelMarkerForm}
         onClose={closeMarkerForm}
         onAddMarkerType={addMarkerType}
       />
