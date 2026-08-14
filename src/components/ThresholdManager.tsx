@@ -105,7 +105,7 @@ function RuleForm({
   const [catId, setCatId] = useState<string>(editing?.catId ?? 'all')
   const [windowDays, setWindowDays] = useState<number>(editing?.windowDays ?? 1)
   const [maxCount, setMaxCount] = useState<number>(editing?.maxCount ?? 3)
-  const [type, setType] = useState<string>(editing?.type ?? 'all')
+  const [type, setType] = useState<'all' | VomitType>(editing?.type ?? 'all')
 
   useEffect(() => {
     setCatId(editing?.catId ?? 'all')
@@ -118,7 +118,7 @@ function RuleForm({
     catId: catId === 'all' ? null : catId,
     windowDays,
     maxCount,
-    type: type === 'all' ? null : (type as VomitType),
+    type: type === 'all' ? null : type,
     enabled: true,
   })
 
@@ -150,7 +150,7 @@ function RuleForm({
           <span className="mb-1 block text-sm font-medium text-gray-600">토 종류</span>
           <select
             value={type}
-            onChange={(e) => setType(e.target.value)}
+            onChange={(e) => setType(e.target.value as 'all' | VomitType)}
             className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
           >
             <option value="all">종류 무관</option>
