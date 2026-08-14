@@ -12,6 +12,7 @@ import { CatFormModal } from './components/CatFormModal'
 import { Onboarding } from './components/Onboarding'
 import { ThresholdManager } from './components/ThresholdManager'
 import { SettingsView } from './components/SettingsView'
+import { CatSwitcher } from './components/CatSwitcher'
 import { deleteDraft } from './lib/storage'
 import type { AlertEntry, VomitRecord } from './types'
 
@@ -50,10 +51,14 @@ function Shell() {
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
 
-  const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog } = store
+  const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog, currentCatId, setCurrentCat } =
+    store
 
   // 잘못된/빈 경로는 캘린더로 폴백 (기본 탭)
   const activeTab: Tab = TABS.find((t) => `/${t.id}` === path)?.id ?? 'calendar'
+
+  // 캘린더·통계는 현재 선택된 고양이 기준으로 필터
+  const catFilteredRecords = currentCatId ? records.filter((r) => r.catId === currentCatId) : records
 
   const openCatModal = () => setCatModalOpen(true)
   const handleCatAdd = (name: string, photoId?: string) => {
@@ -127,7 +132,7 @@ function Shell() {
   // 기본 탭(캘린더) 폴백과 /calendar 라우트가 같은 뷰를 공유
   const calendarView = (
     <CalendarView
-      records={records}
+      records={catFilteredRecords}
       cats={cats}
       onEdit={handleEdit}
       onDelete={handleDelete}
@@ -137,6 +142,9 @@ function Shell() {
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-gray-100 text-gray-900">
+      {cats.length > 1 && (
+        <CatSwitcher cats={cats} currentCatId={currentCatId} onChange={setCurrentCat} />
+      )}
       <main className="no-scrollbar relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto">
         {matchRecord && (
           <RecordBrowser
@@ -147,7 +155,7 @@ function Shell() {
           />
         )}
         {(matchCalendar || isDefaultTab) && calendarView}
-        {matchStats && <StatsView records={records} cats={cats} />}
+        {matchStats && <StatsView records={catFilteredRecords} cats={cats} />}
         {matchAlert && (
           <ThresholdManager
             cats={cats}

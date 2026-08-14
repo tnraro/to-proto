@@ -35,6 +35,9 @@ export interface Store {
   renameCat: (id: string, name: string) => void
   updateCatPhoto: (id: string, photoId?: string) => void
   deleteCat: (id: string) => void
+  /** 현재 선택된 고양이 id (null = 전체) */
+  currentCatId: string | null
+  setCurrentCat: (catId: string | null) => void
   addRecord: (input: RecordInput) => Promise<AlertEntry[]>
   updateRecord: (id: string, input: RecordInput) => Promise<void>
   deleteRecord: (id: string) => void
@@ -52,6 +55,7 @@ export function useStore(): Store {
   const [records, setRecords] = useState<VomitRecord[]>([])
   const [rules, setRules] = useState<ThresholdRule[]>([])
   const [alertLog, setAlertLog] = useState<AlertEntry[]>([])
+  const [currentCatId, setCurrentCat] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -106,6 +110,8 @@ export function useStore(): Store {
       if (target?.photoId) void delPhotos([target.photoId])
       return prev.filter((c) => c.id !== id)
     })
+    // 삭제된 고양이가 선택 중이면 전체로 리셋
+    setCurrentCat((cur) => (cur === id ? null : cur))
     setRecords((prev) => prev.filter((r) => r.catId !== id))
     void (async () => {
       const photoIds = await delRecordsByCat(id)
@@ -233,6 +239,7 @@ export function useStore(): Store {
     setRecords([])
     setRules([])
     setAlertLog([])
+    setCurrentCat(null)
     void clearAll()
   }, [])
 
@@ -246,6 +253,8 @@ export function useStore(): Store {
     renameCat,
     updateCatPhoto,
     deleteCat,
+    currentCatId,
+    setCurrentCat,
     addRecord,
     updateRecord,
     deleteRecord,
