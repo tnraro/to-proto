@@ -56,6 +56,11 @@ export async function dbGetAll<T>(store: StoreName): Promise<T[]> {
   return request(db.transaction(store, 'readonly').objectStore(store).getAll() as IDBRequest<T[]>)
 }
 
+export async function dbGetAllByIndex<T>(store: StoreName, index: string, value: string): Promise<T[]> {
+  const db = await openDB()
+  return request(db.transaction(store, 'readonly').objectStore(store).index(index).getAll(value) as IDBRequest<T[]>)
+}
+
 export async function dbDel(store: StoreName, id: string): Promise<void> {
   const db = await openDB()
   const tx = db.transaction(store, 'readwrite')

@@ -16,13 +16,14 @@ export function evaluateRules(
   now: Date,
 ): Violation[] {
   const violations: Violation[] = []
+  const nowMs = now.getTime()
   for (const rule of rules) {
     if (!rule.enabled) continue
-    const cutoff = now.getTime() - rule.windowDays * DAY_MS
+    const cutoff = nowMs - rule.windowDays * DAY_MS
     let count = 0
     for (const r of records) {
       const t = new Date(r.datetime).getTime()
-      if (t < cutoff || t > now.getTime()) continue
+      if (t < cutoff || t > nowMs) continue
       if (rule.catId !== null && r.catId !== rule.catId) continue
       if (rule.type !== null && !r.types.includes(rule.type)) continue
       count++

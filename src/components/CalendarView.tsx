@@ -92,6 +92,7 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
         {cells.map((cell, i) => {
           const key = cell ? toDateKey(cell) : null
           const list = key ? recordsByDay.get(key) : undefined
+          const summary = list ? summarizeByType(list) : null
           const isSelected = key === selectedKey
           const isToday = key === toDateKey(today)
           return (
@@ -118,23 +119,21 @@ export function CalendarView({ records, cats, onEdit, onDelete, onSelectedDateCh
               >
                 {cell?.getDate()}
               </span>
-              {list && (
+              {summary && (
                 <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                  {summarizeByType(list)
-                    .slice(0, MAX_TYPE_PAIRS)
-                    .map(({ type, count }) => (
-                      <span
-                        key={type}
-                        className="flex items-center gap-0.5"
-                        title={`${VOMIT_TYPES[type].label} ${count}회`}
-                      >
-                        <span className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[type].color}`} />
-                        {count > 1 && <span className="text-[10px] leading-none text-gray-500">{count}</span>}
-                      </span>
-                    ))}
-                  {summarizeByType(list).length > MAX_TYPE_PAIRS && (
+                  {summary.slice(0, MAX_TYPE_PAIRS).map(({ type, count }) => (
+                    <span
+                      key={type}
+                      className="flex items-center gap-0.5"
+                      title={`${VOMIT_TYPES[type].label} ${count}회`}
+                    >
+                      <span className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[type].color}`} />
+                      {count > 1 && <span className="text-[10px] leading-none text-gray-500">{count}</span>}
+                    </span>
+                  ))}
+                  {summary.length > MAX_TYPE_PAIRS && (
                     <span className="text-[10px] leading-none text-gray-400">
-                      +{summarizeByType(list).slice(MAX_TYPE_PAIRS).reduce((s, x) => s + x.count, 0)}
+                      +{summary.slice(MAX_TYPE_PAIRS).reduce((s, x) => s + x.count, 0)}
                     </span>
                   )}
                 </span>

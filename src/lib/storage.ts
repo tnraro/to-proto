@@ -1,5 +1,5 @@
 import type { AlertEntry, Cat, RecordDraft, ThresholdRule, VomitRecord } from '../types'
-import { dbClear, dbDel, dbDelByIndex, dbGet, dbGetAll, dbPut, STORES } from './db'
+import { dbClear, dbDel, dbDelByIndex, dbGet, dbGetAll, dbGetAllByIndex, dbPut, STORES } from './db'
 
 const DRAFT_ID = 'record'
 
@@ -45,8 +45,7 @@ export async function delRecord(id: string): Promise<void> {
 }
 
 export async function delRecordsByCat(catId: string): Promise<string[]> {
-  const records = await dbGetAll<VomitRecord>('records')
-  const targets = records.filter((r) => r.catId === catId)
+  const targets = await dbGetAllByIndex<VomitRecord>('records', 'catId', catId)
   await dbDelByIndex('records', 'catId', catId)
   return targets.flatMap((r) => r.photos)
 }
