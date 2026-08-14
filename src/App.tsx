@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useRoute, Router, useLocation } from 'wouter'
+import { useHashLocation } from 'wouter/use-hash-location'
 import { useStore } from './hooks/useStore'
 import { type RecordInput } from './types'
 import { RecordBrowser } from './components/RecordBrowser'
@@ -24,8 +26,23 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 export default function App() {
+  return (
+    <Router hook={useHashLocation}>
+      <Shell />
+    </Router>
+  )
+}
+
+function Shell() {
   const store = useStore()
-  const [tab, setTab] = useState<Tab>('calendar')
+  const [path, navigate] = useLocation()
+  const [matchRecord] = useRoute('/record')
+  const [matchCalendar] = useRoute('/calendar')
+  const [matchStats] = useRoute('/stats')
+  const [matchAlert] = useRoute('/alert')
+  const [matchSettings] = useRoute('/settings')
+  // 알 수 없는 경로 → 기본 탭(캘린더) 폴백
+  const isDefaultTab = !matchRecord && !matchCalendar && !matchStats && !matchAlert && !matchSettings
   const [formOpen, setFormOpen] = useState(false)
   const [formInitial, setFormInitial] = useState<VomitRecord | null>(null)
   const [formPresetDate, setFormPresetDate] = useState<string | null>(null)
@@ -34,6 +51,9 @@ export default function App() {
   const [catModalOpen, setCatModalOpen] = useState(false)
 
   const { cats, records, addCat, addRecord, updateRecord, deleteRecord, alertLog } = store
+
+  // 잘못된/빈 경로는 캘린더로 폴백 (기본 탭)
+  const activeTab: Tab = TABS.find((t) => `/${t.id}` === path)?.id ?? 'calendar'
 
   const openCatModal = () => setCatModalOpen(true)
   const handleCatAdd = (name: string, photoId?: string) => {
@@ -66,7 +86,7 @@ export default function App() {
   }
 
   const openAddFromFAB = () => {
-    if (tab === 'calendar' && calendarDate) {
+    if (activeTab === 'calendar' && calendarDate) {
       openRecordForm(null, calendarDate)
     } else {
       openRecordForm()
@@ -100,37 +120,49 @@ export default function App() {
     openRecordForm(r)
   }
 
+  const handleDelete = (id: string) => {
+    if (confirm('기록을 삭제할까요?')) deleteRecord(id)
+  }
+
+  // 기본 탭(캘린더) 폴백과 /calendar 라우트가 같은 뷰를 공유
+  const calendarView = (
+    <CalendarView
+      records={records}
+      cats={cats}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onSelectedDateChange={setCalendarDate}
+    />
+  )
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-gray-100 text-gray-900">
       <main className="no-scrollbar relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto">
-        {tab === 'record' && (
+        {matchRecord && (
           <RecordBrowser
             records={records}
             cats={cats}
             onEdit={handleEdit}
-            onDelete={(id) => {
-              if (confirm('기록을 삭제할까요?')) deleteRecord(id)
-            }}
+            onDelete={handleDelete}
           />
         )}
-
-        {tab === 'calendar' && (
-          <CalendarView
-            records={records}
+        {(matchCalendar || isDefaultTab) && calendarView}
+        {matchStats && <StatsView records={records} cats={cats} />}
+        {matchAlert && (
+          <ThresholdManager
             cats={cats}
-            onEdit={handleEdit}
-            onDelete={(id) => {
-              if (confirm('기록을 삭제할까요?')) deleteRecord(id)
-            }}
-            onSelectedDateChange={setCalendarDate}
+            rules={store.rules}
+            alertLog={alertLog}
+            addRule={store.addRule}
+            updateRule={store.updateRule}
+            deleteRule={store.deleteRule}
+            deleteAlert={store.deleteAlert}
+            clearAlerts={store.clearAlerts}
           />
         )}
-
-        {tab === 'stats' && <StatsView records={records} cats={cats} />}
-
-        {tab === 'alert' && <ThresholdManager cats={cats} rules={store.rules} alertLog={alertLog} addRule={store.addRule} updateRule={store.updateRule} deleteRule={store.deleteRule} deleteAlert={store.deleteAlert} clearAlerts={store.clearAlerts} />}
-
-        {tab === 'settings' && <SettingsView {...store} onAddCat={openCatModal} onNavigate={setTab} />}
+        {matchSettings && (
+          <SettingsView {...store} onAddCat={openCatModal} onNavigate={(t) => navigate(`/${t}`)} />
+        )}
       </main>
 
       <button
@@ -159,12 +191,12 @@ export default function App() {
           {TABS.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => navigate(`/${t.id}`)}
               className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
-                tab === t.id ? 'font-semibold text-primary' : 'text-gray-500'
+                activeTab === t.id ? 'font-semibold text-primary' : 'text-gray-500'
               }`}
             >
-              {tab === t.id && (
+              {activeTab === t.id && (
                 <span className="absolute top-1 h-1 w-5 rounded-full bg-primary" />
               )}
               {t.label}
