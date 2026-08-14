@@ -4,7 +4,6 @@ import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
 import { deleteDraft, getPhoto, loadDraft, saveDraft, uid } from '../lib/storage'
 import { PhotoPreview } from './PhotoPreview'
-import { ImageEditorModal } from './ImageEditorModal'
 
 const MAX_PHOTOS = 6
 const DRAFT_TTL_MS = 30 * 60 * 1000
@@ -45,8 +44,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
   )
   const [memo, setMemo] = useState(() => initial?.memo ?? '')
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
-  const [editingQueue, setEditingQueue] = useState<File[]>([])
-  const editingBlob = editingQueue[0] ?? null
   const fileRef = useRef<HTMLInputElement>(null)
   const draftReady = useRef(false)
   const dragKeyRef = useRef<string | null>(null)
@@ -121,21 +118,13 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
     if (!files) return
     const added = Array.from(files).slice(0, MAX_PHOTOS - photoItems.length)
     if (added.length === 0) return
-    setEditingQueue((prev) => [...prev, ...added])
+    // 원본 그대로 저장이므로 편집 없이 즉시 추가
+    setPhotoItems((prev) => [...prev, ...added.map((f) => ({ key: uid(), blob: f }))])
     if (fileRef.current) fileRef.current.value = ''
   }
 
   const removePhoto = (key: string) => {
     setPhotoItems((prev) => prev.filter((p) => p.key !== key))
-  }
-
-  const cancelEditing = () => {
-    setEditingQueue((prev) => prev.slice(1))
-  }
-
-  const applyEdited = (blob: Blob) => {
-    setPhotoItems((prev) => [...prev, { key: uid(), blob }])
-    setEditingQueue((prev) => prev.slice(1))
   }
 
   const onThumbPointerDown = (e: React.PointerEvent, key: string) => {
@@ -353,12 +342,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onCancel, onAd
           </button>
         )}
       </div>
-      <ImageEditorModal
-        open={editingBlob !== null}
-        image={editingBlob}
-        onCancel={cancelEditing}
-        onApply={applyEdited}
-      />
     </form>
   )
 }
