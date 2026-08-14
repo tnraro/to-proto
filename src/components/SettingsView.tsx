@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import type { Store } from '../hooks/useStore'
 import { CatManager } from './CatManager'
+import { applyUpdate, checkForUpdate, usePwaStatus } from '../lib/pwa'
 
 export function SettingsView({ cats, records, rules, alertLog, resetAll, renameCat, updateCatPhoto, deleteCat, onAddCat }: Store & { onAddCat: () => void }) {
   const [confirming, setConfirming] = useState(false)
+  const pwaStatus = usePwaStatus()
 
   return (
     <div className="space-y-6 p-4">
@@ -21,6 +23,35 @@ export function SettingsView({ cats, records, rules, alertLog, resetAll, renameC
           <Stat label="경고 이력" value={alertLog.length} />
         </dl>
         <p className="mt-3 text-xs text-gray-400">데이터는 이 기기의 IndexedDB에 저장됩니다</p>
+      </section>
+
+      <section className="rounded-card border border-gray-100 bg-white p-4 shadow-card">
+        <h2 className="mb-3 text-sm font-semibold text-gray-700">업데이트</h2>
+        {pwaStatus === 'update-ready' && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-gray-600">새 버전이 준비되었습니다</p>
+            <button
+              onClick={applyUpdate}
+              className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
+            >
+              업데이트 설치
+            </button>
+          </div>
+        )}
+        {pwaStatus === 'up-to-date' && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-gray-600">최신 버전입니다</p>
+            <button
+              onClick={() => void checkForUpdate()}
+              className="shrink-0 rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            >
+              업데이트 확인
+            </button>
+          </div>
+        )}
+        {pwaStatus === 'unsupported' && (
+          <p className="text-sm text-gray-400">이 브라우저에서는 업데이트 확인을 지원하지 않습니다</p>
+        )}
       </section>
 
       <section className="rounded-card border border-red-200 bg-red-50 p-4">

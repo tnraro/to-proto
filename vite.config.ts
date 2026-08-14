@@ -10,7 +10,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      injectRegister: null,
       includeAssets: ['favicon.svg', 'icon.svg', 'icon-192.png', 'icon-512.png', 'maskable-512.png'],
       manifest: {
         name: '고양이 토 기록',
