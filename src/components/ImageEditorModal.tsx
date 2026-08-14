@@ -51,9 +51,6 @@ export function ImageEditorModal({ open, image, aspect, onCancel, onApply }: Pro
   return (
     <Modal open={open} onClose={onCancel} drawer={false}>
       <h2 className="text-lg font-bold">사진 편집</h2>
-      <p className="mt-1 text-sm text-gray-500">
-        {noCrop ? '사진이 원본 그대로 저장됩니다' : '크롭 영역을 드래그하고 확대를 조절하세요'}
-      </p>
 
       {noCrop ? (
         <div className="relative mt-4 h-72 w-full overflow-hidden rounded-card bg-gray-900">
