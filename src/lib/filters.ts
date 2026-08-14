@@ -1,5 +1,5 @@
 import type { VomitRecord, VomitType } from '../types'
-import { toDateKey } from './dates'
+import { toDayKey } from './dates'
 
 export type DateMode = 'all' | 'before' | 'after' | 'range'
 
@@ -25,10 +25,6 @@ export const EMPTY_FILTERS: RecordFilters = {
   catIds: [],
   dateMode: 'all',
   memo: '',
-}
-
-function toDayKey(iso: string): string {
-  return toDateKey(new Date(iso))
 }
 
 function matchesDate(f: RecordFilters, dayKey: string): boolean {

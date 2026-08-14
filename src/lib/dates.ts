@@ -60,7 +60,8 @@ export function formatAbsoluteTime(iso: string): string {
   return absFullFmt.format(new Date(iso))
 }
 
-export function sameDayKey(iso: string): string {
+/** ISO 문자열의 날짜 키(YYYY-MM-DD, 로컬 타임존) */
+export function toDayKey(iso: string): string {
   return toDateKey(new Date(iso))
 }
 
