@@ -50,8 +50,7 @@ export function evaluateRules(
 
 /**
  * New-alert evaluation on record add: only rules matching the new record are
- * re-evaluated, and only when this record pushes the count across the threshold.
- * Rules already in violation are not re-alerted.
+ * re-evaluated; a matching record alerts whenever the count reaches the threshold.
  */
 export function evaluateNewRecord(
   rules: ThresholdRule[],
