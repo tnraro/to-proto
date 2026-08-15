@@ -88,6 +88,22 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
 
   useImperativeHandle(ref, () => ({ requestClose }))
 
+  useEffect(() => {
+    if (!initial || restoredDraft) return
+    let cancelled = false
+    void (async () => {
+      const existing: PhotoItem[] = []
+      for (const id of initial.photos) {
+        const blob = await getPhoto(id)
+        if (blob) existing.push({ key: id, id, blob })
+      }
+      if (!cancelled) setPhotoItems(existing)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [initial, restoredDraft])
+
   // Draft restore: ask once, then restore or discard (StrictMode double-run guarded by ref)
   const restoreAskedRef = useRef(false)
   useEffect(() => {
