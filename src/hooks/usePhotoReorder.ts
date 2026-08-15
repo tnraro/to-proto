@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
- * Reorder thumbnails by dragging anywhere on them.
- * Tracks move/up at window level so dragging outside a thumbnail still works,
- * and touches that start on the remove button are not treated as drags.
- * Handlers always reference the latest onReorder via a ref, keeping them
- * stable across renders.
+ * Track move/up at window level so dragging outside a thumbnail still works.
  */
 export function usePhotoReorder(onReorder: (fromKey: string, toKey: string) => void) {
   const onReorderRef = useRef(onReorder)

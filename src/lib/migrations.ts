@@ -1,5 +1,4 @@
 export interface Migration {
-  /** DB version reached after applying this migration */
   version: number
   name: string
   /**
@@ -68,7 +67,7 @@ export function dropStore(db: IDBDatabase, name: string): void {
   if (db.objectStoreNames.contains(name)) db.deleteObjectStore(name)
 }
 
-/** Reads an entire store in an upgrade transaction, transforms, and writes to a new store (old store removal is dropStore) */
+/** Old store removal is dropStore */
 export async function copyStore(
   db: IDBDatabase,
   from: string,

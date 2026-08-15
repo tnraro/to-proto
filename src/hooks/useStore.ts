@@ -142,7 +142,6 @@ export function useStore(): Store {
     })
     setCurrentCat((cur) => (cur === id ? null : cur))
     setRecords((prev) => prev.filter((r) => r.catId !== id))
-    // Markers only lose that cat (marker stays); the marker is deleted when no cats remain
     setMarkers((prev) => {
       const removed: Marker[] = []
       const next = prev.flatMap((m) => {
@@ -294,7 +293,7 @@ export function useStore(): Store {
     })
   }, [])
 
-  /** Cascades to markers of the type and their photos (confirm is in the UI) */
+  /** Confirm is handled in the UI */
   const deleteMarkerType = useCallback(
     (id: string) => {
       setMarkerTypes((prev) => prev.filter((t) => t.id !== id))

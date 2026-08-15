@@ -4,7 +4,7 @@ import { usePhotoUrl } from '../lib/usePhotoUrl'
 interface Props {
   cat?: Cat
   sizeClass?: string
-  /** 'photo': clickable photo button (settings tab) */
+  /** 'photo': settings tab */
   variant?: 'plain' | 'photo'
   onClick?: () => void
 }

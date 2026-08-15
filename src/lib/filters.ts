@@ -4,12 +4,9 @@ import { toDayKey } from './dates'
 export type DateMode = 'all' | 'before' | 'after' | 'range'
 
 export interface RecordFilters {
-  /** Empty array = all */
   types: VomitType[]
-  /** Empty array = all */
   catIds: string[]
   kinds: Array<'record' | 'marker'>
-  /** Marker kind ids (marker filter only) */
   markerTypeIds: string[]
   dateMode: DateMode
   dateBefore?: string

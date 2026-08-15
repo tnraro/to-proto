@@ -44,7 +44,6 @@ function Shell() {
   const [matchStats] = useRoute('/stats')
   const [matchAlert] = useRoute('/alert')
   const [matchSettings] = useRoute('/settings')
-  // Unknown routes fall back to the default tab (calendar)
   const isDefaultTab = !matchRecord && !matchCalendar && !matchStats && !matchAlert && !matchSettings
   const [formOpen, setFormOpen] = useState(false)
   const [formInitial, setFormInitial] = useState<VomitRecord | null>(null)
@@ -173,7 +172,6 @@ function Shell() {
     if (confirm('마커를 삭제할까요?')) deleteMarker(id)
   }
 
-  // Default-tab fallback and the /calendar route share the same view
   const calendarView = (
     <CalendarView
       records={catFilteredRecords}

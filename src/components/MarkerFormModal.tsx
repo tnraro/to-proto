@@ -17,7 +17,6 @@ interface Props {
   presetDate?: string | null
   onSubmit: (input: MarkerInput) => void | Promise<void>
   onClose: () => void
-  /** Inline marker-type add (returns the new id) */
   onAddMarkerType: (name: string) => string
 }
 
@@ -118,7 +117,6 @@ function MarkerFormContent({
   }, [datetime, typeId, catIds, memo, photoItems, onStateChange])
 
   const requestClose = () => {
-    // Confirm only when a draft exists this session — otherwise close immediately
     if (draftHasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
     discardMarkerDraft()
     onClose()

@@ -28,7 +28,6 @@ export function StatsView({ records }: Props) {
 
   const total = filtered.length
 
-  // Sets the stacked bar's stack order
   const stackedTypes = useMemo(() => {
     const set = new Set<VomitType>()
     for (const r of filtered) {

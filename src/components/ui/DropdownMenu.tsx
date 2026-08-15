@@ -9,7 +9,6 @@ export interface DropdownItem {
 
 interface Props {
   items: DropdownItem[]
-  /** Extra action before an item runs (e.g. opening a file picker) */
   beforeClose?: () => void
   ariaLabel?: string
   placement?: 'bottom' | 'top'

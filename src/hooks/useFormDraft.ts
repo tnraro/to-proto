@@ -8,7 +8,6 @@ const DRAFT_SAVE_MS = 500
 export interface FormDraftState<T extends BaseDraft> {
   /** Restore finished — saving starts only after this */
   ready: boolean
-  /** Restorable draft (context matches + within TTL) */
   restored: (T & { id: string }) | null
   /** Draft saved/restored this session — basis for the confirm prompt */
   hasDraft: boolean
@@ -72,7 +71,6 @@ export function useFormDraft<T extends BaseDraft>(
     }, DRAFT_SAVE_MS)
   }, [id])
 
-  /** Save only on real changes (vs baseline) — mount/StrictMode calls are ignored */
   const onStateChange = useCallback(() => {
     const snapshot = JSON.stringify(depsRef.current)
     if (baselineRef.current === undefined) {

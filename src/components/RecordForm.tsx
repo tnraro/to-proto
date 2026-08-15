@@ -27,7 +27,6 @@ export interface RecordFormHandle {
 
 interface PhotoItem {
   key: string
-  /** Existing photo id (undefined for new photos) */
   id?: string
   blob: Blob
 }
@@ -82,7 +81,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
   }, [datetime, catId, types, memo, photoItems, onStateChange])
 
   const requestClose = () => {
-    // Confirm only when a draft exists this session — otherwise close immediately
     if (draftHasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
     discardDraft()
     onClose()

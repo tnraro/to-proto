@@ -6,9 +6,7 @@ interface Props {
   onClose: () => void
   closeOnEsc?: boolean
   closeOnBackdrop?: boolean
-  /** Bottom-sheet on mobile; centered dialog on all screens when false */
   drawer?: boolean
-  /** Extra classes for the sheet content (e.g. max-h/overflow) */
   contentClassName?: string
   children: ReactNode
 }

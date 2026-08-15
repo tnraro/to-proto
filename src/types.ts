@@ -57,7 +57,6 @@ export type TimelineItem =
   | { kind: 'record'; payload: VomitRecord }
   | { kind: 'marker'; payload: Marker }
 
-/** Marker kind that the user freely CRUDs */
 export interface MarkerType {
   id: string
   name: string
