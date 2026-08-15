@@ -4,7 +4,6 @@ import { formatAbsoluteTime, formatRelativeTime } from '../../lib/dates'
 
 interface Props {
   iso: string
-  /** 표시기 스타일 (기본: 통일된 작은 회색 텍스트) */
   className?: string
 }
 

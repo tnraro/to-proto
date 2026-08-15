@@ -28,7 +28,7 @@ export function StatsView({ records }: Props) {
 
   const total = filtered.length
 
-  // 기간 내 등장한 종류 (누적 바의 스택 순서 기준)
+  // Sets the stacked bar's stack order
   const stackedTypes = useMemo(() => {
     const set = new Set<VomitType>()
     for (const r of filtered) {
@@ -200,7 +200,6 @@ export function StatsView({ records }: Props) {
   )
 }
 
-/** 공용 차트 툴팁 — 0인 항목은 생략 */
 function ChartTooltip({
   active,
   payload,

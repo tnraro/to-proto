@@ -3,9 +3,7 @@ import { usePhotoUrl } from '../lib/usePhotoUrl'
 import { PhotoLightbox } from './PhotoLightbox'
 
 interface Props {
-  /** 소속 기록의 전체 사진 id 목록 */
   photos: string[]
-  /** 이 썸네일의 인덱스 */
   index: number
 }
 

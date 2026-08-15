@@ -55,7 +55,7 @@ describe('evaluateRules', () => {
 
   test('윈도우 밖 기록은 집계 제외', () => {
     const records = [
-      rec(new Date('2026-08-10T06:00:00')), // 3일 전
+      rec(new Date('2026-08-10T06:00:00')), // 3 days ago
       rec(new Date('2026-08-13T06:00:00')),
       rec(new Date('2026-08-13T08:00:00')),
       rec(new Date('2026-08-13T10:00:00')),
@@ -63,7 +63,7 @@ describe('evaluateRules', () => {
     ]
     const violations = evaluateRules([rule1d], records, cats, now)
     expect(violations).toHaveLength(1)
-    expect(violations[0].count).toBe(4) // 윈도우 밖 기록 미포함
+    expect(violations[0].count).toBe(4) // outside-window record not counted
   })
 
   test('고양이 필터: 다른 고양이 기록은 제외', () => {
@@ -72,7 +72,7 @@ describe('evaluateRules', () => {
       rec(new Date('2026-08-13T07:00:00'), 'c1'),
       rec(new Date('2026-08-13T08:00:00'), 'c1'),
       rec(new Date('2026-08-13T09:00:00'), 'c1'),
-      rec(new Date('2026-08-13T11:00:00'), 'c2'), // 대상 아닌 고양이
+      rec(new Date('2026-08-13T11:00:00'), 'c2'), // not the target cat
     ]
     const violations = evaluateRules([rule1d], records, cats, now)
     expect(violations).toHaveLength(1)
@@ -84,7 +84,7 @@ describe('evaluateRules', () => {
     const records = [
       rec(new Date('2026-08-13T06:00:00')), // food
       rec(new Date('2026-08-13T07:00:00'), 'c1', ['bloody']),
-      rec(new Date('2026-08-13T08:00:00'), 'c1', ['food', 'bloody']), // 다중: 포함 매칭
+      rec(new Date('2026-08-13T08:00:00'), 'c1', ['food', 'bloody']), // multi-kind: include matching
       rec(new Date('2026-08-13T09:00:00'), 'c1', ['bloody']),
       rec(new Date('2026-08-13T10:00:00'), 'c1', ['bloody']),
     ]
@@ -136,7 +136,7 @@ describe('addRecord 경고 생성 시뮬레이션 (evaluateNewRecord)', () => {
       rec(new Date('2026-08-13T06:00:00')),
       rec(new Date('2026-08-13T08:00:00')),
     ]
-    const created = rec(new Date('2026-08-10T09:00:00')) // 3일 전 기록을 이제 추가
+    const created = rec(new Date('2026-08-10T09:00:00')) // adding a record from 3 days ago
     expect(evaluateNewRecord([rule1d], existing, cats, created, now)).toHaveLength(0)
   })
 
@@ -145,11 +145,11 @@ describe('addRecord 경고 생성 시뮬레이션 (evaluateNewRecord)', () => {
     const hairballRule: ThresholdRule = { id: 'r2', catId: 'c1', windowDays: 7, maxCount: 2, type: 'hairball', enabled: true }
     const existing = [
       rec(new Date('2026-08-12T06:00:00'), 'c1', ['hairball']),
-      rec(new Date('2026-08-12T10:00:00'), 'c1', ['hairball']), // 헤어볼 2회 → 헤어볼 규칙 이미 만족
+      rec(new Date('2026-08-12T10:00:00'), 'c1', ['hairball']), // hairball x2 → hairball rule already met
       rec(new Date('2026-08-13T06:00:00')), // food
       rec(new Date('2026-08-13T08:00:00')), // food
     ]
-    const created = rec(new Date('2026-08-13T10:00:00')) // food → 종류 무관 5회째로 교차, 헤어볼 규칙엔 불일치
+    const created = rec(new Date('2026-08-13T10:00:00')) // food → crosses any-kind 5th, doesn't match hairball rule
     const newAlerts = evaluateNewRecord([anyRule, hairballRule], existing, cats, created, now)
     expect(newAlerts).toHaveLength(1)
     expect(newAlerts[0].rule.id).toBe(anyRule.id)
@@ -160,7 +160,7 @@ describe('addRecord 경고 생성 시뮬레이션 (evaluateNewRecord)', () => {
     const anyRule: ThresholdRule = { id: 'r3', catId: 'c1', windowDays: 7, maxCount: 5, type: null, enabled: true }
     const hairballRule: ThresholdRule = { id: 'r2', catId: 'c1', windowDays: 7, maxCount: 2, type: 'hairball', enabled: true }
     const existing = [
-      rec(new Date('2026-08-12T06:00:00'), 'c1', ['hairball']), // 헤어볼 1회
+      rec(new Date('2026-08-12T06:00:00'), 'c1', ['hairball']), // hairball x1
       rec(new Date('2026-08-13T06:00:00')), // food
       rec(new Date('2026-08-13T08:00:00')), // food
       rec(new Date('2026-08-13T10:00:00')), // food

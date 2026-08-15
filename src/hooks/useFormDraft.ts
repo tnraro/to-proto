@@ -6,24 +6,23 @@ const DRAFT_TTL_MS = 30 * 60 * 1000
 const DRAFT_SAVE_MS = 500
 
 export interface FormDraftState<T extends BaseDraft> {
-  /** 복원 완료 여부 — 저장은 이 후에 시작한다 */
+  /** Restore finished — saving starts only after this */
   ready: boolean
-  /** 유효한(컨텍스트 일치 + TTL 내) 복원용 draft */
+  /** Restorable draft (context matches + within TTL) */
   restored: (T & { id: string }) | null
-  /** 이번 세션에서 draft가 저장/복원됨 — confirm 표시 기준 */
+  /** Draft saved/restored this session — basis for the confirm prompt */
   hasDraft: boolean
-  /** 폼 상태가 실제로 바뀌었을 때 호출 (렌더와 무관, 안정 참조) */
+  /** Call when the form state actually changed (render-independent, stable ref) */
   onStateChange: () => void
-  /** draft 삭제 (제출 시) */
   deleteDraft: () => void
-  /** 저장 억제 후 draft 삭제 — 언마운트 flush가 재저장하지 않도록 한다 (확인 후 나가기) */
+  /** Delete the draft with saving suppressed so the unmount flush does not re-save */
   discard: () => void
 }
 
 /**
- * 폼 draft 공통 로직: 로드·복원(TTL/applyTo 가드), 실제 상태 변경 시 디바운스 저장, 삭제.
- * onStateChange는 베이스라인 스냅샷과 비교해 실변경일 때만 저장하므로
- * 마운트/StrictMode/리렌더 phantom이 발생하지 않는다.
+ * Shared form-draft logic: load/restore (TTL/applyTo guards), debounced save on real
+ * state changes, delete. onStateChange saves only on real changes vs the baseline
+ * snapshot, so mount/StrictMode/re-render phantoms never fire.
  */
 export function useFormDraft<T extends BaseDraft>(
   id: string,
@@ -65,7 +64,6 @@ export function useFormDraft<T extends BaseDraft>(
   }, [id, applyTo])
 
   const scheduleSave = useCallback(() => {
-    // 이전 타이머를 먼저 정리 — 어떤 시점에도 타이머는 최대 1개 (discard 정리 보장)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       saveTimer.current = undefined
@@ -74,7 +72,7 @@ export function useFormDraft<T extends BaseDraft>(
     }, DRAFT_SAVE_MS)
   }, [id])
 
-  /** 실제 변경(베이스라인 대비)일 때만 저장 스케줄 — 마운트·StrictMode 호출은 무시된다 */
+  /** Save only on real changes (vs baseline) — mount/StrictMode calls are ignored */
   const onStateChange = useCallback(() => {
     const snapshot = JSON.stringify(depsRef.current)
     if (baselineRef.current === undefined) {
@@ -86,12 +84,10 @@ export function useFormDraft<T extends BaseDraft>(
     if (readyRef.current) {
       scheduleSave()
     } else {
-      // ready 전 변경 — ready 플립 시 저장
       pendingChangeRef.current = true
     }
   }, [scheduleSave])
 
-  // ready 플립: ready 전에 변경된 내용이 있으면 저장
   useEffect(() => {
     if (!ready || !pendingChangeRef.current) return
     pendingChangeRef.current = false
@@ -100,7 +96,6 @@ export function useFormDraft<T extends BaseDraft>(
     scheduleSave()
   }, [ready, scheduleSave])
 
-  // 언마운트 시 대기 중인 저장 flush (StrictMode 이중 마운트는 ready 전이라 스킵)
   useEffect(() => {
     return () => {
       if (suppressSaveRef.current) return

@@ -6,9 +6,9 @@ interface Props {
   onClose: () => void
   closeOnEsc?: boolean
   closeOnBackdrop?: boolean
-  /** 모바일에서 하단 드로어(바텀 시트)로 표시할지. false면 모든 화면에서 중앙 다이얼로그 */
+  /** Bottom-sheet on mobile; centered dialog on all screens when false */
   drawer?: boolean
-  /** 시트 내용부 추가 클래스 (예: max-h/overflow) */
+  /** Extra classes for the sheet content (e.g. max-h/overflow) */
   contentClassName?: string
   children: ReactNode
 }
@@ -106,8 +106,8 @@ export function Modal({
         downOnBackdrop.current = e.target === e.currentTarget
       }}
       onPointerUp={(e) => {
-        // 백드롭 닫기는 pointerdown/pointerup이 모두 백드롭에서 일어난 경우에만 동작한다
-        // (시트 안 down → 바깥 up 같은 불일치 제스처로 닫히지 않도록)
+        // Backdrop closes only when both pointerdown and pointerup land on the backdrop
+        // (so a down-in-sheet / up-outside gesture does not close it)
         if (closeOnBackdrop && downOnBackdrop.current && e.target === e.currentTarget) onClose()
       }}
       role="dialog"

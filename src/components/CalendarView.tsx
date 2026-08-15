@@ -13,13 +13,13 @@ interface Props {
   cats: Cat[]
   markers: Marker[]
   markerTypes: MarkerType[]
-  /** 실험: 일자 기록 표시를 '토 N회' 형식으로 */
+  /** Experiment (feature flag) */
   showRecordCount?: boolean
   onEdit: (record: VomitRecord) => void
   onDelete: (id: string) => void
   onEditMarker: (marker: Marker) => void
   onDeleteMarker: (id: string) => void
-  /** 선택된 날짜(YYYY-MM-DD)를 상위로 보고 — FAB의 프리셋에 사용 */
+  /** Selected date (YYYY-MM-DD) — FAB preset source */
   onSelectedDateChange: (dateKey: string) => void
 }
 
@@ -48,7 +48,6 @@ export function CalendarView({
   const recordsByDay = useMemo(() => groupByDay(records), [records])
   const markersByDay = useMemo(() => groupByDay(markers), [markers])
 
-  // 선택일의 기록+마커를 datetime 내림차순(최신순) 병합
   const dayItems = useMemo<TimelineItem[]>(() => {
     const recordsOfDay = recordsByDay.get(selectedKey) ?? []
     const markersOfDay = markersByDay.get(selectedKey) ?? []
@@ -205,7 +204,6 @@ function buildMonthCells(cursor: Date): (Date | null)[] {
   return cells
 }
 
-/** 하루 기록을 종류별로 집계해 횟수 내림차순으로 정렬 */
 function summarizeByType(records: VomitRecord[]): { type: VomitType; count: number }[] {
   const counts = new Map<VomitType, number>()
   for (const r of records) {

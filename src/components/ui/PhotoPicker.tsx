@@ -6,16 +6,14 @@ export interface PhotoPickerHandle {
 }
 
 interface Props {
-  /** 크롭 적용 시 편집된 이미지 blob 전달 (취소 시 호출되지 않음) */
+  /** Passes the edited image blob when a crop is applied (not called on cancel) */
   onPhoto: (blob: Blob) => void
-  /** 크롭 비율 */
   aspect: number
-  /** 트리거 렌더러 — open()을 호출하면 파일 선택이 열린다 */
+  /** Trigger renderer — open() starts the file picker */
   renderTrigger: (open: () => void) => ReactNode
   ref?: Ref<PhotoPickerHandle>
 }
 
-/** 사진 공용 픽커: 파일 선택 → 크롭 편집 → blob 반환 */
 export function PhotoPicker({ onPhoto, aspect, renderTrigger, ref }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [editingBlob, setEditingBlob] = useState<Blob | null>(null)

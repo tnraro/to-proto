@@ -44,7 +44,7 @@ function Shell() {
   const [matchStats] = useRoute('/stats')
   const [matchAlert] = useRoute('/alert')
   const [matchSettings] = useRoute('/settings')
-  // 알 수 없는 경로 → 기본 탭(캘린더) 폴백
+  // Unknown routes fall back to the default tab (calendar)
   const isDefaultTab = !matchRecord && !matchCalendar && !matchStats && !matchAlert && !matchSettings
   const [formOpen, setFormOpen] = useState(false)
   const [formInitial, setFormInitial] = useState<VomitRecord | null>(null)
@@ -55,7 +55,7 @@ function Shell() {
   const [markerFormOpen, setMarkerFormOpen] = useState(false)
   const [markerFormInitial, setMarkerFormInitial] = useState<Marker | null>(null)
   const [markerPresetDate, setMarkerPresetDate] = useState<string | null>(null)
-  // 실험: 캘린더 일자 기록 표시를 '토 N회' 형식으로
+  // Experiment (feature flag)
   const [showRecordCount, setShowRecordCount] = useFeatureFlag('calendar.recordCount', false)
 
   const {
@@ -76,10 +76,8 @@ function Shell() {
     addMarkerType,
   } = store
 
-  // 잘못된/빈 경로는 캘린더로 폴백 (기본 탭)
   const activeTab: Tab = TABS.find((t) => `/${t.id}` === path)?.id ?? 'calendar'
 
-  // 캘린더·통계는 현재 선택된 고양이 기준으로 필터
   const catFilteredRecords = currentCatId ? records.filter((r) => r.catId === currentCatId) : records
   const catFilteredMarkers = currentCatId ? markers.filter((m) => m.catIds.includes(currentCatId)) : markers
 
@@ -142,7 +140,7 @@ function Shell() {
     closeMarkerForm()
   }
 
-  /** 취소/닫기: RecordForm 내부에서 confirm·draft 폐기 후 호출 */
+  /** Close: called after RecordForm's internal confirm/draft discard */
   const closeRecordForm = () => {
     setFormOpen(false)
     setFormInitial(null)
@@ -175,7 +173,7 @@ function Shell() {
     if (confirm('마커를 삭제할까요?')) deleteMarker(id)
   }
 
-  // 기본 탭(캘린더) 폴백과 /calendar 라우트가 같은 뷰를 공유
+  // Default-tab fallback and the /calendar route share the same view
   const calendarView = (
     <CalendarView
       records={catFilteredRecords}

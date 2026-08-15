@@ -13,10 +13,10 @@ const MAX_PHOTOS = 6
 interface Props {
   cats: Cat[]
   initial?: VomitRecord | null
-  /** YYYY-MM-DD: 캘린더에서 날짜 선택 시 프리셋 */
+  /** YYYY-MM-DD: preset when a date is picked in the calendar */
   presetDate?: string | null
   onSubmit: (input: RecordInput) => void
-  /** 취소/닫기 완료 콜백 (confirm·draft 폐기는 폼 내부에서 처리) */
+  /** Close callback (confirm/draft discard are handled inside the form) */
   onClose: () => void
   onAddCat: () => void
 }
@@ -27,7 +27,7 @@ export interface RecordFormHandle {
 
 interface PhotoItem {
   key: string
-  /** 기존 사진의 id (새 사진은 undefined) */
+  /** Existing photo id (undefined for new photos) */
   id?: string
   blob: Blob
 }
@@ -77,13 +77,12 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
     },
   )
 
-  // 상태 변경 시 draft 저장 (실변경 감지는 훅 내부 스냅샷 비교가 담당)
   useEffect(() => {
     onStateChange()
   }, [datetime, catId, types, memo, photoItems, onStateChange])
 
   const requestClose = () => {
-    // 이번 세션에 draft가 있으면 확인 — 없으면 즉시 닫기
+    // Confirm only when a draft exists this session — otherwise close immediately
     if (draftHasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
     discardDraft()
     onClose()
@@ -91,7 +90,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
 
   useImperativeHandle(ref, () => ({ requestClose }))
 
-  // draft 복원: 1회 질문 후 복원 또는 폐기 (StrictMode 이중 실행은 ref로 1회만)
+  // Draft restore: ask once, then restore or discard (StrictMode double-run guarded by ref)
   const restoreAskedRef = useRef(false)
   useEffect(() => {
     if (!draftReady || !restoredDraft || restoreAskedRef.current) return
@@ -106,7 +105,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
       setCatId(restoredDraft.catId)
       if (restoredDraft.types.length > 0) setTypes(restoredDraft.types)
       setMemo(restoredDraft.memo)
-      // 사진 목록 복원: 기존 사진(원래 순서, 제거된 것 제외) + 새 사진
       const newBlobs = restoredDraft.newPhotos.map((p) => p.blob)
       const removed = restoredDraft.removedPhotos
       if (initial) {
@@ -141,7 +139,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
     if (!files) return
     const added = Array.from(files).slice(0, MAX_PHOTOS - photoItems.length)
     if (added.length === 0) return
-    // 원본 그대로 저장이므로 편집 없이 즉시 추가
+    // Photos are stored as-is, so add immediately without editing
     setPhotoItems((prev) => [...prev, ...added.map((f) => ({ key: uid(), blob: f }))])
     if (fileRef.current) fileRef.current.value = ''
   }

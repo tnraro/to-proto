@@ -6,7 +6,6 @@ interface Props {
   onChange: (catId: string | null) => void
 }
 
-/** 상단 헤더 — 앱 타이틀과 고양이 전환 select (2마리 이상일 때만 표시) */
 export function AppHeader({ cats, currentCatId, onChange }: Props) {
   return (
     <header className="shrink-0 border-b border-gray-200 bg-white">

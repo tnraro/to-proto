@@ -15,7 +15,7 @@
     background-color: var(--color-gray-100);
   }
 
-  /* 모바일/PWA: 문서 경계 오버스크롤로 앱 전체가 끌려 올라가지 않도록 */
+  /* Mobile/PWA: keep the document-edge overscroll from dragging the whole app */
   html,
   body {
     overscroll-behavior: none;
@@ -25,14 +25,14 @@
     background-color: var(--color-gray-100);
   }
 
-  /* iOS 자동 줌 방지 */
+  /* Prevent iOS auto-zoom */
   input,
   select,
   textarea {
     font-size: 16px;
   }
 
-  /* Safari의 datetime-local 내장 최소 너비가 컨테이너를 밀어내지 않도록 */
+  /* Keep Safari's built-in datetime-local min width from pushing the container */
   input[type='datetime-local'] {
     min-width: 0;
   }
@@ -46,7 +46,7 @@
   }
 }
 
-/* 스크롤바 숨김 */
+/* Hide scrollbars */
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;

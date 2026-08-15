@@ -4,7 +4,7 @@ import { usePhotoUrl } from '../lib/usePhotoUrl'
 interface Props {
   cat?: Cat
   sizeClass?: string
-  /** photo: 클릭 가능한 사진 버튼 (설정 탭) — 사진 없으면 중앙 + 표시 */
+  /** 'photo': clickable photo button (settings tab) */
   variant?: 'plain' | 'photo'
   onClick?: () => void
 }

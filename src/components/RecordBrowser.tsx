@@ -32,7 +32,7 @@ export function RecordBrowser({
 
   const filtered = useMemo(() => filterRecords(records, filters), [records, filters])
 
-  // 기록과 마커를 같은 필터로 거르고 datetime 내림차순 병합 — 페이지네이션은 타입을 모른다
+  // The merged timeline keeps pagination type-agnostic
   const timeline = useMemo<TimelineItem[]>(() => {
     const includeRecords = filters.kinds.length === 0 || filters.kinds.includes('record')
     const includeMarkers = filters.kinds.length === 0 || filters.kinds.includes('marker')

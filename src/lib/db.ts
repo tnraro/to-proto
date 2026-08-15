@@ -13,8 +13,6 @@ function openDB(): Promise<IDBDatabase> {
       const req = indexedDB.open(DB_NAME, DB_VERSION)
       req.onupgradeneeded = (e) => {
         const oldVersion = (e as IDBVersionChangeEvent).oldVersion
-        // 신규 설치(oldVersion 0)면 v1 마이그레이션이 초기 스키마를 만들고,
-        // 기존 설치는 등록된 마이그레이션을 버전 순서대로 적용한다.
         runMigrations(req.result, oldVersion, req.transaction!)
       }
       req.onsuccess = () => resolve(req.result)
@@ -85,7 +83,7 @@ export async function dbClear(store: StoreName): Promise<void> {
   await txDone(tx)
 }
 
-/** 현재 DB의 모든 스토어를 비운다 (objectStoreNames가 진실 공급원) */
+/** Clears every store in the current DB (objectStoreNames is the source of truth) */
 export async function dbClearAll(): Promise<void> {
   const db = await openDB()
   await Promise.all(
@@ -97,7 +95,7 @@ export async function dbClearAll(): Promise<void> {
   )
 }
 
-/** 테스트 전용: 연결을 닫고 DB를 삭제해 마이그레이션 시나리오를 재현할 수 있게 한다 */
+/** Test-only: closes the connection and deletes the DB so migration scenarios can be reproduced */
 export async function resetDbForTests(): Promise<void> {
   if (dbPromise) {
     const db = await dbPromise.catch(() => null)

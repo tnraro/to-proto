@@ -27,14 +27,12 @@ const absFullFmt = new Intl.DateTimeFormat(resolveLocale(), {
   timeStyle: 'short',
 })
 
-/** 하루 = 86,400,000ms */
 export const DAY_MS = 24 * 60 * 60 * 1000
 
 const MINUTE = 60
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
-/** 기록 시각을 사용자 로케일 기반 상대 시간("n시간 전")으로 표시. 7일 초과/미래는 절대 시각 폴백 */
 export function formatRelativeTime(iso: string, now = new Date()): string {
   const diffSec = Math.round((now.getTime() - new Date(iso).getTime()) / 1000)
   if (diffSec < 0 || diffSec >= 7 * DAY) return absFullFmt.format(new Date(iso))
@@ -44,22 +42,20 @@ export function formatRelativeTime(iso: string, now = new Date()): string {
   return rtf.format(-Math.round(diffSec / DAY), 'day')
 }
 
-/** 로케일 기반 보기 좋은 절대 시각 (툴팁용) — 예: 2026. 8. 13. 오후 4:47 */
 export function formatAbsoluteTime(iso: string): string {
   return absFullFmt.format(new Date(iso))
 }
 
-/** ISO 문자열의 날짜 키(YYYY-MM-DD, 로컬 타임존) */
+/** Day key (YYYY-MM-DD, local timezone) from an ISO string */
 export function toDayKey(iso: string): string {
   return toDateKey(new Date(iso))
 }
 
-/** 시간축 데이터를 datetime 내림차순(최신순)으로 정렬 — 원본 배열은 변경하지 않음 */
 export function sortByDatetimeDesc<T extends TimeSeriesItem>(items: T[]): T[] {
   return [...items].sort((a, b) => b.datetime.localeCompare(a.datetime))
 }
 
-/** 시간축 데이터를 로컬 날짜 키(YYYY-MM-DD) 기준으로 그룹화 */
+/** Groups time-based data by local day key (YYYY-MM-DD) */
 export function groupByDay<T extends TimeSeriesItem>(items: T[]): Map<string, T[]> {
   const map = new Map<string, T[]>()
   for (const item of items) {

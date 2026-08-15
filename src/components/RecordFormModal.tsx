@@ -9,7 +9,7 @@ interface Props {
   initial?: VomitRecord | null
   presetDate?: string | null
   onSubmit: (input: RecordInput) => void
-  /** 취소/닫기 완료 콜백 (confirm·draft 폐기는 RecordForm 내부에서 처리) */
+  /** Close callback (confirm/draft discard are handled inside RecordForm) */
   onClose: () => void
   onAddCat: () => void
 }

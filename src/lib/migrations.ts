@@ -1,21 +1,20 @@
 export interface Migration {
-  /** 이 마이그레이션 적용 후 도달하는 DB 버전 */
+  /** DB version reached after applying this migration */
   version: number
   name: string
   /**
-   * 스키마/데이터 변환. upgradeneeded 트랜잭션 내에서 실행되므로
-   * 실패 시 전체가 롤백된다. 스키마 변경은 동기적으로,
-   * 데이터 이관은 tx 기반 요청 체인으로 수행할 것.
+   * Schema/data transform. Runs inside the upgradeneeded transaction, so
+   * failure rolls back everything. Keep schema changes synchronous and
+   * data migration as a tx-based request chain.
    */
   up: (db: IDBDatabase, tx: IDBTransaction) => void | Promise<void>
 }
 
 /**
- * 향후 스키마 변경 시: db.ts의 DB_VERSION을 올리고 이 배열에 새 항목을 추가할 것.
- * 신규 설치(oldVersion 0)도 v1부터 순차 적용되므로 기준 스키마는 v1이 담당한다.
- * 각 마이그레이션은 자신의 버전 스냅샷 목록을 인라인으로 고정한다 (STORES 공유 없음).
- * 이미 배포된 과거 마이그레이션의 스냅샷은 절대 변경하지 않는다 — 변경이 필요하면
- * 새 버전 마이그레이션으로 처리할 것.
+ * On future schema changes: bump DB_VERSION in db.ts and append a new entry here.
+ * Fresh installs (oldVersion 0) also run v1 first, so v1 owns the baseline schema.
+ * Each migration fixes its own version's store list inline (no shared STORES).
+ * Never change already-shipped migration snapshots — handle changes with a new version.
  */
 export const MIGRATIONS: Migration[] = [
   {
@@ -69,7 +68,7 @@ export function dropStore(db: IDBDatabase, name: string): void {
   if (db.objectStoreNames.contains(name)) db.deleteObjectStore(name)
 }
 
-/** 업그레이드 트랜잭션에서 스토어 전체를 읽어 변환 후 새 스토어에 기록 (구 스토어 삭제는 dropStore) */
+/** Reads an entire store in an upgrade transaction, transforms, and writes to a new store (old store removal is dropStore) */
 export async function copyStore(
   db: IDBDatabase,
   from: string,

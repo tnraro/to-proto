@@ -26,7 +26,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-/** 회전을 적용한 이미지가 그려진 캔버스 (크롭 없음) */
 function drawRotated(img: HTMLImageElement, rotation: number): HTMLCanvasElement | null {
   const { width: bBoxWidth, height: bBoxHeight } = rotateSize(img.width, img.height, rotation)
   const canvas = document.createElement('canvas')
@@ -41,7 +40,6 @@ function drawRotated(img: HTMLImageElement, rotation: number): HTMLCanvasElement
   return canvas
 }
 
-/** 회전(자유 각도) → 크롭 → JPEG Blob 변환 */
 export async function cropImage(image: Blob, pixelCrop: CropArea, rotation = 0): Promise<Blob> {
   const imageSrc = URL.createObjectURL(image)
   try {

@@ -9,12 +9,11 @@ export interface DropdownItem {
 
 interface Props {
   items: DropdownItem[]
-  /** 항목 선택 전 추가 동작 (예: 파일 선택기 열기) — 메뉴는 항상 닫음 */
+  /** Extra action before an item runs (e.g. opening a file picker) */
   beforeClose?: () => void
   ariaLabel?: string
-  /** 메뉴 위치 (기본: 버튼 아래) */
   placement?: 'bottom' | 'top'
-  /** 트리거 렌더러 — toggle()을 호출하면 메뉴가 열린다. ref는 위치 계산용 */
+  /** Trigger renderer — toggle() opens the menu. The ref is used for positioning */
   renderTrigger?: (toggle: () => void, ref: RefObject<HTMLButtonElement | null>) => ReactNode
 }
 

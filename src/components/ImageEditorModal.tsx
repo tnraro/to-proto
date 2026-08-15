@@ -6,7 +6,6 @@ import { cropImage } from '../lib/cropImage'
 interface Props {
   open: boolean
   image: Blob | null
-  /** 크롭 비율 */
   aspect: number
   onCancel: () => void
   onApply: (blob: Blob) => void

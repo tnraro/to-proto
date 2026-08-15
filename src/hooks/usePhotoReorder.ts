@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
- * 썸네일 전체 드래그 순서 변경.
- * 포인터가 썸네일 밖으로 나가도 move/up을 받도록 window 레벨로 추적하며,
- * 제거 버튼에서 시작한 터치는 드래그로 취급하지 않는다.
- * 핸들러는 ref를 통해 항상 최신 onReorder를 참조하므로 렌더와 무관하게 안정적이다.
+ * Reorder thumbnails by dragging anywhere on them.
+ * Tracks move/up at window level so dragging outside a thumbnail still works,
+ * and touches that start on the remove button are not treated as drags.
+ * Handlers always reference the latest onReorder via a ref, keeping them
+ * stable across renders.
  */
 export function usePhotoReorder(onReorder: (fromKey: string, toKey: string) => void) {
   const onReorderRef = useRef(onReorder)

@@ -49,9 +49,9 @@ export function evaluateRules(
 }
 
 /**
- * 기록 추가 시 새 경고 판정: 새 기록이 일치하는 규칙만 재평가하고,
- * 이번 기록이 임계값을 넘게 만든 경우(교차)에만 경고를 반환한다.
- * 이미 위반 중인 규칙은 재경고하지 않는다.
+ * New-alert evaluation on record add: only rules matching the new record are
+ * re-evaluated, and only when this record pushes the count across the threshold.
+ * Rules already in violation are not re-alerted.
  */
 export function evaluateNewRecord(
   rules: ThresholdRule[],
@@ -68,7 +68,6 @@ export function evaluateNewRecord(
     const t = new Date(newRecord.datetime).getTime()
     if (t < cutoff || t > nowMs) continue
     const countBefore = countInWindow(rule, records, nowMs, cutoff)
-    // 이번 기록이 일치·집계되어 count가 임계값 이상이면 경고 (이미 위반 중이어도 재경고)
     const count = countBefore + 1
     if (count >= rule.maxCount) {
       violations.push({ rule, catName: catNameOf(rule, cats), count })

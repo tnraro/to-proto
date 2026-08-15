@@ -13,12 +13,11 @@ interface Props {
   markerTypes: MarkerType[]
   cats: Cat[]
   initial?: Marker | null
-  /** YYYY-MM-DD: 캘린더에서 날짜 선택 시 프리셋 */
+  /** YYYY-MM-DD: preset when a date is picked in the calendar */
   presetDate?: string | null
   onSubmit: (input: MarkerInput) => void | Promise<void>
-  /** 취소/닫기: confirm 후 draft 폐기 */
   onClose: () => void
-  /** 마커 종류 인라인 추가 (새 id 반환) */
+  /** Inline marker-type add (returns the new id) */
   onAddMarkerType: (name: string) => string
 }
 
@@ -114,13 +113,12 @@ function MarkerFormContent({
     }),
   )
 
-  // 상태 변경 시 draft 저장 (실변경 감지는 훅 내부 스냅샷 비교가 담당)
   useEffect(() => {
     onStateChange()
   }, [datetime, typeId, catIds, memo, photoItems, onStateChange])
 
   const requestClose = () => {
-    // 이번 세션에 draft가 있으면 확인 — 없으면 즉시 닫기
+    // Confirm only when a draft exists this session — otherwise close immediately
     if (draftHasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
     discardMarkerDraft()
     onClose()
@@ -128,7 +126,6 @@ function MarkerFormContent({
 
   useImperativeHandle(ref, () => ({ requestClose }))
 
-  // draft가 복원되는 경우가 아니면 수정 모드의 기존 사진을 로드
   useEffect(() => {
     if (!initial || restoredDraft) return
     let cancelled = false
@@ -145,7 +142,7 @@ function MarkerFormContent({
     }
   }, [initial, restoredDraft])
 
-  // draft 복원: 1회 질문 후 복원 또는 폐기 (StrictMode 이중 실행은 ref로 1회만)
+  // Draft restore: ask once, then restore or discard (StrictMode double-run guarded by ref)
   const restoreAskedRef = useRef(false)
   useEffect(() => {
     if (!draftReady || !restoredDraft || restoreAskedRef.current) return

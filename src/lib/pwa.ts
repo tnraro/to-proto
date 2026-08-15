@@ -23,7 +23,7 @@ export function usePwaStatus(): PwaStatus {
 
 let updateSW: ((reloadPage?: boolean) => Promise<void>) | null = null
 
-/** 앱 시작 시 1회 호출. 서비스워커 등록과 업데이트 상태 추적을 시작한다 */
+/** Call once at app start. Starts service worker registration and update tracking */
 export function initPwa(): void {
   if (!('serviceWorker' in navigator)) return
   updateSW = registerSW({
@@ -31,7 +31,6 @@ export function initPwa(): void {
     onNeedRefresh: () => setStatus('update-ready'),
     onOfflineReady: () => {},
     onRegisteredSW: (_swUrl, registration) => {
-      // 이미 대기 중인 새 버전이 있으면 업데이트 가능 상태로 시작
       setStatus(registration?.waiting ? 'update-ready' : 'up-to-date')
     },
     onRegisterError: () => setStatus('unsupported'),
@@ -44,7 +43,7 @@ export async function checkForUpdate(): Promise<void> {
   await reg?.update()
 }
 
-/** 새 버전 적용 (skipWaiting 후 페이지 새로고침) */
+/** Applies the new version (skipWaiting, then page reload) */
 export function applyUpdate(): void {
   void updateSW?.(true)
 }

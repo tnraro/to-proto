@@ -24,7 +24,7 @@ describe('IndexedDB 마이그레이션', () => {
     expect(await dbGet('draft', 'anything')).toBeUndefined()
     await dbPut('draft', { id: 'x', applyTo: 'add' })
     expect((await dbGet<{ id: string }>('draft', 'x'))?.id).toBe('x')
-    // v2 스토어도 신규 설치에서 생성된다
+    // v2 stores are created on fresh installs too
     expect(await dbGet('markers', 'anything')).toBeUndefined()
     expect(await dbGet('markerTypes', 'anything')).toBeUndefined()
   })
@@ -32,7 +32,7 @@ describe('IndexedDB 마이그레이션', () => {
   test('기존 설치(v1) → v2 업그레이드: 마이그레이션 실행 + 데이터 보존', async () => {
     await resetDbForTests()
 
-    // 1) v1 DB를 직접 생성하고 기록 데이터를 넣는다
+    // 1) create the v1 DB directly and seed record data
     const oldDb = await openAtVersion(1, (d) => {
       for (const name of ['cats', 'records', 'rules', 'alertLog', 'photos', 'draft']) {
         d.createObjectStore(name, { keyPath: 'id' })
@@ -55,7 +55,7 @@ describe('IndexedDB 마이그레이션', () => {
     })
     oldDb.close()
 
-    // 2) 현재 버전으로 오픈 → 등록된 마이그레이션(v2) 실행
+    // 2) open at the current version → registered migrations (v2) run
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, 2)
       req.onupgradeneeded = (e) => {
@@ -65,7 +65,7 @@ describe('IndexedDB 마이그레이션', () => {
       req.onerror = () => reject(req.error)
     })
 
-    // 3) 기존 데이터 보존 + v2 스토어 생성 확인
+    // 3) existing data preserved + v2 stores created
     const tx = db.transaction(['records', 'markers', 'markerTypes'], 'readwrite')
     const got = await new Promise<Array<{ id: string }>>((resolve) => {
       const r = tx.objectStore('records').getAll()
@@ -81,7 +81,7 @@ describe('IndexedDB 마이그레이션', () => {
     })
     db.close()
 
-    // 4) 저장된 마커 데이터 조회
+    // 4) verify saved marker data
     const markers = await dbGetAll<{ id: string; typeId: string }>('markers')
     expect(markers).toHaveLength(1)
     expect(markers[0].typeId).toBe('t1')

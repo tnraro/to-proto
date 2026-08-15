@@ -53,7 +53,6 @@ export interface Store {
   renameCat: (id: string, name: string) => void
   updateCatPhoto: (id: string, photoId?: string) => void
   deleteCat: (id: string) => void
-  /** 현재 선택된 고양이 id (null = 전체) */
   currentCatId: string | null
   setCurrentCat: (catId: string | null) => void
   addRecord: (input: RecordInput) => Promise<AlertEntry[]>
@@ -141,10 +140,9 @@ export function useStore(): Store {
       if (target?.photoId) void delPhotos([target.photoId])
       return prev.filter((c) => c.id !== id)
     })
-    // 삭제된 고양이가 선택 중이면 전체로 리셋
     setCurrentCat((cur) => (cur === id ? null : cur))
     setRecords((prev) => prev.filter((r) => r.catId !== id))
-    // 마커에서는 해당 고양이만 제거 (마커는 유지), 연관 고양이가 0이 되면 마커 삭제
+    // Markers only lose that cat (marker stays); the marker is deleted when no cats remain
     setMarkers((prev) => {
       const removed: Marker[] = []
       const next = prev.flatMap((m) => {
@@ -178,7 +176,6 @@ export function useStore(): Store {
     return ids
   }
 
-  /** 최종 순서의 사진 목록(string = 기존 id, Blob = 새 사진)을 id 배열로 해석 */
   async function resolvePhotoIds(photos: Array<string | Blob>): Promise<string[]> {
     const ids: string[] = []
     for (const p of photos) {
@@ -204,8 +201,6 @@ export function useStore(): Store {
         updatedAt: now.toISOString(),
       }
       const nextRecords = sortByDatetimeDesc([...records, created])
-
-      // 이번 기록이 임계값을 넘게 만든 규칙만 경고 (이미 위반 중인 규칙은 제외)
       const newAlerts = evaluateNewRecord(rules, records, cats, created, now).map(violationToAlertEntry)
 
       setRecords(nextRecords)
@@ -299,7 +294,7 @@ export function useStore(): Store {
     })
   }, [])
 
-  /** 종류 삭제: 해당 종류의 마커와 그 사진을 캐스케이드 삭제 (confirm은 UI에서) */
+  /** Cascades to markers of the type and their photos (confirm is in the UI) */
   const deleteMarkerType = useCallback(
     (id: string) => {
       setMarkerTypes((prev) => prev.filter((t) => t.id !== id))
