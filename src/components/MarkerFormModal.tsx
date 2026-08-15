@@ -45,7 +45,6 @@ export function MarkerFormModal({
   return (
     <Modal open={open} onClose={() => contentRef.current?.requestClose()} contentClassName="max-h-[85vh] overflow-y-auto">
       <MarkerFormContent
-        key={initial?.id ?? 'new'}
         ref={contentRef}
         markerTypes={markerTypes}
         cats={cats}
