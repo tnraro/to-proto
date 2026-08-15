@@ -194,7 +194,7 @@ function Shell() {
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-gray-100 text-gray-900">
       <AppHeader cats={cats} currentCatId={currentCatId} onChange={setCurrentCat} />
-      <main className="no-scrollbar relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto">
+      <main className="no-scrollbar relative mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto overscroll-contain">
         {matchRecord && (
           <RecordBrowser
             records={records}

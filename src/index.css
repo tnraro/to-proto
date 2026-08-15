@@ -15,6 +15,12 @@
     background-color: var(--color-gray-100);
   }
 
+  /* 모바일/PWA: 문서 경계 오버스크롤로 앱 전체가 끌려 올라가지 않도록 */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
   body {
     background-color: var(--color-gray-100);
   }
