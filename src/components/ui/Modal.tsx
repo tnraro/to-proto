@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { beginDrag, createDragSession, endDrag, moveDrag, type DragContext, type DragSession } from '../../lib/dragSession'
 
 interface Props {
   open: boolean
@@ -13,8 +14,6 @@ interface Props {
 
 let scrollLockCount = 0
 
-const DRAG_CLOSE_RATIO = 0.25
-
 export function Modal({
   open,
   onClose,
@@ -25,8 +24,11 @@ export function Modal({
   children,
 }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null)
-  const dragStart = useRef<number | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const sessionRef = useRef<DragSession>(createDragSession())
   const downOnBackdrop = useRef(false)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   const [dragY, setDragY] = useState<number | null>(null)
 
   useEffect(() => {
@@ -45,11 +47,11 @@ export function Modal({
   useEffect(() => {
     if (!open || !closeOnEsc) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, closeOnEsc, onClose])
+  }, [open, closeOnEsc])
 
   useEffect(() => {
     if (!open) return
@@ -70,34 +72,90 @@ export function Modal({
   }, [open])
 
   useEffect(() => {
-    if (dragY === null) return
-    const onMove = (e: PointerEvent) => {
-      if (dragStart.current === null) return
-      setDragY(Math.max(0, e.clientY - dragStart.current))
+    if (!open || !drawer) return
+    const sheet = sheetRef.current
+    if (!sheet) return
+
+    const container = scrollRef.current
+      ? {
+          get scrollTop() {
+            return scrollRef.current?.scrollTop ?? 0
+          },
+          contains: (t: unknown) => scrollRef.current?.contains(t as Node | null) ?? false,
+        }
+      : null
+    const ctx = (): DragContext => ({ container, sheetHeight: sheet.offsetHeight })
+    const sync = (s: DragSession) => setDragY(s.dragY)
+    const applyMove = (y: number) => {
+      const r = moveDrag(sessionRef.current, y, ctx())
+      sessionRef.current = r.session
+      sync(r.session)
     }
-    const onUp = () => {
-      const sheet = sheetRef.current
-      const threshold = sheet ? sheet.offsetHeight * DRAG_CLOSE_RATIO : 0
-      const willClose = dragStart.current !== null && dragY !== null && dragY > threshold
-      dragStart.current = null
-      setDragY(null)
-      if (willClose) onClose()
+    const applyEnd = () => {
+      const r = endDrag(sessionRef.current, ctx())
+      sessionRef.current = r.session
+      sync(r.session)
+      if (r.close) onCloseRef.current()
     }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onUp)
+
+    // Mouse/pen path — touch pointers are ignored here because the touch path
+    // below must stay live during native scroll (pointer events get cancelled)
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return
+      sessionRef.current = beginDrag(sessionRef.current, e.target instanceof Element ? e.target : null, e.clientY)
+    }
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return
+      applyMove(e.clientY)
+    }
+    const onPointerEnd = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return
+      applyEnd()
+    }
+
+    // Touch path — non-passive move so the session can stop native scroll on takeover
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0]
+      if (!t) return
+      sessionRef.current = beginDrag(sessionRef.current, e.target instanceof Element ? e.target : null, t.clientY)
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0]
+      if (!t) return
+      const r = moveDrag(sessionRef.current, t.clientY, ctx())
+      sessionRef.current = r.session
+      if (r.preventDefault) e.preventDefault()
+      sync(r.session)
+    }
+    const onTouchEnd = () => applyEnd()
+
+    sheet.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerEnd)
+    window.addEventListener('pointercancel', onPointerEnd)
+    sheet.addEventListener('touchstart', onTouchStart, { passive: true })
+    sheet.addEventListener('touchmove', onTouchMove, { passive: false })
+    sheet.addEventListener('touchend', onTouchEnd, { passive: true })
+    sheet.addEventListener('touchcancel', onTouchEnd, { passive: true })
     return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onUp)
+      sheet.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerEnd)
+      window.removeEventListener('pointercancel', onPointerEnd)
+      sheet.removeEventListener('touchstart', onTouchStart)
+      sheet.removeEventListener('touchmove', onTouchMove)
+      sheet.removeEventListener('touchend', onTouchEnd)
+      sheet.removeEventListener('touchcancel', onTouchEnd)
+      sessionRef.current = createDragSession()
+      setDragY(null)
     }
-  }, [dragY, onClose])
+  }, [open, drawer])
 
   if (!open) return null
 
   const overlay = (
     <div
-      className={`fixed inset-0 z-50 flex justify-center overflow-x-hidden bg-black/40 ${
+      className={`fixed inset-0 z-50 flex justify-center overflow-hidden bg-black/40 ${
         drawer ? 'items-end sm:items-center sm:p-4' : 'items-center p-4'
       }`}
       onPointerDown={(e) => {
@@ -106,7 +164,7 @@ export function Modal({
       onPointerUp={(e) => {
         // Backdrop closes only when both pointerdown and pointerup land on the backdrop
         // (so a down-in-sheet / up-outside gesture does not close it)
-        if (closeOnBackdrop && downOnBackdrop.current && e.target === e.currentTarget) onClose()
+        if (closeOnBackdrop && downOnBackdrop.current && e.target === e.currentTarget) onCloseRef.current()
       }}
       role="dialog"
       aria-modal="true"
@@ -114,6 +172,8 @@ export function Modal({
       <div
         ref={sheetRef}
         className={`overflow-x-hidden bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-pop ${
+          dragY !== null ? 'select-none' : ''
+        } ${
           drawer
             ? 'flex max-h-[85vh] w-full flex-col rounded-t-2xl sm:max-w-md sm:rounded-2xl sm:pb-5'
             : 'w-full max-w-md rounded-2xl sm:pb-5'
@@ -131,16 +191,13 @@ export function Modal({
           <>
             <div
               className="-mx-5 -mt-5 mb-2 shrink-0 cursor-grab touch-none select-none px-5 pb-1 pt-4 active:cursor-grabbing sm:hidden"
-              onPointerDown={(e) => {
-                dragStart.current = e.clientY
-                setDragY(0)
-              }}
               aria-hidden="true"
             >
               <div className="mx-auto h-1.5 w-12 rounded-full bg-gray-300" />
             </div>
             <div
-              className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 -mx-2 ${contentClassName ?? ''}`}
+              ref={scrollRef}
+              className={`min-h-0 flex-1 overflow-y-auto overscroll-contain overflow-x-hidden px-2 -mx-2 ${contentClassName ?? ''}`}
             >
               {children}
             </div>
