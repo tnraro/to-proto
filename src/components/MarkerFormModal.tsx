@@ -46,19 +46,17 @@ export function MarkerFormModal({
 
   return (
     <Modal open={open} onClose={() => contentRef.current?.requestClose()} contentClassName="max-h-[85vh] overflow-y-auto">
-      {open && (
-        <MarkerFormContent
-          key={initial?.id ?? 'new'}
-          ref={contentRef}
-          markerTypes={markerTypes}
-          cats={cats}
-          initial={initial}
-          presetDate={presetDate}
-          onSubmit={onSubmit}
-          onClose={onClose}
-          onAddMarkerType={onAddMarkerType}
-        />
-      )}
+      <MarkerFormContent
+        key={initial?.id ?? 'new'}
+        ref={contentRef}
+        markerTypes={markerTypes}
+        cats={cats}
+        initial={initial}
+        presetDate={presetDate}
+        onSubmit={onSubmit}
+        onClose={onClose}
+        onAddMarkerType={onAddMarkerType}
+      />
     </Modal>
   )
 }
