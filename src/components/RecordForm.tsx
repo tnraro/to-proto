@@ -51,6 +51,10 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
   const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
+  if (cats.length > 0 && !cats.some((c) => c.id === catId)) {
+    setCatId(cats[cats.length - 1].id)
+  }
+
   const draftContext = initial ? initial.id : 'add'
   const {
     ready: draftReady,
@@ -137,13 +141,6 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
       cancelled = true
     }
   }, [draftReady, restoredDraft, initial, discardDraft])
-
-  useEffect(() => {
-    if (cats.length === 0) return
-    if (!cats.some((c) => c.id === catId)) {
-      setCatId(cats[cats.length - 1].id)
-    }
-  }, [cats, catId])
 
   const toggleType = (k: VomitType) => {
     setTypes((prev) => (prev.includes(k) ? prev.filter((t) => t !== k) : [...prev, k]))

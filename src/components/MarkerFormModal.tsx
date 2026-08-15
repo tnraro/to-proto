@@ -89,6 +89,11 @@ function MarkerFormContent({
   const fileRef = useRef<HTMLInputElement>(null)
   const newTypeRef = useRef<HTMLInputElement>(null)
 
+  const validCatIds = catIds.filter((id) => cats.some((c) => c.id === id))
+  if (validCatIds.length !== catIds.length) {
+    setCatIds(validCatIds)
+  }
+
   const draftContext = initial ? initial.id : 'add'
   const {
     ready: draftReady,
