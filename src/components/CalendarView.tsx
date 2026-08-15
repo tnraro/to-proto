@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Cat, Marker, MarkerType, TimelineItem, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { monthLabel, startOfMonth, toDateKey, groupByDay } from '../lib/dates'
+import { beginSwipe, createSwipeSession, endSwipe, moveSwipe, type SwipeSession } from '../lib/horizontalSwipe'
 import { RecordList } from './RecordList'
 import { Card } from './ui/Card'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MAX_TYPE_PAIRS = 3
+const SLIDE_IN_OFFSET = 80
+const SETTLE_MS = 200
 
 interface Props {
   records: VomitRecord[]
@@ -38,6 +41,16 @@ export function CalendarView({
   const today = new Date()
   const [cursor, setCursor] = useState(() => startOfMonth(today))
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(today))
+  const [dx, setDx] = useState(0)
+  const [swipeTransitioning, setSwipeTransitioning] = useState(false)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const swipeSessionRef = useRef<SwipeSession>(createSwipeSession())
+  const suppressClickRef = useRef(false)
+  const transitioningRef = useRef(false)
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    transitioningRef.current = swipeTransitioning
+  }, [swipeTransitioning])
 
   useEffect(() => {
     onSelectedDateChange(selectedKey)
@@ -57,11 +70,74 @@ export function CalendarView({
     ].sort((a, b) => b.payload.datetime.localeCompare(a.payload.datetime))
   }, [recordsByDay, markersByDay, selectedKey])
 
-  const move = (delta: number) => {
-    const next = new Date(cursor)
-    next.setMonth(next.getMonth() + delta)
-    setCursor(startOfMonth(next))
-  }
+  const move = useCallback((delta: number) => {
+    setCursor((cur) => {
+      const next = new Date(cur)
+      next.setMonth(next.getMonth() + delta)
+      return startOfMonth(next)
+    })
+  }, [])
+
+  useEffect(() => {
+    const grid = gridRef.current
+    if (!grid) return
+    const onPointerDown = (e: PointerEvent) => {
+      suppressClickRef.current = false
+      if (transitioningRef.current) return
+      swipeSessionRef.current = beginSwipe(swipeSessionRef.current, e.clientX, e.clientY)
+    }
+    const onPointerMove = (e: PointerEvent) => {
+      const r = moveSwipe(swipeSessionRef.current, e.clientX, e.clientY)
+      swipeSessionRef.current = r.session
+      if (r.session.state === 'horizontal') {
+        suppressClickRef.current = true
+        setDx(r.dx)
+        e.preventDefault()
+      }
+    }
+    // Animate the grid back to 0; the timer (not transitionend) resets the gate
+    // so gestures can never get stuck after a no-op release
+    const settleBack = () => {
+      setSwipeTransitioning(true)
+      setDx(0)
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+      settleTimerRef.current = setTimeout(() => setSwipeTransitioning(false), SETTLE_MS)
+    }
+    const onPointerEnd = () => {
+      const finalDx = swipeSessionRef.current.dx
+      const r = endSwipe(swipeSessionRef.current)
+      swipeSessionRef.current = r.session
+      if (r.change !== 0) {
+        move(r.change > 0 ? -1 : 1)
+        // New month slides in from the swipe direction; offset first, then transition to 0
+        setSwipeTransitioning(false)
+        setDx((r.change > 0 ? 1 : -1) * SLIDE_IN_OFFSET)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => settleBack())
+        })
+      } else if (finalDx !== 0) {
+        settleBack()
+      }
+    }
+    const onPointerCancel = () => {
+      swipeSessionRef.current = createSwipeSession()
+      suppressClickRef.current = false
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+      setSwipeTransitioning(false)
+      setDx(0)
+    }
+    grid.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerEnd)
+    window.addEventListener('pointercancel', onPointerCancel)
+    return () => {
+      grid.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerEnd)
+      window.removeEventListener('pointercancel', onPointerCancel)
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
+    }
+  }, [move])
 
   return (
     <div className="space-y-4 p-4">
@@ -95,7 +171,20 @@ export function CalendarView({
         <span className="w-24" />
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div
+        ref={gridRef}
+        onClickCapture={(e) => {
+          if (suppressClickRef.current) {
+            suppressClickRef.current = false
+            e.stopPropagation()
+          }
+        }}
+        className={`grid grid-cols-7 gap-1 touch-pan-y ${dx !== 0 ? 'select-none' : ''}`}
+        style={{
+          transform: dx !== 0 ? `translateX(${dx}px)` : undefined,
+          transition: swipeTransitioning ? 'transform 200ms ease-out' : 'none',
+        }}
+      >
         {WEEKDAYS.map((w, i) => (
           <div
             key={w}
