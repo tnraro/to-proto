@@ -7,22 +7,16 @@ import { PhotoPreview } from '../PhotoPreview'
 interface Props {
   items: PhotoItem[]
   onChange: Dispatch<SetStateAction<PhotoItem[]>>
-  /** Photo count cap (undefined = unlimited) */
-  max?: number
 }
 
-export function PhotoSection({ items, onChange, max }: Props) {
+export function PhotoSection({ items, onChange }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const onFiles = (files: FileList | null) => {
     if (!files) return
     const added = Array.from(files)
     if (added.length === 0) return
-    onChange((prev) => {
-      if (max !== undefined && prev.length >= max) return prev
-      const remaining = max === undefined ? added.length : Math.max(0, max - prev.length)
-      return [...prev, ...added.slice(0, remaining).map((f) => ({ key: uid(), blob: f }))]
-    })
+    onChange((prev) => [...prev, ...added.map((f) => ({ key: uid(), blob: f }))])
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -74,15 +68,13 @@ export function PhotoSection({ items, onChange, max }: Props) {
             </div>
           </div>
         ))}
-        {(max === undefined || items.length < max) && (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-2xl text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
-          >
-            +
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-2xl text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
+        >
+          +
+        </button>
       </div>
       <input
         ref={fileRef}

@@ -7,8 +7,6 @@ import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput } from '../lib/dates'
 import { PhotoSection } from './ui/PhotoSection'
 
-const MAX_PHOTOS = 6
-
 export interface RecordFormValues {
   datetime: string
   catId: string
@@ -175,10 +173,8 @@ export function RecordForm({ cats, initial, onSubmit, onClose, onAddCat, ref }: 
       </label>
 
       <div>
-        <span className="mb-1 block text-sm font-medium text-gray-600">
-          사진 ({photoItems.length}/{MAX_PHOTOS})
-        </span>
-        <PhotoSection items={photoItems} onChange={setPhotoItems} max={MAX_PHOTOS} />
+        <span className="mb-1 block text-sm font-medium text-gray-600">사진</span>
+        <PhotoSection items={photoItems} onChange={setPhotoItems} />
       </div>
 
       <div className="flex gap-2">
