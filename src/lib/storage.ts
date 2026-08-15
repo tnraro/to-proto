@@ -5,12 +5,23 @@ export function uid(): string {
   return crypto.randomUUID()
 }
 
+export const DRAFT_TTL_MS = 30 * 60 * 1000
+
 export async function saveDraft<T extends BaseDraft>(draft: T & { id: string }): Promise<void> {
   await dbPut('draft', draft)
 }
 
 export async function loadDraft<T extends BaseDraft>(id: string): Promise<(T & { id: string }) | undefined> {
   return dbGet<(T & { id: string }) | undefined>('draft', id)
+}
+
+/** Returns the draft only when it targets the given context and is fresh; expired drafts are deleted */
+export async function loadValidDraft<T extends BaseDraft>(id: string, applyTo: string): Promise<(T & { id: string }) | null> {
+  const draft = await loadDraft<T>(id)
+  if (!draft) return null
+  if (draft.applyTo === applyTo && Date.now() - draft.savedAt <= DRAFT_TTL_MS) return draft
+  if (Date.now() - draft.savedAt > DRAFT_TTL_MS) await deleteDraft(id)
+  return null
 }
 
 export async function deleteDraft(id: string): Promise<void> {

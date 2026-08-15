@@ -1,20 +1,24 @@
-import { useCallback, useEffect, useRef, useState, type Ref } from 'react'
+import { useEffect, useState, type Ref } from 'react'
 import { useImperativeHandle } from 'react'
-import { usePhotoReorder } from '../hooks/usePhotoReorder'
 import { useFormDraft } from '../hooks/useFormDraft'
-import type { Cat, RecordDraft, RecordInput, VomitRecord, VomitType } from '../types'
+import type { FormOpenState } from '../hooks/useFormOpener'
+import type { Cat, RecordDraft, RecordInput, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
-import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
-import { getPhoto, uid } from '../lib/storage'
-import { PhotoPreview } from './PhotoPreview'
+import { fromLocalDateTimeInput } from '../lib/dates'
+import { PhotoSection } from './ui/PhotoSection'
 
 const MAX_PHOTOS = 6
 
+export interface RecordFormValues {
+  datetime: string
+  catId: string
+  types: VomitType[]
+  memo: string
+}
+
 interface Props {
   cats: Cat[]
-  initial?: VomitRecord | null
-  /** YYYY-MM-DD: preset when a date is picked in the calendar */
-  presetDate?: string | null
+  initial: FormOpenState<RecordFormValues>
   onSubmit: (input: RecordInput) => void
   /** Close callback (confirm/draft discard are handled inside the form) */
   onClose: () => void
@@ -25,59 +29,29 @@ export interface RecordFormHandle {
   requestClose: () => void
 }
 
-interface PhotoItem {
-  key: string
-  id?: string
-  blob: Blob
-}
-
-export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAddCat, ref }: Props & { ref?: Ref<RecordFormHandle> }) {
-  const now = new Date()
-  const initialDatetime = () => {
-    if (initial) return toLocalDateTimeInput(new Date(initial.datetime))
-    if (presetDate) {
-      const d = new Date(presetDate)
-      d.setHours(now.getHours(), now.getMinutes(), 0, 0)
-      return toLocalDateTimeInput(d)
-    }
-    return toLocalDateTimeInput(now)
-  }
-  const [datetime, setDatetime] = useState(initialDatetime)
-  const [catId, setCatId] = useState(() => initial?.catId ?? cats[0]?.id ?? '')
-  const [types, setTypes] = useState<VomitType[]>(() =>
-    initial && initial.types.length > 0 ? initial.types : [],
-  )
-  const [memo, setMemo] = useState(() => initial?.memo ?? '')
-  const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
-  const fileRef = useRef<HTMLInputElement>(null)
+export function RecordForm({ cats, initial, onSubmit, onClose, onAddCat, ref }: Props & { ref?: Ref<RecordFormHandle> }) {
+  const [datetime, setDatetime] = useState(initial.values.datetime)
+  const [catId, setCatId] = useState(initial.values.catId)
+  const [types, setTypes] = useState<VomitType[]>(initial.values.types)
+  const [memo, setMemo] = useState(initial.values.memo)
+  const [photoItems, setPhotoItems] = useState(initial.photoItems)
 
   if (cats.length > 0 && !cats.some((c) => c.id === catId)) {
     setCatId(cats[cats.length - 1].id)
   }
 
-  const draftContext = initial ? initial.id : 'add'
-  const {
-    ready: draftReady,
-    restored: restoredDraft,
-    discard: discardDraft,
-    hasDraft: draftHasDraft,
-    onStateChange,
-  } = useFormDraft<RecordDraft>(
+  const { hasDraft, onStateChange, discard } = useFormDraft<RecordDraft>(
     'record',
-    draftContext,
     [datetime, catId, types, memo, photoItems],
-    () => {
-      const removedPhotos = initial ? initial.photos.filter((id) => !photoItems.some((p) => p.id === id)) : []
-      return {
-        applyTo: draftContext,
-        datetime,
-        catId,
-        types,
-        memo,
-        newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
-        removedPhotos,
-      }
-    },
+    () => ({
+      applyTo: initial.context,
+      datetime,
+      catId,
+      types,
+      memo,
+      newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
+      removedPhotos: initial.originalPhotoIds.filter((id) => !photoItems.some((p) => p.id === id)),
+    }),
   )
 
   useEffect(() => {
@@ -85,97 +59,21 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
   }, [datetime, catId, types, memo, photoItems, onStateChange])
 
   const requestClose = () => {
-    if (draftHasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
-    discardDraft()
+    if (hasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
+    discard()
     onClose()
   }
 
   useImperativeHandle(ref, () => ({ requestClose }))
 
-  useEffect(() => {
-    if (!initial || restoredDraft) return
-    let cancelled = false
-    void (async () => {
-      const existing: PhotoItem[] = []
-      for (const id of initial.photos) {
-        const blob = await getPhoto(id)
-        if (blob) existing.push({ key: id, id, blob })
-      }
-      if (!cancelled) setPhotoItems(existing)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [initial, restoredDraft])
-
-  // Draft restore: ask once, then restore or discard (StrictMode double-run guarded by ref)
-  const restoreAskedRef = useRef(false)
-  useEffect(() => {
-    if (!draftReady || !restoredDraft || restoreAskedRef.current) return
-    restoreAskedRef.current = true
-    if (!confirm('이전에 작성 중이던 내용이 있습니다. 불러올까요?')) {
-      discardDraft()
-      return
-    }
-    let cancelled = false
-    void (async () => {
-      setDatetime(restoredDraft.datetime)
-      setCatId(restoredDraft.catId)
-      if (restoredDraft.types.length > 0) setTypes(restoredDraft.types)
-      setMemo(restoredDraft.memo)
-      const newBlobs = restoredDraft.newPhotos.map((p) => p.blob)
-      const removed = restoredDraft.removedPhotos
-      if (initial) {
-        const existing: PhotoItem[] = []
-        for (const id of initial.photos) {
-          if (removed.includes(id)) continue
-          const blob = await getPhoto(id)
-          if (blob) existing.push({ key: id, id, blob })
-        }
-        if (!cancelled) setPhotoItems([...existing, ...newBlobs.map((blob) => ({ key: uid(), blob }))])
-      } else if (!cancelled) {
-        setPhotoItems(newBlobs.map((blob) => ({ key: uid(), blob })))
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [draftReady, restoredDraft, initial, discardDraft])
-
   const toggleType = (k: VomitType) => {
     setTypes((prev) => (prev.includes(k) ? prev.filter((t) => t !== k) : [...prev, k]))
   }
 
-  const onFiles = (files: FileList | null) => {
-    if (!files) return
-    const added = Array.from(files).slice(0, MAX_PHOTOS - photoItems.length)
-    if (added.length === 0) return
-    // Photos are stored as-is, so add immediately without editing
-    setPhotoItems((prev) => [...prev, ...added.map((f) => ({ key: uid(), blob: f }))])
-    if (fileRef.current) fileRef.current.value = ''
-  }
-
-  const removePhoto = (key: string) => {
-    setPhotoItems((prev) => prev.filter((p) => p.key !== key))
-  }
-
-  const reorderPhoto = useCallback((fromKey: string, toKey: string) => {
-    setPhotoItems((prev) => {
-      const from = prev.findIndex((p) => p.key === fromKey)
-      const to = prev.findIndex((p) => p.key === toKey)
-      if (from < 0 || to < 0 || from === to) return prev
-      const next = [...prev]
-      const [moved] = next.splice(from, 1)
-      next.splice(to, 0, moved)
-      return next
-    })
-  }, [])
-  const { dragKey, onThumbPointerDown } = usePhotoReorder(reorderPhoto)
-
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!datetime || !catId || types.length === 0) return
-    discardDraft()
+    discard()
     onSubmit({
       datetime: fromLocalDateTimeInput(datetime).toISOString(),
       catId,
@@ -194,7 +92,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
             type="datetime-local"
             value={datetime}
             onChange={(e) => setDatetime(e.target.value)}
-              className="w-full min-w-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
+            className="w-full min-w-0 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
             required
           />
         </label>
@@ -222,7 +120,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
                 }
                 setCatId(e.target.value)
               }}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 focus:border-primary focus:bg-white focus:outline-none"
               required
             >
               {cats.map((c) => (
@@ -280,50 +178,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
         <span className="mb-1 block text-sm font-medium text-gray-600">
           사진 ({photoItems.length}/{MAX_PHOTOS})
         </span>
-        <div className="flex flex-wrap gap-2">
-          {photoItems.map((p) => (
-            <div
-              key={p.key}
-              data-photo-key={p.key}
-              onPointerDown={(e) => onThumbPointerDown(e, p.key)}
-              className={`relative touch-none select-none rounded-lg ${
-                dragKey === p.key ? 'opacity-70 ring-2 ring-primary' : ''
-              }`}
-            >
-              <PhotoPreview blob={p.blob} onRemove={() => removePhoto(p.key)} />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute bottom-0.5 right-0.5 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/45 text-white"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
-                  <circle cx="9" cy="6" r="1.4" />
-                  <circle cx="15" cy="6" r="1.4" />
-                  <circle cx="9" cy="12" r="1.4" />
-                  <circle cx="15" cy="12" r="1.4" />
-                  <circle cx="9" cy="18" r="1.4" />
-                  <circle cx="15" cy="18" r="1.4" />
-                </svg>
-              </div>
-            </div>
-          ))}
-          {photoItems.length < MAX_PHOTOS && (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-2xl text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
-            >
-              +
-            </button>
-          )}
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => onFiles(e.target.files)}
-        />
+        <PhotoSection items={photoItems} onChange={setPhotoItems} max={MAX_PHOTOS} />
       </div>
 
       <div className="flex gap-2">
@@ -332,7 +187,7 @@ export function RecordForm({ cats, initial, presetDate, onSubmit, onClose, onAdd
           disabled={!catId || !datetime || types.length === 0}
           className="rounded-lg bg-primary px-5 py-2 font-medium text-white hover:bg-primary-hover disabled:opacity-40"
         >
-          {initial ? '수정 저장' : '기록 추가'}
+          {initial.context !== 'add' ? '수정 저장' : '기록 추가'}
         </button>
         <button type="button" onClick={requestClose} className="rounded-lg border border-gray-200 px-4 py-2 text-gray-600">
           취소

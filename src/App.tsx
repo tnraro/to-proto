@@ -2,10 +2,13 @@ import { useState } from 'react'
 import { useRoute, Router, useLocation } from 'wouter'
 import { useHashLocation } from 'wouter/use-hash-location'
 import { useStore } from './hooks/useStore'
-import { type MarkerInput, type RecordInput } from './types'
+import { useFormOpener } from './hooks/useFormOpener'
+import { type MarkerInput, type RecordInput, type MarkerDraft, type RecordDraft } from './types'
+import { formDatetimeInput } from './lib/dates'
 import { RecordBrowser } from './components/RecordBrowser'
 import { RecordFormModal } from './components/RecordFormModal'
-import { MarkerFormModal } from './components/MarkerFormModal'
+import { type RecordFormValues } from './components/RecordForm'
+import { MarkerFormModal, type MarkerFormValues } from './components/MarkerFormModal'
 import { CalendarView } from './components/CalendarView'
 import { StatsView } from './components/StatsView'
 import { AlertModal } from './components/AlertModal'
@@ -45,17 +48,14 @@ function Shell() {
   const [matchAlert] = useRoute('/alert')
   const [matchSettings] = useRoute('/settings')
   const isDefaultTab = !matchRecord && !matchCalendar && !matchStats && !matchAlert && !matchSettings
-  const [formOpen, setFormOpen] = useState(false)
-  const [formInitial, setFormInitial] = useState<VomitRecord | null>(null)
-  const [formPresetDate, setFormPresetDate] = useState<string | null>(null)
   const [calendarDate, setCalendarDate] = useState<string | null>(null)
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
-  const [markerFormOpen, setMarkerFormOpen] = useState(false)
-  const [markerFormInitial, setMarkerFormInitial] = useState<Marker | null>(null)
-  const [markerPresetDate, setMarkerPresetDate] = useState<string | null>(null)
   // Experiment (feature flag)
   const [showRecordCount, setShowRecordCount] = useFeatureFlag('calendar.recordCount', false)
+
+  const recordOpener = useFormOpener<VomitRecord, RecordFormValues, RecordDraft>('record')
+  const markerOpener = useFormOpener<Marker, MarkerFormValues, MarkerDraft>('marker')
 
   const {
     cats,
@@ -104,10 +104,17 @@ function Shell() {
     )
   }
 
-  const openRecordForm = (initial: VomitRecord | null = null, presetDate: string | null = null) => {
-    setFormInitial(initial)
-    setFormPresetDate(presetDate)
-    setFormOpen(true)
+  const openRecordForm = (target: VomitRecord | null = null, presetDate: string | null = null) => {
+    void recordOpener.open({
+      target,
+      values: (t, draft, now) => ({
+        datetime: formDatetimeInput(draft?.datetime || t?.datetime, presetDate, now),
+        catId: draft?.catId ?? t?.catId ?? cats[0]?.id ?? '',
+        types: draft?.types ?? t?.types ?? [],
+        memo: draft?.memo ?? t?.memo ?? '',
+      }),
+      photoIds: (t) => t?.photos ?? [],
+    })
   }
 
   const openAddFromFAB = () => {
@@ -118,42 +125,38 @@ function Shell() {
     }
   }
 
-  const openMarkerForm = (initial: Marker | null = null, presetDate: string | null = null) => {
-    setMarkerFormInitial(initial)
-    setMarkerPresetDate(presetDate)
-    setMarkerFormOpen(true)
-  }
-
-  const closeMarkerForm = () => {
-    setMarkerFormOpen(false)
-    setMarkerFormInitial(null)
-    setMarkerPresetDate(null)
+  const openMarkerForm = (target: Marker | null = null, presetDate: string | null = null) => {
+    void markerOpener.open({
+      target,
+      values: (t, draft, now) => ({
+        datetime: formDatetimeInput(draft?.datetime || t?.datetime, presetDate, now),
+        typeId: draft?.typeId ?? t?.typeId ?? markerTypes[0]?.id ?? '',
+        catIds: draft?.catIds ?? t?.catIds ?? [],
+        memo: draft?.memo ?? t?.memo ?? '',
+      }),
+      photoIds: (t) => t?.photos ?? [],
+    })
   }
 
   const handleMarkerSubmit = async (input: MarkerInput) => {
-    if (markerFormInitial) {
-      await updateMarker(markerFormInitial.id, input)
+    const context = markerOpener.state?.context
+    if (context && context !== 'add') {
+      await updateMarker(context, input)
     } else {
       await addMarker(input)
     }
-    closeMarkerForm()
-  }
-
-  /** Close: called after RecordForm's internal confirm/draft discard */
-  const closeRecordForm = () => {
-    setFormOpen(false)
-    setFormInitial(null)
-    setFormPresetDate(null)
+    markerOpener.close()
   }
 
   const handleSubmit = async (input: RecordInput) => {
-    if (formInitial) {
-      await updateRecord(formInitial.id, input)
+    const context = recordOpener.state?.context
+    if (context && context !== 'add') {
+      await updateRecord(context, input)
     } else {
       const newAlerts = await addRecord(input)
       if (newAlerts.length > 0) setModalAlerts(newAlerts)
     }
-    closeRecordForm()
+    recordOpener.close()
   }
 
   const handleEdit = (r: VomitRecord) => {
@@ -250,23 +253,19 @@ function Shell() {
       )}
 
       <RecordFormModal
-        open={formOpen}
         cats={cats}
-        initial={formInitial}
-        presetDate={formPresetDate}
+        initial={recordOpener.state}
         onSubmit={handleSubmit}
-        onClose={closeRecordForm}
+        onClose={recordOpener.close}
         onAddCat={openCatModal}
       />
 
       <MarkerFormModal
-        open={markerFormOpen}
         markerTypes={markerTypes}
         cats={cats}
-        initial={markerFormInitial}
-        presetDate={markerPresetDate}
+        initial={markerOpener.state}
         onSubmit={handleMarkerSubmit}
-        onClose={closeMarkerForm}
+        onClose={markerOpener.close}
         onAddMarkerType={addMarkerType}
       />
 

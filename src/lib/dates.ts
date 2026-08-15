@@ -16,6 +16,17 @@ export function fromLocalDateTimeInput(value: string): Date {
   return new Date(value)
 }
 
+/** datetime-local input value: existing iso/local value → preset date with current time → now */
+export function formDatetimeInput(iso: string | undefined, presetDate: string | null | undefined, now = new Date()): string {
+  if (iso) return toLocalDateTimeInput(new Date(iso))
+  if (presetDate) {
+    const d = new Date(presetDate)
+    d.setHours(now.getHours(), now.getMinutes(), 0, 0)
+    return toLocalDateTimeInput(d)
+  }
+  return toLocalDateTimeInput(now)
+}
+
 function resolveLocale(): string {
   return typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'ko'
 }

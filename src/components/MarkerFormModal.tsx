@@ -1,55 +1,42 @@
 import { useEffect, useRef, useState, type Ref } from 'react'
 import { useImperativeHandle } from 'react'
-import type { Cat, Marker, MarkerDraft, MarkerInput, MarkerType } from '../types'
-import { fromLocalDateTimeInput, toLocalDateTimeInput } from '../lib/dates'
-import { getPhoto, uid } from '../lib/storage'
-import { usePhotoReorder } from '../hooks/usePhotoReorder'
+import type { Cat, MarkerDraft, MarkerInput, MarkerType } from '../types'
+import { fromLocalDateTimeInput } from '../lib/dates'
 import { useFormDraft } from '../hooks/useFormDraft'
+import type { FormOpenState } from '../hooks/useFormOpener'
 import { Modal } from './ui/Modal'
-import { PhotoPreview } from './PhotoPreview'
+import { PhotoSection } from './ui/PhotoSection'
+
+export interface MarkerFormValues {
+  datetime: string
+  typeId: string
+  catIds: string[]
+  memo: string
+}
 
 interface Props {
-  open: boolean
   markerTypes: MarkerType[]
   cats: Cat[]
-  initial?: Marker | null
-  /** YYYY-MM-DD: preset when a date is picked in the calendar */
-  presetDate?: string | null
+  initial: FormOpenState<MarkerFormValues> | null
   onSubmit: (input: MarkerInput) => void | Promise<void>
   onClose: () => void
   onAddMarkerType: (name: string) => string
-}
-
-interface PhotoItem {
-  key: string
-  id?: string
-  blob: Blob
 }
 
 interface MarkerFormHandle {
   requestClose: () => void
 }
 
-export function MarkerFormModal({
-  open,
-  markerTypes,
-  cats,
-  initial,
-  presetDate,
-  onSubmit,
-  onClose,
-  onAddMarkerType,
-}: Props) {
+export function MarkerFormModal({ markerTypes, cats, initial, onSubmit, onClose, onAddMarkerType }: Props) {
   const contentRef = useRef<MarkerFormHandle | null>(null)
-
+  if (!initial) return null
   return (
-    <Modal open={open} onClose={() => contentRef.current?.requestClose()} contentClassName="max-h-[85vh] overflow-y-auto">
+    <Modal open onClose={() => contentRef.current?.requestClose()} contentClassName="max-h-[85vh] overflow-y-auto">
       <MarkerFormContent
         ref={contentRef}
         markerTypes={markerTypes}
         cats={cats}
         initial={initial}
-        presetDate={presetDate}
         onSubmit={onSubmit}
         onClose={onClose}
         onAddMarkerType={onAddMarkerType}
@@ -62,30 +49,18 @@ function MarkerFormContent({
   markerTypes,
   cats,
   initial,
-  presetDate,
   onSubmit,
   onClose,
   onAddMarkerType,
   ref,
-}: Omit<Props, 'open'> & { ref?: Ref<MarkerFormHandle> }) {
-  const now = new Date()
-  const initialDatetime = () => {
-    if (initial) return toLocalDateTimeInput(new Date(initial.datetime))
-    if (presetDate) {
-      const d = new Date(presetDate)
-      d.setHours(now.getHours(), now.getMinutes(), 0, 0)
-      return toLocalDateTimeInput(d)
-    }
-    return toLocalDateTimeInput(now)
-  }
-  const [datetime, setDatetime] = useState(initialDatetime)
-  const [typeId, setTypeId] = useState(initial?.typeId ?? markerTypes[0]?.id ?? '')
-  const [catIds, setCatIds] = useState<string[]>(initial?.catIds ?? [])
-  const [memo, setMemo] = useState(initial?.memo ?? '')
-  const [photoItems, setPhotoItems] = useState<PhotoItem[]>([])
+}: Omit<Props, 'initial'> & { initial: FormOpenState<MarkerFormValues>; ref?: Ref<MarkerFormHandle> }) {
+  const [datetime, setDatetime] = useState(initial.values.datetime)
+  const [typeId, setTypeId] = useState(initial.values.typeId)
+  const [catIds, setCatIds] = useState<string[]>(initial.values.catIds)
+  const [memo, setMemo] = useState(initial.values.memo)
+  const [photoItems, setPhotoItems] = useState(initial.photoItems)
   const [addingType, setAddingType] = useState(false)
   const [newTypeName, setNewTypeName] = useState('')
-  const fileRef = useRef<HTMLInputElement>(null)
   const newTypeRef = useRef<HTMLInputElement>(null)
 
   const validCatIds = catIds.filter((id) => cats.some((c) => c.id === id))
@@ -93,26 +68,17 @@ function MarkerFormContent({
     setCatIds(validCatIds)
   }
 
-  const draftContext = initial ? initial.id : 'add'
-  const {
-    ready: draftReady,
-    restored: restoredDraft,
-    deleteDraft: deleteMarkerDraft,
-    discard: discardMarkerDraft,
-    hasDraft: draftHasDraft,
-    onStateChange,
-  } = useFormDraft<MarkerDraft>(
+  const { hasDraft, onStateChange, discard } = useFormDraft<MarkerDraft>(
     'marker',
-    draftContext,
     [datetime, typeId, catIds, memo, photoItems],
     () => ({
-      applyTo: draftContext,
+      applyTo: initial.context,
       datetime,
       typeId,
       catIds,
       memo,
       newPhotos: photoItems.filter((p) => !p.id).map((p, i) => ({ id: `d${i}`, blob: p.blob })),
-      removedPhotos: initial ? initial.photos.filter((id) => !photoItems.some((p) => p.id === id)) : [],
+      removedPhotos: initial.originalPhotoIds.filter((id) => !photoItems.some((p) => p.id === id)),
     }),
   )
 
@@ -121,90 +87,16 @@ function MarkerFormContent({
   }, [datetime, typeId, catIds, memo, photoItems, onStateChange])
 
   const requestClose = () => {
-    if (draftHasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
-    discardMarkerDraft()
+    if (hasDraft && !confirm('정말 나가시겠습니까? 작성 중인 내용은 저장되지 않습니다')) return
+    discard()
     onClose()
   }
 
   useImperativeHandle(ref, () => ({ requestClose }))
 
-  useEffect(() => {
-    if (!initial || restoredDraft) return
-    let cancelled = false
-    void (async () => {
-      const items: PhotoItem[] = []
-      for (const id of initial.photos) {
-        const blob = await getPhoto(id)
-        if (blob) items.push({ key: id, id, blob })
-      }
-      if (!cancelled) setPhotoItems(items)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [initial, restoredDraft])
-
-  // Draft restore: ask once, then restore or discard (StrictMode double-run guarded by ref)
-  const restoreAskedRef = useRef(false)
-  useEffect(() => {
-    if (!draftReady || !restoredDraft || restoreAskedRef.current) return
-    restoreAskedRef.current = true
-    if (!confirm('이전에 작성 중이던 내용이 있습니다. 불러올까요?')) {
-      discardMarkerDraft()
-      return
-    }
-    let cancelled = false
-    void (async () => {
-      setDatetime(restoredDraft.datetime)
-      setTypeId(restoredDraft.typeId)
-      setCatIds(restoredDraft.catIds)
-      setMemo(restoredDraft.memo)
-      const newBlobs = restoredDraft.newPhotos.map((p) => p.blob)
-      const removed = restoredDraft.removedPhotos
-      if (initial) {
-        const items: PhotoItem[] = []
-        for (const id of initial.photos) {
-          if (removed.includes(id)) continue
-          const blob = await getPhoto(id)
-          if (blob) items.push({ key: id, id, blob })
-        }
-        if (!cancelled) setPhotoItems([...items, ...newBlobs.map((blob) => ({ key: uid(), blob }))])
-      } else if (!cancelled) {
-        setPhotoItems(newBlobs.map((blob) => ({ key: uid(), blob })))
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [draftReady, restoredDraft, initial, discardMarkerDraft])
-
   const toggleCat = (id: string) => {
     setCatIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
   }
-
-  const onFiles = (files: FileList | null) => {
-    if (!files) return
-    const added = Array.from(files)
-    setPhotoItems((prev) => [...prev, ...added.map((f) => ({ key: uid(), blob: f }))])
-    if (fileRef.current) fileRef.current.value = ''
-  }
-
-  const removePhoto = (key: string) => {
-    setPhotoItems((prev) => prev.filter((p) => p.key !== key))
-  }
-
-  const reorderPhoto = (fromKey: string, toKey: string) => {
-    setPhotoItems((prev) => {
-      const from = prev.findIndex((p) => p.key === fromKey)
-      const to = prev.findIndex((p) => p.key === toKey)
-      if (from < 0 || to < 0 || from === to) return prev
-      const next = [...prev]
-      const [moved] = next.splice(from, 1)
-      next.splice(to, 0, moved)
-      return next
-    })
-  }
-  const { dragKey, onThumbPointerDown } = usePhotoReorder(reorderPhoto)
 
   const addNewType = () => {
     const trimmed = newTypeName.trim()
@@ -217,7 +109,7 @@ function MarkerFormContent({
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!datetime || !typeId) return
-    deleteMarkerDraft()
+    discard()
     void onSubmit({
       datetime: fromLocalDateTimeInput(datetime).toISOString(),
       typeId,
@@ -229,7 +121,7 @@ function MarkerFormContent({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <h2 className="text-lg font-bold">{initial ? '마커 수정' : '마커 추가'}</h2>
+      <h2 className="text-lg font-bold">{initial.context !== 'add' ? '마커 수정' : '마커 추가'}</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block">
@@ -333,48 +225,7 @@ function MarkerFormContent({
 
       <div>
         <span className="mb-1 block text-sm font-medium text-gray-600">사진</span>
-        <div className="flex flex-wrap gap-2">
-          {photoItems.map((p) => (
-            <div
-              key={p.key}
-              data-photo-key={p.key}
-              onPointerDown={(e) => onThumbPointerDown(e, p.key)}
-              className={`relative touch-none select-none rounded-lg ${
-                dragKey === p.key ? 'opacity-70 ring-2 ring-primary' : ''
-              }`}
-            >
-              <PhotoPreview blob={p.blob} onRemove={() => removePhoto(p.key)} />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute bottom-0.5 right-0.5 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/45 text-white"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
-                  <circle cx="9" cy="6" r="1.4" />
-                  <circle cx="15" cy="6" r="1.4" />
-                  <circle cx="9" cy="12" r="1.4" />
-                  <circle cx="15" cy="12" r="1.4" />
-                  <circle cx="9" cy="18" r="1.4" />
-                  <circle cx="15" cy="18" r="1.4" />
-                </svg>
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-2xl text-gray-400 hover:border-emerald-400 hover:text-emerald-500"
-          >
-            +
-          </button>
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => onFiles(e.target.files)}
-        />
+        <PhotoSection items={photoItems} onChange={setPhotoItems} />
       </div>
 
       <div className="flex gap-2">
@@ -383,7 +234,7 @@ function MarkerFormContent({
           disabled={!datetime || !typeId}
           className="rounded-lg bg-primary px-5 py-2 font-medium text-white hover:bg-primary-hover disabled:opacity-40"
         >
-          {initial ? '수정 저장' : '마커 추가'}
+          {initial.context !== 'add' ? '수정 저장' : '마커 추가'}
         </button>
         <button type="button" onClick={requestClose} className="rounded-lg border border-gray-200 px-4 py-2 text-gray-600">
           취소
