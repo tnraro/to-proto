@@ -25,6 +25,20 @@
     background-color: var(--color-gray-100);
   }
 
+  /* App-like UX: text selectable only where editing requires it */
+  html {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  select,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
   /* Prevent iOS auto-zoom */
   input,
   select,

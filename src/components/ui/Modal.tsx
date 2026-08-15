@@ -172,8 +172,6 @@ export function Modal({
       <div
         ref={sheetRef}
         className={`overflow-x-hidden bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-pop ${
-          dragY !== null ? 'select-none' : ''
-        } ${
           drawer
             ? 'flex max-h-[85vh] w-full flex-col rounded-t-2xl sm:max-w-md sm:rounded-2xl sm:pb-5'
             : 'w-full max-w-md rounded-2xl sm:pb-5'
@@ -190,7 +188,7 @@ export function Modal({
         {drawer ? (
           <>
             <div
-              className="-mx-5 -mt-5 mb-2 shrink-0 cursor-grab touch-none select-none px-5 pb-1 pt-4 active:cursor-grabbing sm:hidden"
+              className="-mx-5 -mt-5 mb-2 shrink-0 cursor-grab touch-none px-5 pb-1 pt-4 active:cursor-grabbing sm:hidden"
               aria-hidden="true"
             >
               <div className="mx-auto h-1.5 w-12 rounded-full bg-gray-300" />

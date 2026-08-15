@@ -3,6 +3,7 @@ import type { Cat, Marker, MarkerType, TimelineItem, VomitRecord, VomitType } fr
 import { VOMIT_TYPES } from '../types'
 import { monthLabel, startOfMonth, toDateKey, groupByDay } from '../lib/dates'
 import { beginSwipe, createSwipeSession, endSwipe, moveSwipe, type SwipeSession } from '../lib/horizontalSwipe'
+import { pieSegments } from '../lib/pieSegments'
 import { RecordList } from './RecordList'
 import { Card } from './ui/Card'
 
@@ -92,7 +93,6 @@ export function CalendarView({
       if (r.session.state === 'horizontal') {
         suppressClickRef.current = true
         setDx(r.dx)
-        e.preventDefault()
       }
     }
     // Animate the grid back to 0; the timer (not transitionend) resets the gate
@@ -179,7 +179,7 @@ export function CalendarView({
             e.stopPropagation()
           }
         }}
-        className={`grid grid-cols-7 gap-1 touch-pan-y ${dx !== 0 ? 'select-none' : ''}`}
+        className={`grid grid-cols-7 gap-1 touch-pan-y`}
         style={{
           transform: dx !== 0 ? `translateX(${dx}px)` : undefined,
           transition: swipeTransitioning ? 'transform 200ms ease-out' : 'none',
@@ -236,8 +236,15 @@ export function CalendarView({
               {showRecordCount ? (
                 list && list.length > 0 ? (
                   <span className="mt-0.5 flex items-center gap-1">
-                    <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
-                    <span className="text-[10px] leading-none text-gray-500">{list.length}</span>
+                    <span
+                      className="h-3.5 w-3.5 rounded-full"
+                      style={{
+                        background: `conic-gradient(${pieSegments(summary ?? []).map((s) => `${s.color} ${s.start}% ${s.end}%`).join(', ')})`,
+                      }}
+                    />
+                    <span className="text-[10px] leading-none text-gray-500">
+                      {summary?.reduce((s, x) => s + x.count, 0) ?? 0}
+                    </span>
                   </span>
                 ) : null
               ) : (
