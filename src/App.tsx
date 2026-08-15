@@ -19,6 +19,7 @@ import { SettingsView } from './components/SettingsView'
 import { AppHeader } from './components/AppHeader'
 import { DropdownMenu } from './components/ui/DropdownMenu'
 import { useFeatureFlag } from './hooks/useFeatureFlag'
+import { CALENDAR_INDICATOR_KEY, parseCalendarIndicator } from './lib/calendarIndicator'
 import type { AlertEntry, Marker, VomitRecord } from './types'
 
 type Tab = 'record' | 'calendar' | 'stats' | 'alert' | 'settings'
@@ -52,7 +53,10 @@ function Shell() {
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
   // Experiment (feature flag)
-  const [showRecordCount, setShowRecordCount] = useFeatureFlag('calendar.recordCount', false)
+  const [calendarIndicator, setCalendarIndicator] = useFeatureFlag(
+    CALENDAR_INDICATOR_KEY,
+    parseCalendarIndicator,
+  )
 
   const recordOpener = useFormOpener<VomitRecord, RecordFormValues, RecordDraft>('record')
   const markerOpener = useFormOpener<Marker, MarkerFormValues, MarkerDraft>('marker')
@@ -181,7 +185,7 @@ function Shell() {
       cats={cats}
       markers={catFilteredMarkers}
       markerTypes={markerTypes}
-      showRecordCount={showRecordCount}
+      indicator={calendarIndicator}
       onEdit={handleEdit}
       onDelete={handleDelete}
       onEditMarker={handleEditMarker}
@@ -225,8 +229,8 @@ function Shell() {
             {...store}
             onAddCat={openCatModal}
             onNavigate={(t) => navigate(`/${t}`)}
-            showRecordCount={showRecordCount}
-            onShowRecordCountChange={setShowRecordCount}
+            indicator={calendarIndicator}
+            onIndicatorChange={setCalendarIndicator}
           />
         )}
       </main>

@@ -1,15 +1,15 @@
 import { useCallback, useState } from 'react'
 
-export function useFeatureFlag(key: string, defaultValue: boolean): [boolean, (v: boolean) => void] {
-  const [value, setValue] = useState(() => {
-    const raw = localStorage.getItem(key)
-    return raw === null ? defaultValue : raw === '1'
-  })
+export function useFeatureFlag<T extends string>(
+  key: string,
+  parse: (raw: string | null) => T,
+): [T, (v: T) => void] {
+  const [value, setValue] = useState<T>(() => parse(localStorage.getItem(key)))
 
   const set = useCallback(
-    (v: boolean) => {
+    (v: T) => {
       setValue(v)
-      localStorage.setItem(key, v ? '1' : '0')
+      localStorage.setItem(key, v)
     },
     [key],
   )

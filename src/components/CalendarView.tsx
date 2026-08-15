@@ -4,6 +4,7 @@ import { VOMIT_TYPES } from '../types'
 import { monthLabel, startOfMonth, toDateKey, groupByDay } from '../lib/dates'
 import { beginSwipe, createSwipeSession, endSwipe, moveSwipe, type SwipeSession } from '../lib/horizontalSwipe'
 import { pieSegments } from '../lib/pieSegments'
+import type { CalendarIndicator } from '../lib/calendarIndicator'
 import { RecordList } from './RecordList'
 import { Card } from './ui/Card'
 
@@ -17,8 +18,8 @@ interface Props {
   cats: Cat[]
   markers: Marker[]
   markerTypes: MarkerType[]
-  /** Experiment (feature flag) */
-  showRecordCount?: boolean
+  /** Experiment (feature flag): per-day indicator style */
+  indicator?: CalendarIndicator
   onEdit: (record: VomitRecord) => void
   onDelete: (id: string) => void
   onEditMarker: (marker: Marker) => void
@@ -32,7 +33,7 @@ export function CalendarView({
   cats,
   markers,
   markerTypes,
-  showRecordCount = false,
+  indicator = 'summary',
   onEdit,
   onDelete,
   onEditMarker,
@@ -233,7 +234,14 @@ export function CalendarView({
                   {markerTypes.find((t) => t.id === m.typeId)?.name ?? '?'}
                 </span>
               ))}
-              {showRecordCount ? (
+              {indicator === 'count' ? (
+                list && list.length > 0 ? (
+                  <span className="mt-0.5 flex items-center gap-1">
+                    <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
+                    <span className="text-[10px] leading-none text-gray-500">{list.length}</span>
+                  </span>
+                ) : null
+              ) : indicator === 'pie' ? (
                 list && list.length > 0 ? (
                   <span className="mt-0.5 flex items-center gap-1">
                     <span

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Store } from '../hooks/useStore'
+import { CALENDAR_INDICATOR_OPTIONS, type CalendarIndicator } from '../lib/calendarIndicator'
 import { CatManager } from './CatManager'
 import { MarkerTypeManager } from './MarkerTypeManager'
 import { Card } from './ui/Card'
@@ -23,13 +24,13 @@ export function SettingsView({
   deleteMarkerType,
   onAddCat,
   onNavigate,
-  showRecordCount,
-  onShowRecordCountChange,
+  indicator,
+  onIndicatorChange,
 }: Store & {
   onAddCat: () => void
   onNavigate: (tab: NavTab) => void
-  showRecordCount: boolean
-  onShowRecordCountChange: (v: boolean) => void
+  indicator: CalendarIndicator
+  onIndicatorChange: (v: CalendarIndicator) => void
 }) {
   const [confirming, setConfirming] = useState(false)
   const pwaStatus = usePwaStatus()
@@ -94,23 +95,23 @@ export function SettingsView({
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-gray-700">실험</h2>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-gray-600">캘린더 일자 표시 — 토 N회 (실험)</p>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={showRecordCount}
-            onClick={() => onShowRecordCountChange(!showRecordCount)}
-            className={`relative h-7 w-12 shrink-0 rounded-full transition ${
-              showRecordCount ? 'bg-primary' : 'bg-gray-300'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
-                showRecordCount ? 'left-[calc(100%-1.625rem)]' : 'left-0.5'
+        <p className="mb-2 text-sm text-gray-600">캘린더 일자 표시 방식 (실험)</p>
+        <div className="flex flex-wrap gap-2">
+          {CALENDAR_INDICATOR_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              aria-pressed={indicator === opt.value}
+              onClick={() => onIndicatorChange(opt.value)}
+              className={`min-h-9 rounded-full border px-3.5 text-sm transition ${
+                indicator === opt.value
+                  ? 'border-transparent bg-primary font-medium text-white'
+                  : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
               }`}
-            />
-          </button>
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </Card>
 
