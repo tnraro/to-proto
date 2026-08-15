@@ -185,7 +185,8 @@ function MarkerFormContent({
 
   const onFiles = (files: FileList | null) => {
     if (!files) return
-    setPhotoItems((prev) => [...prev, ...Array.from(files).map((f) => ({ key: uid(), blob: f }))])
+    const added = Array.from(files)
+    setPhotoItems((prev) => [...prev, ...added.map((f) => ({ key: uid(), blob: f }))])
     if (fileRef.current) fileRef.current.value = ''
   }
 
