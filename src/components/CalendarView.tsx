@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Cat, Marker, MarkerType, TimelineItem, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
-import { monthLabel, startOfMonth, toDateKey, groupByDay } from '../lib/dates'
+import { WEEKDAYS, monthLabel, startOfMonth, toDateKey, groupByDay } from '../lib/dates'
 import { beginSwipe, createSwipeSession, endSwipe, moveSwipe, type SwipeSession } from '../lib/horizontalSwipe'
 import { pieSegments } from '../lib/pieSegments'
 import type { CalendarIndicator } from '../lib/calendarIndicator'
 import { RecordList } from './RecordList'
 import { Card } from './ui/Card'
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MAX_TYPE_PAIRS = 3
 const SLIDE_IN_OFFSET = 80
 const SETTLE_MS = 200

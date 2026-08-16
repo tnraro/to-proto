@@ -1,7 +1,15 @@
 import type { TimeSeriesItem } from '../types'
 
+export const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const
+
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
+}
+
+/** Local-timezone parse of a YYYY-MM-DD key (new Date(key) would parse as UTC) */
+function parseDateKey(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
 export function toDateKey(d: Date): string {
@@ -62,6 +70,25 @@ export function toDayKey(iso: string): string {
   return toDateKey(new Date(iso))
 }
 
+export function addDays(d: Date, n: number): Date {
+  const next = new Date(d)
+  next.setDate(d.getDate() + n)
+  return next
+}
+
+/** Sunday-start week anchor of the given day */
+export function startOfWeek(d: Date): Date {
+  const next = new Date(d)
+  next.setDate(d.getDate() - d.getDay())
+  return next
+}
+
+/** The 7 day keys of the week containing the given key (Sunday first) */
+export function weekDayKeys(key: string): string[] {
+  const start = startOfWeek(parseDateKey(key))
+  return Array.from({ length: 7 }, (_, i) => toDateKey(addDays(start, i)))
+}
+
 export function sortByDatetimeDesc<T extends TimeSeriesItem>(items: T[]): T[] {
   return [...items].sort((a, b) => b.datetime.localeCompare(a.datetime))
 }
@@ -84,5 +111,11 @@ export function startOfMonth(d: Date): Date {
 
 export function monthLabel(d: Date): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월`
+}
+
+/** Localized day header, e.g. "8월 16일 (일)" */
+export function dayLabel(key: string): string {
+  const d = parseDateKey(key)
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEKDAYS[d.getDay()]})`
 }
 
