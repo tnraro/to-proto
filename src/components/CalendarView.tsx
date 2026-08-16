@@ -1,57 +1,32 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Cat, Marker, MarkerType, TimelineItem, VomitRecord, VomitType } from '../types'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { Marker, MarkerType, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
-import { WEEKDAYS, monthLabel, startOfMonth, toDateKey, groupByDay } from '../lib/dates'
-import { beginSwipe, createSwipeSession, endSwipe, moveSwipe, type SwipeSession } from '../lib/horizontalSwipe'
+import { WEEKDAYS, groupByDay, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
 import { pieSegments } from '../lib/pieSegments'
 import type { CalendarIndicator } from '../lib/calendarIndicator'
-import { RecordList } from './RecordList'
-import { Card } from './ui/Card'
 
 const MAX_TYPE_PAIRS = 3
-const SLIDE_IN_OFFSET = 80
-const SETTLE_MS = 200
 
 interface Props {
   records: VomitRecord[]
-  cats: Cat[]
   markers: Marker[]
   markerTypes: MarkerType[]
   /** Experiment (feature flag): per-day indicator style */
   indicator?: CalendarIndicator
-  onEdit: (record: VomitRecord) => void
-  onDelete: (id: string) => void
-  onEditMarker: (marker: Marker) => void
-  onDeleteMarker: (id: string) => void
   /** Selected date (YYYY-MM-DD) — FAB preset source */
   onSelectedDateChange: (dateKey: string) => void
 }
 
 export function CalendarView({
   records,
-  cats,
   markers,
   markerTypes,
   indicator = 'summary',
-  onEdit,
-  onDelete,
-  onEditMarker,
-  onDeleteMarker,
   onSelectedDateChange,
 }: Props) {
   const today = new Date()
   const [cursor, setCursor] = useState(() => startOfMonth(today))
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(today))
-  const [dx, setDx] = useState(0)
-  const [swipeTransitioning, setSwipeTransitioning] = useState(false)
-  const gridRef = useRef<HTMLDivElement>(null)
-  const swipeSessionRef = useRef<SwipeSession>(createSwipeSession())
-  const suppressClickRef = useRef(false)
-  const transitioningRef = useRef(false)
-  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => {
-    transitioningRef.current = swipeTransitioning
-  }, [swipeTransitioning])
 
   useEffect(() => {
     onSelectedDateChange(selectedKey)
@@ -62,15 +37,6 @@ export function CalendarView({
   const recordsByDay = useMemo(() => groupByDay(records), [records])
   const markersByDay = useMemo(() => groupByDay(markers), [markers])
 
-  const dayItems = useMemo<TimelineItem[]>(() => {
-    const recordsOfDay = recordsByDay.get(selectedKey) ?? []
-    const markersOfDay = markersByDay.get(selectedKey) ?? []
-    return [
-      ...recordsOfDay.map((r) => ({ kind: 'record' as const, payload: r })),
-      ...markersOfDay.map((m) => ({ kind: 'marker' as const, payload: m })),
-    ].sort((a, b) => b.payload.datetime.localeCompare(a.payload.datetime))
-  }, [recordsByDay, markersByDay, selectedKey])
-
   const move = useCallback((delta: number) => {
     setCursor((cur) => {
       const next = new Date(cur)
@@ -78,66 +44,6 @@ export function CalendarView({
       return startOfMonth(next)
     })
   }, [])
-
-  useEffect(() => {
-    const grid = gridRef.current
-    if (!grid) return
-    const onPointerDown = (e: PointerEvent) => {
-      suppressClickRef.current = false
-      if (transitioningRef.current) return
-      swipeSessionRef.current = beginSwipe(swipeSessionRef.current, e.clientX, e.clientY)
-    }
-    const onPointerMove = (e: PointerEvent) => {
-      const r = moveSwipe(swipeSessionRef.current, e.clientX, e.clientY)
-      swipeSessionRef.current = r.session
-      if (r.session.state === 'horizontal') {
-        suppressClickRef.current = true
-        setDx(r.dx)
-      }
-    }
-    // Animate the grid back to 0; the timer (not transitionend) resets the gate
-    // so gestures can never get stuck after a no-op release
-    const settleBack = () => {
-      setSwipeTransitioning(true)
-      setDx(0)
-      if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
-      settleTimerRef.current = setTimeout(() => setSwipeTransitioning(false), SETTLE_MS)
-    }
-    const onPointerEnd = () => {
-      const finalDx = swipeSessionRef.current.dx
-      const r = endSwipe(swipeSessionRef.current)
-      swipeSessionRef.current = r.session
-      if (r.change !== 0) {
-        move(r.change > 0 ? -1 : 1)
-        // New month slides in from the swipe direction; offset first, then transition to 0
-        setSwipeTransitioning(false)
-        setDx((r.change > 0 ? 1 : -1) * SLIDE_IN_OFFSET)
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => settleBack())
-        })
-      } else if (finalDx !== 0) {
-        settleBack()
-      }
-    }
-    const onPointerCancel = () => {
-      swipeSessionRef.current = createSwipeSession()
-      suppressClickRef.current = false
-      if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
-      setSwipeTransitioning(false)
-      setDx(0)
-    }
-    grid.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerEnd)
-    window.addEventListener('pointercancel', onPointerCancel)
-    return () => {
-      grid.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerEnd)
-      window.removeEventListener('pointercancel', onPointerCancel)
-      if (settleTimerRef.current) clearTimeout(settleTimerRef.current)
-    }
-  }, [move])
 
   return (
     <div className="space-y-4 p-4">
@@ -171,20 +77,7 @@ export function CalendarView({
         <span className="w-24" />
       </div>
 
-      <div
-        ref={gridRef}
-        onClickCapture={(e) => {
-          if (suppressClickRef.current) {
-            suppressClickRef.current = false
-            e.stopPropagation()
-          }
-        }}
-        className={`grid grid-cols-7 gap-1 touch-pan-y`}
-        style={{
-          transform: dx !== 0 ? `translateX(${dx}px)` : undefined,
-          transition: swipeTransitioning ? 'transform 200ms ease-out' : 'none',
-        }}
-      >
+      <div className="grid grid-cols-7 gap-1">
         {WEEKDAYS.map((w, i) => (
           <div
             key={w}
@@ -279,19 +172,6 @@ export function CalendarView({
           )
         })}
       </div>
-
-      <Card>
-        <h3 className="mb-2 text-sm font-semibold text-gray-600">{selectedKey} 기록</h3>
-        <RecordList
-          items={dayItems}
-          cats={cats}
-          markerTypes={markerTypes}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onEditMarker={onEditMarker}
-          onDeleteMarker={onDeleteMarker}
-        />
-      </Card>
     </div>
   )
 }

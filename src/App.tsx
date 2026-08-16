@@ -182,14 +182,9 @@ function Shell() {
   const calendarView = (
     <CalendarView
       records={catFilteredRecords}
-      cats={cats}
       markers={catFilteredMarkers}
       markerTypes={markerTypes}
       indicator={calendarIndicator}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onEditMarker={handleEditMarker}
-      onDeleteMarker={handleDeleteMarker}
       onSelectedDateChange={setCalendarDate}
     />
   )
