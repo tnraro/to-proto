@@ -10,6 +10,7 @@ import {
   createMonthScroll,
   endMonthScroll,
   moveMonthScroll,
+  normalizeWheelDelta,
   wheelMonthScroll,
   type MonthScrollState,
 } from '../lib/monthScroll'
@@ -113,7 +114,12 @@ export function CalendarView({
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       cancelSnap()
-      const r = wheelMonthScroll(getState(), e.deltaY, performance.now(), MONTH_LAYOUT)
+      const r = wheelMonthScroll(
+        getState(),
+        normalizeWheelDelta(e.deltaY, e.deltaMode, vh),
+        performance.now(),
+        MONTH_LAYOUT,
+      )
       // Refused (finger gesture in progress): ignore entirely — scheduling the
       // idle timer here would fire finishGesture mid-drag and reset the session
       if (!r.active) return
@@ -130,7 +136,7 @@ export function CalendarView({
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
       if (snapRafRef.current !== null) cancelAnimationFrame(snapRafRef.current)
     }
-  }, [cancelSnap, commit, finishGesture, getState])
+  }, [cancelSnap, commit, finishGesture, getState, vh])
 
   useEffect(() => {
     // No pointer capture: capturing retargets the click event to the capture
