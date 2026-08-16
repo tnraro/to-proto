@@ -19,6 +19,9 @@ export interface MonthScrollState {
   session: ScrollSession
   startY: number | null
   lastY: number | null
+  /** Sign of the last wheel delta — wheel snap never cancels, it moves one
+   *  month in this direction regardless of distance */
+  wheelDir: -1 | 0 | 1
   /** (t, y) samples for flick velocity */
   samples: { t: number; y: number }[]
 }
@@ -36,6 +39,7 @@ export function createMonthScroll(anchorIdx: number, viewTop = 0): MonthScrollSt
     session: 'idle',
     startY: null,
     lastY: null,
+    wheelDir: 0,
     samples: [],
   }
 }
@@ -70,20 +74,30 @@ export function moveMonthScroll(s: MonthScrollState, y: number, t: number, layou
 /** Wheel input — moves like a drag without a pressed phase. Uses its own
  *  session so it can never be driven by, or feed, pointer gestures.
  *  Positive deltaY (wheel down) moves toward future months, matching natural
- *  scroll; sampled y is inverted so flick direction matches finger semantics. */
+ *  scroll. Samples are not used for wheel decisions (no flick). */
 export function wheelMonthScroll(s: MonthScrollState, dy: number, t: number, layout: MonthLayout): MoveResult {
   if (s.session !== 'idle' && s.session !== 'wheel') return { state: s, active: false }
   const startAnchorIdx = s.session === 'idle' ? s.anchorIdx : s.startAnchorIdx
-  return applyOffset({ ...s, session: 'wheel', startAnchorIdx, lastY: null }, dy, lastSampleY(s) - dy, t, layout)
+  const wheelDir = dy > 0 ? 1 : dy < 0 ? -1 : s.wheelDir
+  return applyOffset({ ...s, session: 'wheel', startAnchorIdx, lastY: null, wheelDir }, dy, lastSampleY(s), t, layout)
 }
 
-/** Release. Two rules with separate reference frames:
- *  - positional (no flick): relative to the release anchor — past the midpoint
- *    snaps to the nearest boundary ahead (+1), otherwise stay.
- *  - flick: relative to the gesture-start anchor — target is one month in the
- *    flick direction from the start (start ± 1), unless the drag already
- *    crossed further in that direction (release anchor wins). This keeps the
- *    flick from stacking on top of boundary crossings made during the drag. */
+/** Converts device-dependent wheel deltas to pixels: line mode (Firefox mice
+ *  report ~3px notches) and page mode need scaling to be usable as px. */
+export function normalizeWheelDelta(deltaY: number, deltaMode: number, viewportH: number): number {
+  if (deltaMode === 1) return deltaY * 16
+  if (deltaMode === 2) return deltaY * viewportH
+  return deltaY
+}
+
+/** Release. Three rules:
+ *  - wheel: never cancels — any nonzero wheel movement snaps one month in the
+ *    last wheel direction (wheel intent is unambiguous even for tiny deltas).
+ *  - positional (finger, no flick): relative to the release anchor — past the
+ *    midpoint snaps to the nearest boundary ahead (+1), otherwise stay.
+ *  - flick (finger only): relative to the gesture-start anchor — target is one
+ *    month in the flick direction from the start (start ± 1), unless the drag
+ *    already crossed further in that direction (release anchor wins). */
 export function endMonthScroll(
   s: MonthScrollState,
   layout: MonthLayout,
@@ -93,7 +107,9 @@ export function endMonthScroll(
   const h = monthHeight(s.anchorIdx, layout)
   let change: -1 | 0 | 1 = 0
   let flick = false
-  if (v < -FLICK_VELOCITY) {
+  if (s.session === 'wheel') {
+    change = s.wheelDir
+  } else if (v < -FLICK_VELOCITY) {
     change = 1
     flick = true
   } else if (v > FLICK_VELOCITY) {

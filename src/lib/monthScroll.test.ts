@@ -5,6 +5,7 @@ import {
   createMonthScroll,
   endMonthScroll,
   moveMonthScroll,
+  normalizeWheelDelta,
   wheelMonthScroll,
 } from './monthScroll'
 
@@ -201,12 +202,37 @@ describe('wheelMonthScroll', () => {
     expect(s.viewTop).toBe(324 - 50)
   })
 
-  test('휠도 플릭 속도로 스냅 판정', () => {
+  test('휠 버스트는 마지막 방향으로 1개월 스냅', () => {
     let s = wheelMonthScroll(createMonthScroll(FEB), 300, 0, LAYOUT).state
     s = wheelMonthScroll(s, 200, 100, LAYOUT).state
-    s = wheelMonthScroll(s, 300, 200, LAYOUT).state
+    s = wheelMonthScroll(s, 300, 200, LAYOUT).state // APR 204
     const r = endMonthScroll(s, LAYOUT)
     expect(r.change).toBe(1)
+    expect(r.state.anchorIdx).toBe(MAR + 2)
+  })
+
+  test('휠 아주 조금 굴려도 취소 없이 이동 (아래)', () => {
+    let s = wheelMonthScroll(createMonthScroll(FEB), 30, 0, LAYOUT).state // FEB 30 < 절반
+    const r = endMonthScroll(s, LAYOUT)
+    expect(r.change).toBe(1)
+    expect(r.state.anchorIdx).toBe(MAR)
+  })
+
+  test('휠 아주 조금 굴려도 취소 없이 이동 (위)', () => {
+    let s = wheelMonthScroll(createMonthScroll(FEB), -30, 0, LAYOUT).state // JAN 294
+    expect(s.anchorIdx).toBe(JAN)
+    const r = endMonthScroll(s, LAYOUT)
+    expect(r.change).toBe(-1)
+    expect(r.state.anchorIdx).toBe(DEC)
+  })
+
+  test('버스트 후반의 방향이 판정', () => {
+    let s = wheelMonthScroll(createMonthScroll(FEB), 300, 0, LAYOUT).state // MAR 28
+    s = wheelMonthScroll(s, -50, 100, LAYOUT).state // viewTop -22 → FEB 250, wheelDir -1
+    expect(s.anchorIdx).toBe(FEB)
+    const r = endMonthScroll(s, LAYOUT)
+    expect(r.change).toBe(-1)
+    expect(r.state.anchorIdx).toBe(JAN)
   })
 
   test('핑거 세션 중 휠은 무시', () => {
@@ -223,6 +249,20 @@ describe('wheelMonthScroll', () => {
     expect(r.active).toBe(false)
     expect(r.state).toBe(s)
     expect(s.viewTop).toBe(200)
+  })
+})
+
+describe('normalizeWheelDelta', () => {
+  test('px 모드는 그대로', () => {
+    expect(normalizeWheelDelta(120, 0, 800)).toBe(120)
+  })
+
+  test('라인 모드는 16배', () => {
+    expect(normalizeWheelDelta(3, 1, 800)).toBe(48)
+  })
+
+  test('페이지 모드는 뷰포트 높이 배', () => {
+    expect(normalizeWheelDelta(2, 2, 800)).toBe(1600)
   })
 })
 
