@@ -116,6 +116,38 @@ export function CalendarView({
     }
   }, [cancelSnap, finishGesture])
 
+  useEffect(() => {
+    // No pointer capture: capturing retargets the click event to the capture
+    // element, which would swallow day-cell taps
+    const onPointerMove = (e: PointerEvent) => {
+      if (stateRef.current.session === 'idle') return
+      const r = moveMonthScroll(stateRef.current, e.clientY, performance.now(), MONTH_LAYOUT)
+      stateRef.current = r.state
+      if (r.active) {
+        suppressClickRef.current = true
+        setScrollState(r.state)
+      }
+    }
+    const onPointerUp = () => {
+      if (stateRef.current.session === 'idle') return
+      finishGesture(stateRef.current)
+    }
+    const onPointerCancel = () => {
+      cancelWheel()
+      cancelSnap()
+      stateRef.current = createMonthScroll(stateRef.current.anchorIdx)
+      setScrollState(stateRef.current)
+    }
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('pointercancel', onPointerCancel)
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+      window.removeEventListener('pointercancel', onPointerCancel)
+    }
+  }, [cancelSnap, cancelWheel, finishGesture])
+
   const recordsByDay = useMemo(() => groupByDay(records), [records])
   const markersByDay = useMemo(() => groupByDay(markers), [markers])
 
@@ -160,27 +192,7 @@ export function CalendarView({
           cancelSnap()
           cancelWheel()
           suppressClickRef.current = false
-          e.currentTarget.setPointerCapture(e.pointerId)
           stateRef.current = beginMonthScroll(stateRef.current, e.clientY, performance.now())
-          setScrollState(stateRef.current)
-        }}
-        onPointerMove={(e) => {
-          if (stateRef.current.session === 'idle') return
-          const r = moveMonthScroll(stateRef.current, e.clientY, performance.now(), MONTH_LAYOUT)
-          stateRef.current = r.state
-          if (r.active) {
-            suppressClickRef.current = true
-            setScrollState(r.state)
-          }
-        }}
-        onPointerUp={() => {
-          if (stateRef.current.session === 'idle') return
-          finishGesture(stateRef.current)
-        }}
-        onPointerCancel={() => {
-          cancelWheel()
-          cancelSnap()
-          stateRef.current = createMonthScroll(stateRef.current.anchorIdx)
           setScrollState(stateRef.current)
         }}
       >
