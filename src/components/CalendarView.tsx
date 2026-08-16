@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Marker, MarkerType, VomitRecord, VomitType } from '../types'
+import type { Cat, Marker, MarkerType, TimelineItem, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
-import { WEEKDAYS, groupByDay, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
+import { WEEKDAYS, groupByDay, monthLabel, parseDateKey, startOfMonth, toDateKey, weekDayKeys } from '../lib/dates'
 import { pieSegments } from '../lib/pieSegments'
 import type { CalendarIndicator } from '../lib/calendarIndicator'
 import { blockOffset, blockWindow, monthFromIndex, monthIndex, rowsInMonth, type MonthLayout } from '../lib/monthList'
@@ -15,6 +15,7 @@ import {
   type MonthScrollState,
 } from '../lib/monthScroll'
 import { useMonthScrollStore } from '../hooks/useMonthScrollStore'
+import { DayView } from './DayView'
 
 const MAX_TYPE_PAIRS = 3
 /** Must match the CSS below: month label + 52px cells with 4px gaps */
@@ -24,24 +25,35 @@ const WHEEL_IDLE_MS = 250
 
 interface Props {
   records: VomitRecord[]
+  cats: Cat[]
   markers: Marker[]
   markerTypes: MarkerType[]
   /** Experiment (feature flag): per-day indicator style */
   indicator?: CalendarIndicator
+  onEdit: (record: VomitRecord) => void
+  onDelete: (id: string) => void
+  onEditMarker: (marker: Marker) => void
+  onDeleteMarker: (id: string) => void
   /** Selected date (YYYY-MM-DD) — FAB preset source */
   onSelectedDateChange: (dateKey: string) => void
 }
 
 export function CalendarView({
   records,
+  cats,
   markers,
   markerTypes,
   indicator = 'summary',
+  onEdit,
+  onDelete,
+  onEditMarker,
+  onDeleteMarker,
   onSelectedDateChange,
 }: Props) {
   const today = new Date()
   const { scrollState, commit, getState } = useMonthScrollStore(monthIndex(startOfMonth(today)))
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(today))
+  const [dayViewOpen, setDayViewOpen] = useState(false)
   const [vh, setVh] = useState(0)
   const viewportRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -49,6 +61,10 @@ export function CalendarView({
   const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const snapRafRef = useRef<number | null>(null)
   const snapGenRef = useRef(0)
+  const dayViewOpenRef = useRef(false)
+  useEffect(() => {
+    dayViewOpenRef.current = dayViewOpen
+  }, [dayViewOpen])
 
   useEffect(() => {
     onSelectedDateChange(selectedKey)
@@ -142,6 +158,7 @@ export function CalendarView({
     if (!vp) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
+      if (dayViewOpenRef.current) return
       cancelSnap()
       const r = wheelMonthScroll(
         getState(),
@@ -198,6 +215,17 @@ export function CalendarView({
   const recordsByDay = useMemo(() => groupByDay(records), [records])
   const markersByDay = useMemo(() => groupByDay(markers), [markers])
 
+  const dayItems = useMemo<TimelineItem[]>(() => {
+    const recordsOfDay = recordsByDay.get(selectedKey) ?? []
+    const markersOfDay = markersByDay.get(selectedKey) ?? []
+    return [
+      ...recordsOfDay.map((r) => ({ kind: 'record' as const, payload: r })),
+      ...markersOfDay.map((m) => ({ kind: 'marker' as const, payload: m })),
+    ].sort((a, b) => b.payload.datetime.localeCompare(a.payload.datetime))
+  }, [recordsByDay, markersByDay, selectedKey])
+
+  const weekKeys = useMemo(() => weekDayKeys(selectedKey), [selectedKey])
+
   const blocks = useMemo(
     () => blockWindow(scrollState.anchorIdx, scrollState.viewTop, vh, MONTH_LAYOUT),
     [vh, scrollState.anchorIdx, scrollState.viewTop],
@@ -208,59 +236,105 @@ export function CalendarView({
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between px-4 py-2">
-        <div className="flex items-center gap-1">
+        {dayViewOpen ? (
           <button
-            onClick={() => goToMonth(-1)}
+            onClick={() => setDayViewOpen(false)}
             className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
-            aria-label="이전 달"
+            aria-label="월 보기"
           >
             ‹
           </button>
-          <button
-            onClick={() => goToMonth(1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
-            aria-label="다음 달"
-          >
-            ›
-          </button>
-          <button
-            onClick={goToday}
-            className="ml-1 min-h-9 rounded-full px-3 text-sm font-medium text-primary hover:bg-emerald-50"
-          >
-            오늘
-          </button>
-        </div>
-        <h2 className="text-lg font-bold">{anchorLabel}</h2>
+        ) : (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => goToMonth(-1)}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
+              aria-label="이전 달"
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => goToMonth(1)}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
+              aria-label="다음 달"
+            >
+              ›
+            </button>
+            <button
+              onClick={goToday}
+              className="ml-1 min-h-9 rounded-full px-3 text-sm font-medium text-primary hover:bg-emerald-50"
+            >
+              오늘
+            </button>
+          </div>
+        )}
+        <h2 className="text-lg font-bold">
+          {dayViewOpen ? monthLabel(parseDateKey(selectedKey)) : anchorLabel}
+        </h2>
         <span className="w-24" />
       </div>
       <div className="grid shrink-0 grid-cols-7 gap-1 px-4 pb-1">
-        {WEEKDAYS.map((w, i) => (
-          <div
-            key={w}
-            className={`pb-1 text-center text-xs font-medium ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-500'}`}
-          >
-            {w}
-          </div>
-        ))}
+        {WEEKDAYS.map((w, i) => {
+          const key = weekKeys[i]
+          const isToday = key === toDateKey(today)
+          const isSelected = key === selectedKey
+          return (
+            <div key={w} className="flex flex-col items-center pb-1">
+              <span
+                className={`text-center text-xs font-medium ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-500'}`}
+              >
+                {w}
+              </span>
+              <button
+                onClick={() => setSelectedKey(key)}
+                aria-label={`${key} 선택`}
+                className={`mt-1 flex h-7 w-7 items-center justify-center rounded-full text-sm transition ${
+                  isSelected
+                    ? 'bg-primary font-bold text-white'
+                    : isToday
+                      ? 'bg-emerald-100 font-semibold text-primary'
+                      : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                style={{
+                  opacity: dayViewOpen ? 1 : 0,
+                  visibility: dayViewOpen ? 'visible' : 'hidden',
+                  transition: 'opacity 200ms ease-out',
+                }}
+              >
+                {Number(key.slice(8))}
+              </button>
+            </div>
+          )
+        })}
       </div>
 
-      <div
-        ref={viewportRef}
-        className="relative min-h-0 flex-1 touch-none overflow-hidden"
-        onPointerDown={(e) => {
-          if (e.pointerType === 'mouse' && e.button !== 0) return
-          cancelSnap()
-          cancelWheel()
-          suppressClickRef.current = false
-          commit(beginMonthScroll(getState(), e.clientY, performance.now()))
-        }}
-      >
-      <div
-        ref={containerRef}
-        className="absolute inset-0"
-        style={{ transform: `translateY(${-scrollState.viewTop}px)` }}
-      >
-          {blocks.map(({ idx, top, height }) => {
+      <div className="relative min-h-0 flex-1">
+        <div
+          className="absolute inset-0"
+          style={{
+            transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+            opacity: dayViewOpen ? 0 : 1,
+            transform: dayViewOpen ? 'scale(0.98) translateY(-6px)' : 'none',
+            pointerEvents: dayViewOpen ? 'none' : undefined,
+          }}
+        >
+          <div
+            ref={viewportRef}
+            className="relative h-full touch-none overflow-hidden"
+            onPointerDown={(e) => {
+              if (e.pointerType === 'mouse' && e.button !== 0) return
+              cancelSnap()
+              cancelWheel()
+              suppressClickRef.current = false
+              commit(beginMonthScroll(getState(), e.clientY, performance.now()))
+            }}
+          >
+            <div
+              ref={containerRef}
+              className="absolute inset-0"
+              style={{ transform: `translateY(${-scrollState.viewTop}px)` }}
+            >
+              {blocks.map(({ idx, top, height }) => {
             const cells = buildMonthCells(monthFromIndex(idx))
             const rows = rowsInMonth(idx)
             return (
@@ -286,6 +360,7 @@ export function CalendarView({
                         onClick={() => {
                           if (suppressClickRef.current || !cell) return
                           setSelectedKey(toDateKey(cell))
+                          setDayViewOpen(true)
                         }}
                         className={`flex flex-col rounded-lg p-1 text-left transition ${
                           isSelected ? 'bg-emerald-50 ring-2 ring-primary' : 'hover:bg-gray-100'
@@ -364,6 +439,29 @@ export function CalendarView({
           })}
         </div>
       </div>
+    </div>
+    <div
+      className="absolute inset-0"
+      style={{
+        transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+        opacity: dayViewOpen ? 1 : 0,
+        transform: dayViewOpen ? 'none' : 'scale(0.98) translateY(6px)',
+        pointerEvents: dayViewOpen ? undefined : 'none',
+      }}
+    >
+      <DayView
+        selectedKey={selectedKey}
+        items={dayItems}
+        cats={cats}
+        markerTypes={markerTypes}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onEditMarker={onEditMarker}
+        onDeleteMarker={onDeleteMarker}
+        onClose={() => setDayViewOpen(false)}
+      />
+    </div>
+    </div>
     </div>
   )
 }

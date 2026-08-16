@@ -7,7 +7,7 @@ function pad2(n: number): string {
 }
 
 /** Local-timezone parse of a YYYY-MM-DD key (new Date(key) would parse as UTC) */
-function parseDateKey(key: string): Date {
+export function parseDateKey(key: string): Date {
   const [y, m, d] = key.split('-').map(Number)
   return new Date(y, m - 1, d)
 }
