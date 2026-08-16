@@ -374,15 +374,19 @@ export function CalendarView({
                         >
                           {cell?.getDate()}
                         </span>
-                        {dayMarkers?.map((m) => (
-                          <span
-                            key={m.id}
-                            className="mt-0.5 block w-full truncate rounded bg-blue-50 px-1 text-[10px] leading-tight text-blue-600"
-                            title={markerTypes.find((t) => t.id === m.typeId)?.name}
-                          >
-                            {markerTypes.find((t) => t.id === m.typeId)?.name ?? '?'}
+                        {dayMarkers && dayMarkers.length > 0 && (
+                          <span className="mt-0.5 flex items-center gap-0.5">
+                            <span
+                              className="flex-1 truncate rounded bg-blue-50 px-1 text-[10px] leading-tight text-blue-600"
+                              title={markerTypes.find((t) => t.id === dayMarkers[0].typeId)?.name}
+                            >
+                              {markerTypes.find((t) => t.id === dayMarkers[0].typeId)?.name ?? '?'}
+                            </span>
+                            {dayMarkers.length > 1 && (
+                              <span className="text-[10px] leading-none text-gray-400">{dayMarkers.length}</span>
+                            )}
                           </span>
-                        ))}
+                        )}
                         {indicator === 'count' ? (
                           list && list.length > 0 ? (
                             <span className="mt-0.5 flex items-center gap-1">
