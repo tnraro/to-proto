@@ -10,7 +10,6 @@ import {
   createMonthScroll,
   endMonthScroll,
   moveMonthScroll,
-  snapStartState,
   wheelMonthScroll,
   type MonthScrollState,
 } from '../lib/monthScroll'
@@ -42,14 +41,14 @@ export function CalendarView({
   const [scrollState, setScrollState] = useState(() => createMonthScroll(monthIndex(startOfMonth(today))))
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(today))
   const [vh, setVh] = useState(0)
-  const [snapping, setSnapping] = useState(false)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const stateRef = useRef(scrollState)
   stateRef.current = scrollState
   const suppressClickRef = useRef(false)
   const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const snapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const snapRafRef = useRef<number | null>(null)
+  const snapGenRef = useRef(0)
 
   useEffect(() => {
     onSelectedDateChange(selectedKey)
@@ -66,11 +65,9 @@ export function CalendarView({
   }, [])
 
   const cancelSnap = useCallback(() => {
-    if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
-    snapTimerRef.current = null
+    snapGenRef.current++
     if (snapRafRef.current !== null) cancelAnimationFrame(snapRafRef.current)
     snapRafRef.current = null
-    setSnapping(false)
   }, [])
 
   const cancelWheel = useCallback(() => {
@@ -78,33 +75,45 @@ export function CalendarView({
     wheelTimerRef.current = null
   }, [])
 
+  // Release: decide the target from the gesture (declarative), then tween the
+  // rendered position to it. The tween starts from the actually painted
+  // transform (measured), so deferred React renders can never cause a jump.
   const finishGesture = useCallback((preEnd: MonthScrollState) => {
     const r = endMonthScroll(preEnd, MONTH_LAYOUT)
-    stateRef.current = r.state
+    const target = preEnd.anchorIdx + r.change
     if (r.change !== 0 || preEnd.viewTop !== 0) {
-      const start = snapStartState(preEnd, r.change, MONTH_LAYOUT)
-      // Two-phase snap: render the start position with the transition off
-      // (identical to the release moment), then enable the transition and move
-      // to the settled position in the next frame. Toggling the transition in
-      // the same update as the position change would animate from the previous
-      // computed value instead.
-      setSnapping(false)
-      setScrollState(start)
-      snapRafRef.current = requestAnimationFrame(() => {
-        snapRafRef.current = requestAnimationFrame(() => {
+      const renderedViewTop = -(measureContainerY(containerRef.current) ?? -preEnd.viewTop)
+      const targetBlockTop =
+        r.change === 1
+          ? monthHeight(preEnd.anchorIdx, MONTH_LAYOUT)
+          : r.change === -1
+            ? -monthHeight(target, MONTH_LAYOUT)
+            : 0
+      const startViewTop = renderedViewTop - targetBlockTop
+      const gen = ++snapGenRef.current
+      stateRef.current = { ...createMonthScroll(target), viewTop: startViewTop }
+      setScrollState(stateRef.current)
+      const t0 = performance.now()
+      const tick = (now: number) => {
+        if (gen !== snapGenRef.current) return
+        const t = Math.min(1, (now - t0) / SNAP_MS)
+        const eased = 1 - Math.pow(1 - t, 3)
+        const viewTop = startViewTop * (1 - eased)
+        stateRef.current = { ...createMonthScroll(target), viewTop }
+        setScrollState(stateRef.current)
+        if (t < 1) {
+          snapRafRef.current = requestAnimationFrame(tick)
+        } else {
           snapRafRef.current = null
-          setSnapping(true)
-          setScrollState({ ...start, viewTop: 0 })
-          snapTimerRef.current = setTimeout(() => {
-            const settled = createMonthScroll(start.anchorIdx)
-            stateRef.current = settled
-            setSnapping(false)
-            setScrollState(settled)
-          }, SNAP_MS)
-        })
-      })
+          const settled = createMonthScroll(target)
+          stateRef.current = settled
+          setScrollState(settled)
+        }
+      }
+      snapRafRef.current = requestAnimationFrame(tick)
     } else {
-      setScrollState(r.state)
+      stateRef.current = createMonthScroll(target)
+      setScrollState(stateRef.current)
     }
   }, [])
 
@@ -127,7 +136,6 @@ export function CalendarView({
     return () => {
       vp.removeEventListener('wheel', onWheel)
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
-      if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
       if (snapRafRef.current !== null) cancelAnimationFrame(snapRafRef.current)
     }
   }, [cancelSnap, finishGesture])
@@ -212,13 +220,11 @@ export function CalendarView({
           setScrollState(stateRef.current)
         }}
       >
-        <div
-          className="absolute inset-0"
-          style={{
-            transform: `translateY(${-scrollState.viewTop}px)`,
-            transition: snapping ? `transform ${SNAP_MS}ms ease-out` : 'none',
-          }}
-        >
+      <div
+        ref={containerRef}
+        className="absolute inset-0"
+        style={{ transform: `translateY(${-scrollState.viewTop}px)` }}
+      >
           {blocks.map(({ idx, top, height }) => {
             const cells = buildMonthCells(monthFromIndex(idx))
             const rows = rowsInMonth(idx)
@@ -325,6 +331,24 @@ export function CalendarView({
       </div>
     </div>
   )
+}
+
+/** Actual painted translateY of the content container (render-lag independent) */
+function measureContainerY(el: HTMLDivElement | null): number | null {
+  if (!el) return null
+  const t = getComputedStyle(el).transform
+  if (!t || t === 'none') return 0
+  const m2 = t.match(/matrix\(([^)]+)\)/)
+  if (m2) {
+    const v = m2[1].split(',').map(Number)
+    return v.length >= 6 ? v[5] : 0
+  }
+  const m3 = t.match(/matrix3d\(([^)]+)\)/)
+  if (m3) {
+    const v = m3[1].split(',').map(Number)
+    return v.length >= 13 ? v[13] : 0
+  }
+  return 0
 }
 
 function buildMonthCells(cursor: Date): (Date | null)[] {

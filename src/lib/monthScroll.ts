@@ -72,15 +72,6 @@ export function endMonthScroll(
   return { state: createMonthScroll(s.anchorIdx + change), change }
 }
 
-/** Animation start state for a snap — screen position is continuous with the release moment */
-export function snapStartState(s: MonthScrollState, change: -1 | 0 | 1, layout: MonthLayout): MonthScrollState {
-  const anchorIdx = s.anchorIdx + change
-  let viewTop = s.viewTop
-  if (change > 0) viewTop -= monthHeight(s.anchorIdx, layout)
-  if (change < 0) viewTop += monthHeight(anchorIdx, layout)
-  return createMonthScroll(anchorIdx, viewTop)
-}
-
 function applyOffset(s: MonthScrollState, dy: number, y: number, t: number, layout: MonthLayout): MoveResult {
   let anchorIdx = s.anchorIdx
   let viewTop = s.viewTop + dy

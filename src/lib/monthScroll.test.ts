@@ -5,7 +5,6 @@ import {
   createMonthScroll,
   endMonthScroll,
   moveMonthScroll,
-  snapStartState,
   wheelMonthScroll,
 } from './monthScroll'
 
@@ -135,26 +134,6 @@ describe('end (스냅 판정)', () => {
     s = moveMonthScroll(s, 160, 30, LAYOUT).state // viewTop 50, 속도 2
     const r = endMonthScroll(s, LAYOUT)
     expect(r.change).toBe(-1)
-  })
-})
-
-describe('snapStartState (애니메이션 연속성)', () => {
-  test('다음 달 스냅: 화면 위치 불변', () => {
-    const s = snapStartState({ ...createMonthScroll(FEB), viewTop: 50 }, 1, LAYOUT)
-    expect(s.anchorIdx).toBe(MAR)
-    expect(s.viewTop).toBe(50 - 272)
-  })
-
-  test('이전 달 스냅', () => {
-    const s = snapStartState({ ...createMonthScroll(FEB), viewTop: 50 }, -1, LAYOUT)
-    expect(s.anchorIdx).toBe(JAN)
-    expect(s.viewTop).toBe(50 + 324)
-  })
-
-  test('원위치 스냅', () => {
-    const s = snapStartState({ ...createMonthScroll(FEB), viewTop: 50 }, 0, LAYOUT)
-    expect(s.anchorIdx).toBe(FEB)
-    expect(s.viewTop).toBe(50)
   })
 })
 
