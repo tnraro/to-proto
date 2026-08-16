@@ -114,6 +114,9 @@ export function CalendarView({
       e.preventDefault()
       cancelSnap()
       const r = wheelMonthScroll(getState(), e.deltaY, performance.now(), MONTH_LAYOUT)
+      // Refused (finger gesture in progress): ignore entirely — scheduling the
+      // idle timer here would fire finishGesture mid-drag and reset the session
+      if (!r.active) return
       commit(r.state)
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
       wheelTimerRef.current = setTimeout(() => {
