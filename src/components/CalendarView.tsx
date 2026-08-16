@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Cat, Marker, MarkerType, TimelineItem, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
-import { WEEKDAYS, groupByDay, monthLabel, parseDateKey, startOfMonth, toDateKey, weekDayKeys } from '../lib/dates'
+import { WEEKDAYS, addDays, groupByDay, monthLabel, parseDateKey, startOfMonth, toDateKey, weekDayKeys } from '../lib/dates'
 import { pieSegments } from '../lib/pieSegments'
 import type { CalendarIndicator } from '../lib/calendarIndicator'
 import { blockOffset, blockWindow, monthFromIndex, monthIndex, rowsInMonth, type MonthLayout } from '../lib/monthList'
@@ -225,6 +225,10 @@ export function CalendarView({
   }, [recordsByDay, markersByDay, selectedKey])
 
   const weekKeys = useMemo(() => weekDayKeys(selectedKey), [selectedKey])
+
+  const navigateDay = useCallback((delta: -1 | 1) => {
+    setSelectedKey((key) => toDateKey(addDays(parseDateKey(key), delta)))
+  }, [])
 
   const blocks = useMemo(
     () => blockWindow(scrollState.anchorIdx, scrollState.viewTop, vh, MONTH_LAYOUT),
@@ -459,6 +463,7 @@ export function CalendarView({
         onEditMarker={onEditMarker}
         onDeleteMarker={onDeleteMarker}
         onClose={() => setDayViewOpen(false)}
+        onNavigate={navigateDay}
       />
     </div>
     </div>
