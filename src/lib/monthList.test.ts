@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { blockCount, monthFromIndex, monthHeight, monthIndex, rowsInMonth, type MonthLayout } from './monthList'
+import { blockCount, blockOffset, monthFromIndex, monthHeight, monthIndex, rowsInMonth, type MonthLayout } from './monthList'
 
 const LAYOUT: MonthLayout = { headerH: 64, rowH: 52 }
 
@@ -68,5 +68,29 @@ describe('blockCount', () => {
     const maxH = 64 + 6 * 52
     // 아래쪽 블록 (count-1)개가 maxH + vh를 덮어야 함
     expect((count - 1) * minH).toBeGreaterThanOrEqual(maxH + vh)
+  })
+})
+
+describe('blockOffset', () => {
+  const FEB = monthIndex(new Date(2026, 1, 1))
+  const JAN = FEB - 1
+  const MAR = FEB + 1
+
+  test('같은 앵커는 0', () => {
+    expect(blockOffset(FEB, FEB, LAYOUT)).toBe(0)
+  })
+
+  test('다음 달은 앵커 높이', () => {
+    expect(blockOffset(FEB, MAR, LAYOUT)).toBe(monthHeight(FEB, LAYOUT))
+  })
+
+  test('이전 달은 음수 높이', () => {
+    expect(blockOffset(FEB, JAN, LAYOUT)).toBe(-monthHeight(JAN, LAYOUT))
+  })
+
+  test('여러 달 누적 (양방향 대칭)', () => {
+    const two = monthHeight(FEB, LAYOUT) + monthHeight(MAR, LAYOUT)
+    expect(blockOffset(FEB, MAR + 1, LAYOUT)).toBe(two)
+    expect(blockOffset(MAR + 1, FEB, LAYOUT)).toBe(-two)
   })
 })

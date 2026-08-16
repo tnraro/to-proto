@@ -69,9 +69,10 @@ export function wheelMonthScroll(s: MonthScrollState, dy: number, t: number, lay
 /** Release. Two rules with separate reference frames:
  *  - positional (no flick): relative to the release anchor — past the midpoint
  *    snaps to the nearest boundary ahead (+1), otherwise stay.
- *  - flick: relative to the gesture-start anchor — guarantees at least one
- *    month of travel in the flick direction, but never more than the drag
- *    itself already covered (no double-stacking with boundary crossings). */
+ *  - flick: relative to the gesture-start anchor — target is one month in the
+ *    flick direction from the start (start ± 1), unless the drag already
+ *    crossed further in that direction (release anchor wins). This keeps the
+ *    flick from stacking on top of boundary crossings made during the drag. */
 export function endMonthScroll(
   s: MonthScrollState,
   layout: MonthLayout,

@@ -13,6 +13,7 @@ const LAYOUT: MonthLayout = { headerH: 64, rowH: 52 }
 const FEB = monthIndex(new Date(2026, 1, 1))
 const JAN = FEB - 1
 const MAR = FEB + 1
+const DEC = FEB - 2
 
 describe('begin / move (세션)', () => {
   test('begin은 pressed 시작', () => {
@@ -172,6 +173,18 @@ describe('end (스냅 판정)', () => {
     const r = endMonthScroll(s, LAYOUT)
     expect(r.change).toBe(0)
     expect(r.state.anchorIdx).toBe(JAN)
+  })
+
+  test('역방향(아래) 드래그 후 순방향(위) 플릭: 목표는 시작 앵커 ± 1', () => {
+    let s = beginMonthScroll(createMonthScroll(FEB), 300, 0)
+    s = moveMonthScroll(s, 420, 100, LAYOUT).state // takeover
+    s = moveMonthScroll(s, 1060, 400, LAYOUT).state // 느린 아래 드래그 640px → DEC 8
+    expect(s.anchorIdx).toBe(DEC)
+    s = moveMonthScroll(s, 760, 430, LAYOUT).state // 빠른 위 플릭 → viewTop 308, 속도 -10
+    expect(s.anchorIdx).toBe(DEC)
+    const r = endMonthScroll(s, LAYOUT)
+    expect(r.change).toBe(1)
+    expect(r.state.anchorIdx).toBe(MAR) // 릴리스 앵커(DEC)에서 3개월 앞
   })
 })
 

@@ -4,7 +4,7 @@ import { VOMIT_TYPES } from '../types'
 import { WEEKDAYS, groupByDay, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
 import { pieSegments } from '../lib/pieSegments'
 import type { CalendarIndicator } from '../lib/calendarIndicator'
-import { blockCount, monthFromIndex, monthHeight, monthIndex, rowsInMonth, type MonthLayout } from '../lib/monthList'
+import { blockCount, blockOffset, monthFromIndex, monthHeight, monthIndex, rowsInMonth, type MonthLayout } from '../lib/monthList'
 import {
   beginMonthScroll,
   createMonthScroll,
@@ -83,12 +83,8 @@ export function CalendarView({
     const target = r.state.anchorIdx
     if (r.change !== 0 || preEnd.viewTop !== 0) {
       const renderedViewTop = -(measureContainerY(containerRef.current) ?? -preEnd.viewTop)
-      const targetBlockTop =
-        target > preEnd.anchorIdx
-          ? monthHeight(preEnd.anchorIdx, MONTH_LAYOUT)
-          : target < preEnd.anchorIdx
-            ? -monthHeight(target, MONTH_LAYOUT)
-            : 0
+      // Target may be several months away (flick clamp vs. release anchor)
+      const targetBlockTop = blockOffset(preEnd.anchorIdx, target, MONTH_LAYOUT)
       const startViewTop = renderedViewTop - targetBlockTop
       const gen = ++snapGenRef.current
       stateRef.current = { ...createMonthScroll(target), viewTop: startViewTop }
