@@ -34,8 +34,16 @@ export function useMonthScrollStore(initialAnchorIdx: number) {
   const getState = useCallback(() => store.state, [store])
   const commit = useCallback(
     (next: MonthScrollState) => {
+      // Only the rendered fields (anchorIdx, viewTop) drive the UI — session
+      // and sample bookkeeping are gesture-internal. Notify only when a
+      // rendered field changes, so taps and pressed-phase moves skip
+      // re-renders entirely. If a future UI reads another field, add it here.
+      const renderedChanged =
+        next.anchorIdx !== store.state.anchorIdx || next.viewTop !== store.state.viewTop
       store.state = next
-      for (const listener of store.listeners) listener()
+      if (renderedChanged) {
+        for (const listener of store.listeners) listener()
+      }
     },
     [store],
   )
