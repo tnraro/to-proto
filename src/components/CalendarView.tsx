@@ -13,6 +13,7 @@ import {
   wheelMonthScroll,
   type MonthScrollState,
 } from '../lib/monthScroll'
+import { useMonthScrollStore } from '../hooks/useMonthScrollStore'
 
 const MAX_TYPE_PAIRS = 3
 /** Must match the CSS below: month label + 52px cells with 4px gaps */
@@ -38,13 +39,11 @@ export function CalendarView({
   onSelectedDateChange,
 }: Props) {
   const today = new Date()
-  const [scrollState, setScrollState] = useState(() => createMonthScroll(monthIndex(startOfMonth(today))))
+  const { scrollState, commit, getState } = useMonthScrollStore(monthIndex(startOfMonth(today)))
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(today))
   const [vh, setVh] = useState(0)
   const viewportRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const stateRef = useRef(scrollState)
-  stateRef.current = scrollState
   const suppressClickRef = useRef(false)
   const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const snapRafRef = useRef<number | null>(null)
@@ -87,31 +86,26 @@ export function CalendarView({
       const targetBlockTop = blockOffset(preEnd.anchorIdx, target, MONTH_LAYOUT)
       const startViewTop = renderedViewTop - targetBlockTop
       const gen = ++snapGenRef.current
-      stateRef.current = { ...createMonthScroll(target), viewTop: startViewTop }
-      setScrollState(stateRef.current)
+      commit({ ...createMonthScroll(target), viewTop: startViewTop })
       const t0 = performance.now()
       const tick = (now: number) => {
         if (gen !== snapGenRef.current) return
         const t = Math.min(1, (now - t0) / SNAP_MS)
         const eased = 1 - Math.pow(1 - t, 3)
         const viewTop = startViewTop * (1 - eased)
-        stateRef.current = { ...createMonthScroll(target), viewTop }
-        setScrollState(stateRef.current)
+        commit({ ...createMonthScroll(target), viewTop })
         if (t < 1) {
           snapRafRef.current = requestAnimationFrame(tick)
         } else {
           snapRafRef.current = null
-          const settled = createMonthScroll(target)
-          stateRef.current = settled
-          setScrollState(settled)
+          commit(createMonthScroll(target))
         }
       }
       snapRafRef.current = requestAnimationFrame(tick)
     } else {
-      stateRef.current = createMonthScroll(target)
-      setScrollState(stateRef.current)
+      commit(createMonthScroll(target))
     }
-  }, [])
+  }, [commit])
 
   useEffect(() => {
     const vp = viewportRef.current
@@ -119,13 +113,12 @@ export function CalendarView({
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       cancelSnap()
-      const r = wheelMonthScroll(stateRef.current, e.deltaY, performance.now(), MONTH_LAYOUT)
-      stateRef.current = r.state
-      setScrollState(r.state)
+      const r = wheelMonthScroll(getState(), e.deltaY, performance.now(), MONTH_LAYOUT)
+      commit(r.state)
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
       wheelTimerRef.current = setTimeout(() => {
         wheelTimerRef.current = null
-        finishGesture(stateRef.current)
+        finishGesture(getState())
       }, WHEEL_IDLE_MS)
     }
     vp.addEventListener('wheel', onWheel, { passive: false })
@@ -134,29 +127,25 @@ export function CalendarView({
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
       if (snapRafRef.current !== null) cancelAnimationFrame(snapRafRef.current)
     }
-  }, [cancelSnap, finishGesture])
+  }, [cancelSnap, commit, finishGesture, getState])
 
   useEffect(() => {
     // No pointer capture: capturing retargets the click event to the capture
     // element, which would swallow day-cell taps
     const onPointerMove = (e: PointerEvent) => {
-      if (stateRef.current.session === 'idle') return
-      const r = moveMonthScroll(stateRef.current, e.clientY, performance.now(), MONTH_LAYOUT)
-      stateRef.current = r.state
-      if (r.active) {
-        suppressClickRef.current = true
-        setScrollState(r.state)
-      }
+      if (getState().session === 'idle') return
+      const r = moveMonthScroll(getState(), e.clientY, performance.now(), MONTH_LAYOUT)
+      commit(r.state)
+      if (r.active) suppressClickRef.current = true
     }
     const onPointerUp = () => {
-      if (stateRef.current.session === 'idle') return
-      finishGesture(stateRef.current)
+      if (getState().session === 'idle') return
+      finishGesture(getState())
     }
     const onPointerCancel = () => {
       cancelWheel()
       cancelSnap()
-      stateRef.current = createMonthScroll(stateRef.current.anchorIdx)
-      setScrollState(stateRef.current)
+      commit(createMonthScroll(getState().anchorIdx))
     }
     window.addEventListener('pointermove', onPointerMove)
     window.addEventListener('pointerup', onPointerUp)
@@ -166,7 +155,7 @@ export function CalendarView({
       window.removeEventListener('pointerup', onPointerUp)
       window.removeEventListener('pointercancel', onPointerCancel)
     }
-  }, [cancelSnap, cancelWheel, finishGesture])
+  }, [cancelSnap, cancelWheel, commit, finishGesture, getState])
 
   const recordsByDay = useMemo(() => groupByDay(records), [records])
   const markersByDay = useMemo(() => groupByDay(markers), [markers])
@@ -212,8 +201,7 @@ export function CalendarView({
           cancelSnap()
           cancelWheel()
           suppressClickRef.current = false
-          stateRef.current = beginMonthScroll(stateRef.current, e.clientY, performance.now())
-          setScrollState(stateRef.current)
+          commit(beginMonthScroll(getState(), e.clientY, performance.now()))
         }}
       >
       <div
