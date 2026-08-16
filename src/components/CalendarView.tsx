@@ -66,6 +66,17 @@ export function CalendarView({
     dayViewOpenRef.current = dayViewOpen
   }, [dayViewOpen])
 
+  // The hidden month grid must point at the selected day's month — when the
+  // day view is open, every selected-day change (strip tap, swipe, today)
+  // reconciles the grid anchor so returning shows the right month
+  useEffect(() => {
+    if (!dayViewOpen) return
+    const month = monthIndex(parseDateKey(selectedKey))
+    if (getState().anchorIdx !== month) {
+      commit(createMonthScroll(month))
+    }
+  }, [dayViewOpen, selectedKey, commit, getState])
+
   useEffect(() => {
     onSelectedDateChange(selectedKey)
   }, [selectedKey, onSelectedDateChange])
