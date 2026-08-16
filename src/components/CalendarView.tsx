@@ -292,7 +292,7 @@ export function CalendarView({
               <button
                 onClick={() => setSelectedKey(key)}
                 aria-label={`${key} 선택`}
-                className={`mt-1 flex h-7 w-7 items-center justify-center rounded-full text-sm transition ${
+                className={`relative mt-1 flex h-7 w-7 items-center justify-center rounded-full text-sm transition ${
                   isSelected
                     ? 'bg-primary font-bold text-white'
                     : isToday
@@ -306,6 +306,9 @@ export function CalendarView({
                 }}
               >
                 {Number(key.slice(8))}
+                {(recordsByDay.get(key)?.length ?? 0) + (markersByDay.get(key)?.length ?? 0) > 0 && (
+                  <span className={`absolute bottom-0.5 h-1 w-1 rounded-full ${isSelected ? 'bg-white' : 'bg-gray-400'}`} />
+                )}
               </button>
             </div>
           )
