@@ -4,7 +4,7 @@ import { VOMIT_TYPES } from '../types'
 import { WEEKDAYS, groupByDay, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
 import { pieSegments } from '../lib/pieSegments'
 import type { CalendarIndicator } from '../lib/calendarIndicator'
-import { blockCount, blockOffset, monthFromIndex, monthHeight, monthIndex, rowsInMonth, type MonthLayout } from '../lib/monthList'
+import { blockOffset, blockWindow, monthFromIndex, monthIndex, rowsInMonth, type MonthLayout } from '../lib/monthList'
 import {
   beginMonthScroll,
   createMonthScroll,
@@ -163,19 +163,10 @@ export function CalendarView({
   const recordsByDay = useMemo(() => groupByDay(records), [records])
   const markersByDay = useMemo(() => groupByDay(markers), [markers])
 
-  const blocks = useMemo(() => {
-    const count = blockCount(vh, MONTH_LAYOUT)
-    const firstIdx = scrollState.anchorIdx - 1
-    const list: { idx: number; top: number; height: number }[] = []
-    let acc = 0
-    for (let i = 0; i < count; i++) {
-      const idx = firstIdx + i
-      const height = monthHeight(idx, MONTH_LAYOUT)
-      list.push({ idx, top: acc, height })
-      acc += height
-    }
-    return list
-  }, [vh, scrollState.anchorIdx])
+  const blocks = useMemo(
+    () => blockWindow(scrollState.anchorIdx, scrollState.viewTop, vh, MONTH_LAYOUT),
+    [vh, scrollState.anchorIdx, scrollState.viewTop],
+  )
 
   const anchorLabel = monthLabel(monthFromIndex(scrollState.anchorIdx))
 

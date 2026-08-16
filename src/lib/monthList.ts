@@ -32,15 +32,36 @@ export function monthHeight(idx: number, layout: MonthLayout = DEFAULT_LAYOUT): 
   return layout.headerH + rowsInMonth(idx) * layout.rowH
 }
 
-const MIN_ROWS = 4
-const MAX_ROWS = 6
+export interface MonthBlock {
+  idx: number
+  top: number
+  height: number
+}
 
-/** Blocks needed so the viewport [viewTop, viewTop + vh] stays covered while the
- *  anchor shifts one month in either direction (viewTop ≤ max month height) */
-export function blockCount(vh: number, layout: MonthLayout = DEFAULT_LAYOUT): number {
-  const minH = layout.headerH + MIN_ROWS * layout.rowH
-  const maxH = layout.headerH + MAX_ROWS * layout.rowH
-  return Math.ceil((maxH + vh) / minH) + 1
+/** Blocks covering the viewport [viewTop, viewTop + vh] with the anchor block
+ *  at local top 0 (machine coordinates). viewTop can be negative during a snap
+ *  tween (viewport top edge above the anchor top), so the window walks upward
+ *  as needed — the walk is bounded by one gesture's travel. */
+export function blockWindow(
+  anchorIdx: number,
+  viewTop: number,
+  vh: number,
+  layout: MonthLayout = DEFAULT_LAYOUT,
+): MonthBlock[] {
+  let startIdx = anchorIdx
+  let aboveH = 0
+  while (aboveH < Math.max(0, -viewTop)) {
+    startIdx -= 1
+    aboveH += monthHeight(startIdx, layout)
+  }
+  const blocks: MonthBlock[] = []
+  let acc = aboveH ? -aboveH : 0
+  for (let idx = startIdx; blocks.length === 0 || acc < viewTop + vh; idx++) {
+    const height = monthHeight(idx, layout)
+    blocks.push({ idx, top: acc, height })
+    acc += height
+  }
+  return blocks
 }
 
 /** Local top of targetIdx's block relative to anchorIdx's block top.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { blockCount, blockOffset, monthFromIndex, monthHeight, monthIndex, rowsInMonth, type MonthLayout } from './monthList'
+import { blockOffset, blockWindow, monthFromIndex, monthHeight, monthIndex, rowsInMonth, type MonthLayout } from './monthList'
 
 const LAYOUT: MonthLayout = { headerH: 64, rowH: 52 }
 
@@ -50,24 +50,43 @@ describe('monthHeight', () => {
   })
 })
 
-describe('blockCount', () => {
-  test('뷰포트가 0이면 최소 블록 수', () => {
-    expect(blockCount(0, LAYOUT)).toBe(Math.ceil((64 + 6 * 52) / (64 + 4 * 52)) + 1)
+describe('blockWindow', () => {
+  const FEB = monthIndex(new Date(2026, 1, 1))
+  const JAN = FEB - 1
+
+  test('앵커 블록이 로컬 top 0 (머신 좌표계 일치)', () => {
+    const blocks = blockWindow(FEB, 0, 300, LAYOUT)
+    expect(blocks[0].idx).toBe(FEB)
+    expect(blocks[0].top).toBe(0)
   })
 
-  test('뷰포트가 커질수록 블록 수 증가', () => {
-    const small = blockCount(300, LAYOUT)
-    const large = blockCount(900, LAYOUT)
-    expect(large).toBeGreaterThan(small)
-  })
-
-  test('항상 앵커 위 1개월 포함해 커버', () => {
+  test('뷰포트 [viewTop, viewTop+vh] 항상 커버', () => {
     const vh = 300
-    const count = blockCount(vh, LAYOUT)
-    const minH = 64 + 4 * 52
-    const maxH = 64 + 6 * 52
-    // 아래쪽 블록 (count-1)개가 maxH + vh를 덮어야 함
-    expect((count - 1) * minH).toBeGreaterThanOrEqual(maxH + vh)
+    for (const viewTop of [0, 100, 271, 272]) {
+      const blocks = blockWindow(FEB, viewTop, vh, LAYOUT)
+      expect(blocks[0].top).toBeLessThanOrEqual(viewTop)
+      const last = blocks[blocks.length - 1]
+      expect(last.top + last.height).toBeGreaterThanOrEqual(viewTop + vh)
+    }
+  })
+
+  test('음수 viewTop (스냅 트윈)은 위쪽 블록을 포함', () => {
+    const blocks = blockWindow(FEB, -50, 300, LAYOUT)
+    expect(blocks[0].idx).toBe(JAN)
+    expect(blocks[0].top).toBeLessThanOrEqual(-50)
+    expect(blocks.find((b) => b.idx === FEB)?.top).toBe(0)
+  })
+
+  test('블록은 인덱스와 위치가 연속', () => {
+    const blocks = blockWindow(FEB, 100, 300, LAYOUT)
+    for (let i = 1; i < blocks.length; i++) {
+      expect(blocks[i].idx).toBe(blocks[i - 1].idx + 1)
+      expect(blocks[i].top).toBe(blocks[i - 1].top + blocks[i - 1].height)
+    }
+  })
+
+  test('vh가 0이어도 최소 1개 블록', () => {
+    expect(blockWindow(FEB, 0, 0, LAYOUT).length).toBeGreaterThan(0)
   })
 })
 
