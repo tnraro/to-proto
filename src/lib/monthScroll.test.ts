@@ -131,9 +131,47 @@ describe('end (스냅 판정)', () => {
   test('빠른 아래쪽 플릭은 이전 달', () => {
     let s = beginMonthScroll(createMonthScroll(FEB), 100, 0)
     s = moveMonthScroll(s, 110, 20, LAYOUT).state // takeover
-    s = moveMonthScroll(s, 160, 30, LAYOUT).state // viewTop 50, 속도 2
+    s = moveMonthScroll(s, 160, 30, LAYOUT).state // viewTop -50 → JAN 274, 속도 2
     const r = endMonthScroll(s, LAYOUT)
     expect(r.change).toBe(-1)
+    expect(r.state.anchorIdx).toBe(JAN)
+  })
+
+  test('경계를 넘은 아래 플릭은 중첩 없이 현재 앵커로 (1개월)', () => {
+    let s = beginMonthScroll(createMonthScroll(FEB), 100, 0)
+    s = moveMonthScroll(s, 130, 20, LAYOUT).state // takeover (+30 → JAN으로 시프트)
+    s = moveMonthScroll(s, 190, 30, LAYOUT).state // viewTop -60 → JAN 264, 속도 3
+    const r = endMonthScroll(s, LAYOUT)
+    expect(r.change).toBe(-1)
+    expect(r.state.anchorIdx).toBe(JAN)
+  })
+
+  test('긴 위쪽 드래그 후 플릭도 중첩 없이 현재 앵커로', () => {
+    let s = beginMonthScroll(createMonthScroll(FEB), 300, 0)
+    s = moveMonthScroll(s, 180, 20, LAYOUT).state // takeover
+    s = moveMonthScroll(s, -100, 30, LAYOUT).state // viewTop 280 → MAR, 속도 -13
+    const r = endMonthScroll(s, LAYOUT)
+    expect(r.change).toBe(1)
+    expect(r.state.anchorIdx).toBe(MAR)
+  })
+
+  test('아래 드래그 절반 미만 느린 릴리스는 원래 월로 복귀 (위치 규칙)', () => {
+    let s = beginMonthScroll(createMonthScroll(FEB), 200, 0)
+    s = moveMonthScroll(s, 230, 100, LAYOUT).state // takeover (+30)
+    s = moveMonthScroll(s, 300, 500, LAYOUT).state // viewTop -70 → JAN 254 (> 절반), 속도 0.2
+    expect(s.anchorIdx).toBe(JAN)
+    const r = endMonthScroll(s, LAYOUT)
+    expect(r.change).toBe(1)
+    expect(r.state.anchorIdx).toBe(FEB)
+  })
+
+  test('아래 드래그 절반 초과 느린 릴리스는 이전 달로 이동', () => {
+    let s = beginMonthScroll(createMonthScroll(FEB), 200, 0)
+    s = moveMonthScroll(s, 230, 100, LAYOUT).state // takeover
+    s = moveMonthScroll(s, 400, 500, LAYOUT).state // viewTop -170 → JAN 154 (< 절반), 속도 0.4
+    const r = endMonthScroll(s, LAYOUT)
+    expect(r.change).toBe(0)
+    expect(r.state.anchorIdx).toBe(JAN)
   })
 })
 

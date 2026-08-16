@@ -13,6 +13,9 @@ export interface MonthScrollState {
   anchorIdx: number
   /** Offset of the viewport top edge within the anchor month, [0, h(anchor)] */
   viewTop: number
+  /** Anchor at gesture start — flick targets are clamped to this so the
+   *  flick never stacks on top of boundary crossings made during the drag */
+  startAnchorIdx: number
   session: ScrollSession
   startY: number | null
   lastY: number | null
@@ -26,12 +29,20 @@ export interface MoveResult {
 }
 
 export function createMonthScroll(anchorIdx: number, viewTop = 0): MonthScrollState {
-  return { anchorIdx, viewTop, session: 'idle', startY: null, lastY: null, samples: [] }
+  return {
+    anchorIdx,
+    viewTop,
+    startAnchorIdx: anchorIdx,
+    session: 'idle',
+    startY: null,
+    lastY: null,
+    samples: [],
+  }
 }
 
 export function beginMonthScroll(s: MonthScrollState, y: number, t: number): MonthScrollState {
   if (s.session !== 'idle') return s
-  return { ...s, session: 'pressed', startY: y, lastY: y, samples: [{ t, y }] }
+  return { ...s, session: 'pressed', startAnchorIdx: s.anchorIdx, startY: y, lastY: y, samples: [{ t, y }] }
 }
 
 /** Finger drag. Pressed → dragging after the start threshold (stable takeover). */
@@ -51,13 +62,16 @@ export function moveMonthScroll(s: MonthScrollState, y: number, t: number, layou
  *  scroll; sampled y is inverted so flick direction matches finger semantics. */
 export function wheelMonthScroll(s: MonthScrollState, dy: number, t: number, layout: MonthLayout): MoveResult {
   if (s.session !== 'idle' && s.session !== 'dragging') return { state: s, active: false }
-  return applyOffset({ ...s, session: 'dragging', lastY: 0 }, dy, lastSampleY(s) - dy, t, layout)
+  const startAnchorIdx = s.session === 'idle' ? s.anchorIdx : s.startAnchorIdx
+  return applyOffset({ ...s, session: 'dragging', startAnchorIdx, lastY: 0 }, dy, lastSampleY(s) - dy, t, layout)
 }
 
-/** Release. Flick velocity wins. Positional rule: past the midpoint of the
- *  anchor month → advance (+1), otherwise stay on the anchor. A backward
- *  change (-1) only happens via flick — crossing a boundary already shifted
- *  the anchor, so "returning" is +1 relative to the new anchor. */
+/** Release. Two rules with separate reference frames:
+ *  - positional (no flick): relative to the release anchor — past the midpoint
+ *    snaps to the nearest boundary ahead (+1), otherwise stay.
+ *  - flick: relative to the gesture-start anchor — guarantees at least one
+ *    month of travel in the flick direction, but never more than the drag
+ *    itself already covered (no double-stacking with boundary crossings). */
 export function endMonthScroll(
   s: MonthScrollState,
   layout: MonthLayout,
@@ -66,10 +80,22 @@ export function endMonthScroll(
   const v = velocity(s.samples)
   const h = monthHeight(s.anchorIdx, layout)
   let change: -1 | 0 | 1 = 0
-  if (v < -FLICK_VELOCITY) change = 1
-  else if (v > FLICK_VELOCITY) change = -1
-  else if (s.viewTop > SNAP_RATIO * h) change = 1
-  return { state: createMonthScroll(s.anchorIdx + change), change }
+  let flick = false
+  if (v < -FLICK_VELOCITY) {
+    change = 1
+    flick = true
+  } else if (v > FLICK_VELOCITY) {
+    change = -1
+    flick = true
+  } else if (s.viewTop > SNAP_RATIO * h) {
+    change = 1
+  }
+  let target = s.anchorIdx + change
+  if (flick) {
+    if (change === 1) target = Math.max(s.startAnchorIdx + 1, s.anchorIdx)
+    else if (change === -1) target = Math.min(s.startAnchorIdx - 1, s.anchorIdx)
+  }
+  return { state: createMonthScroll(target), change }
 }
 
 function applyOffset(s: MonthScrollState, dy: number, y: number, t: number, layout: MonthLayout): MoveResult {

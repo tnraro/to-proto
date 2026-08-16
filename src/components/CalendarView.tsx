@@ -80,13 +80,13 @@ export function CalendarView({
   // transform (measured), so deferred React renders can never cause a jump.
   const finishGesture = useCallback((preEnd: MonthScrollState) => {
     const r = endMonthScroll(preEnd, MONTH_LAYOUT)
-    const target = preEnd.anchorIdx + r.change
+    const target = r.state.anchorIdx
     if (r.change !== 0 || preEnd.viewTop !== 0) {
       const renderedViewTop = -(measureContainerY(containerRef.current) ?? -preEnd.viewTop)
       const targetBlockTop =
-        r.change === 1
+        target > preEnd.anchorIdx
           ? monthHeight(preEnd.anchorIdx, MONTH_LAYOUT)
-          : r.change === -1
+          : target < preEnd.anchorIdx
             ? -monthHeight(target, MONTH_LAYOUT)
             : 0
       const startViewTop = renderedViewTop - targetBlockTop
