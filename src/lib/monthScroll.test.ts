@@ -6,7 +6,6 @@ import {
   endMonthScroll,
   moveMonthScroll,
   normalizeWheelDelta,
-  wheelMonthScroll,
 } from './monthScroll'
 
 const LAYOUT: MonthLayout = { headerH: 64, rowH: 52 }
@@ -189,69 +188,6 @@ describe('end (스냅 판정)', () => {
   })
 })
 
-describe('wheelMonthScroll', () => {
-  test('휠 아래로 = 다음 달 방향 (네이티브 스크롤 방향)', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), 300, 0, LAYOUT).state // 300 > 272
-    expect(s.anchorIdx).toBe(MAR)
-    expect(s.viewTop).toBe(28)
-  })
-
-  test('휠 위로 = 이전 달 방향', () => {
-    const s = wheelMonthScroll(createMonthScroll(FEB), -50, 0, LAYOUT).state
-    expect(s.anchorIdx).toBe(JAN)
-    expect(s.viewTop).toBe(324 - 50)
-  })
-
-  test('휠 버스트는 마지막 방향으로 1개월 스냅', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), 300, 0, LAYOUT).state
-    s = wheelMonthScroll(s, 200, 100, LAYOUT).state
-    s = wheelMonthScroll(s, 300, 200, LAYOUT).state // APR 204
-    const r = endMonthScroll(s, LAYOUT)
-    expect(r.change).toBe(1)
-    expect(r.state.anchorIdx).toBe(MAR + 2)
-  })
-
-  test('휠 아주 조금 굴려도 취소 없이 이동 (아래)', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), 30, 0, LAYOUT).state // FEB 30 < 절반
-    const r = endMonthScroll(s, LAYOUT)
-    expect(r.change).toBe(1)
-    expect(r.state.anchorIdx).toBe(MAR)
-  })
-
-  test('휠 아주 조금 굴려도 취소 없이 이동 (위)', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), -30, 0, LAYOUT).state // JAN 294
-    expect(s.anchorIdx).toBe(JAN)
-    const r = endMonthScroll(s, LAYOUT)
-    expect(r.change).toBe(-1)
-    expect(r.state.anchorIdx).toBe(DEC)
-  })
-
-  test('버스트 후반의 방향이 판정', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), 300, 0, LAYOUT).state // MAR 28
-    s = wheelMonthScroll(s, -50, 100, LAYOUT).state // viewTop -22 → FEB 250, wheelDir -1
-    expect(s.anchorIdx).toBe(FEB)
-    const r = endMonthScroll(s, LAYOUT)
-    expect(r.change).toBe(-1)
-    expect(r.state.anchorIdx).toBe(JAN)
-  })
-
-  test('핑거 세션 중 휠은 무시', () => {
-    let s = beginMonthScroll(createMonthScroll(FEB), 100, 0)
-    s = moveMonthScroll(s, 130, 10, LAYOUT).state // dragging
-    const r = wheelMonthScroll(s, 300, 20, LAYOUT)
-    expect(r.active).toBe(false)
-    expect(r.state).toBe(s)
-  })
-
-  test('휠 세션 중 moveMonthScroll은 무시 (호버 오프셋 차단)', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), 200, 0, LAYOUT).state // 'wheel' 세션
-    const r = moveMonthScroll(s, 400, 10, LAYOUT)
-    expect(r.active).toBe(false)
-    expect(r.state).toBe(s)
-    expect(s.viewTop).toBe(200)
-  })
-})
-
 describe('normalizeWheelDelta', () => {
   test('px 모드는 그대로', () => {
     expect(normalizeWheelDelta(120, 0, 800)).toBe(120)
@@ -266,30 +202,22 @@ describe('normalizeWheelDelta', () => {
   })
 })
 
-describe('입력 핸드오프 (휠 → 포인터)', () => {
+describe('입력 핸드오프 (다른 세션에서 begin)', () => {
   test('begin은 잔존 세션을 버리고 위치를 유지한 채 재시작', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), 200, 0, LAYOUT).state // FEB 200, 'wheel'
+    let s = beginMonthScroll(createMonthScroll(FEB), 100, 0)
+    s = moveMonthScroll(s, 130, 10, LAYOUT).state // dragging, viewTop 0
     s = beginMonthScroll(s, 500, 100)
     expect(s.session).toBe('pressed')
     expect(s.anchorIdx).toBe(FEB)
-    expect(s.viewTop).toBe(200)
+    expect(s.viewTop).toBe(0)
     expect(s.startAnchorIdx).toBe(FEB)
     expect(s.samples).toEqual([{ t: 100, y: 500 }])
   })
 
-  test('휠 직후 첫 pointermove는 점프 없이 손가락을 따름', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), 200, 0, LAYOUT).state // FEB 200
-    s = beginMonthScroll(s, 500, 100)
-    s = moveMonthScroll(s, 470, 110, LAYOUT).state // takeover (-30)
-    s = moveMonthScroll(s, 450, 120, LAYOUT).state // 위로 20 → FEB 220
-    expect(s.anchorIdx).toBe(FEB)
-    expect(s.viewTop).toBe(220)
-  })
-
-  test('핸드오프 후 새 제스처의 startAnchorIdx는 현재 앵커', () => {
-    let s = wheelMonthScroll(createMonthScroll(FEB), 300, 0, LAYOUT).state // MAR 28
-    s = wheelMonthScroll(s, 100, 100, LAYOUT).state // MAR 128
+  test('핸드오프 중간 위치(중단 트윈 등)에서도 위치 유지', () => {
+    let s = { ...createMonthScroll(FEB), viewTop: 120 } // 비정상 상태 (미드트윈)
     s = beginMonthScroll(s, 400, 200)
-    expect(s.startAnchorIdx).toBe(MAR)
+    expect(s.session).toBe('pressed')
+    expect(s.viewTop).toBe(120)
   })
 })

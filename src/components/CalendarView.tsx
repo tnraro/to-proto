@@ -11,7 +11,6 @@ import {
   endMonthScroll,
   moveMonthScroll,
   normalizeWheelDelta,
-  wheelMonthScroll,
   type MonthScrollState,
 } from '../lib/monthScroll'
 import { useMonthScrollStore } from '../hooks/useMonthScrollStore'
@@ -21,7 +20,8 @@ const MAX_TYPE_PAIRS = 3
 /** Must match the CSS below: month label + 52px cells with 4px gaps */
 const MONTH_LAYOUT: MonthLayout = { headerH: 64, rowH: 56 }
 const SNAP_MS = 200
-const WHEEL_IDLE_MS = 250
+/** Wheel deltas accumulate into whole months; one month per this many px */
+const WHEEL_STEP_PX = 100
 
 interface Props {
   records: VomitRecord[]
@@ -58,7 +58,7 @@ export function CalendarView({
   const viewportRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const suppressClickRef = useRef(false)
-  const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wheelAccumRef = useRef(0)
   const snapRafRef = useRef<number | null>(null)
   const snapGenRef = useRef(0)
   const dayViewOpenRef = useRef(false)
@@ -95,11 +95,6 @@ export function CalendarView({
     snapGenRef.current++
     if (snapRafRef.current !== null) cancelAnimationFrame(snapRafRef.current)
     snapRafRef.current = null
-  }, [])
-
-  const cancelWheel = useCallback(() => {
-    if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
-    wheelTimerRef.current = null
   }, [])
 
   // Snap tween: animate the rendered position from its current (measured)
@@ -149,47 +144,44 @@ export function CalendarView({
 
   const goToday = useCallback(() => {
     cancelSnap()
-    cancelWheel()
     const now = new Date()
     animateTo(monthIndex(startOfMonth(now)))
     setSelectedKey(toDateKey(now))
-  }, [animateTo, cancelSnap, cancelWheel])
+  }, [animateTo, cancelSnap])
 
   /** Day-view jump: select today without moving the month grid */
   const goTodayDay = useCallback(() => {
     setSelectedKey(toDateKey(new Date()))
   }, [])
 
+  // Wheel = discrete month stepping: deltas accumulate into whole months and
+  // each step tweens to the adjacent month. No idle timer or snap decision —
+  // the movement is immediate and always ends on a boundary.
   useEffect(() => {
     const vp = viewportRef.current
     if (!vp) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       if (dayViewOpenRef.current) return
+      if (getState().session !== 'idle') return
+      wheelAccumRef.current += normalizeWheelDelta(e.deltaY, e.deltaMode, vh)
+      if (Math.abs(wheelAccumRef.current) < WHEEL_STEP_PX) return
       cancelSnap()
-      const r = wheelMonthScroll(
-        getState(),
-        normalizeWheelDelta(e.deltaY, e.deltaMode, vh),
-        performance.now(),
-        MONTH_LAYOUT,
-      )
-      // Refused (finger gesture in progress): ignore entirely — scheduling the
-      // idle timer here would fire finishGesture mid-drag and reset the session
-      if (!r.active) return
-      commit(r.state)
-      if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
-      wheelTimerRef.current = setTimeout(() => {
-        wheelTimerRef.current = null
-        finishGesture(getState())
-      }, WHEEL_IDLE_MS)
+      while (wheelAccumRef.current >= WHEEL_STEP_PX) {
+        wheelAccumRef.current -= WHEEL_STEP_PX
+        animateTo(getState().anchorIdx + 1)
+      }
+      while (wheelAccumRef.current <= -WHEEL_STEP_PX) {
+        wheelAccumRef.current += WHEEL_STEP_PX
+        animateTo(getState().anchorIdx - 1)
+      }
     }
     vp.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       vp.removeEventListener('wheel', onWheel)
-      if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
       if (snapRafRef.current !== null) cancelAnimationFrame(snapRafRef.current)
     }
-  }, [cancelSnap, commit, finishGesture, getState, vh])
+  }, [animateTo, cancelSnap, getState, vh])
 
   useEffect(() => {
     // No pointer capture: capturing retargets the click event to the capture
@@ -205,7 +197,6 @@ export function CalendarView({
       finishGesture(getState())
     }
     const onPointerCancel = () => {
-      cancelWheel()
       cancelSnap()
       commit(createMonthScroll(getState().anchorIdx))
     }
@@ -217,7 +208,7 @@ export function CalendarView({
       window.removeEventListener('pointerup', onPointerUp)
       window.removeEventListener('pointercancel', onPointerCancel)
     }
-  }, [cancelSnap, cancelWheel, commit, finishGesture, getState])
+  }, [cancelSnap, commit, finishGesture, getState])
 
   const recordsByDay = useMemo(() => groupByDay(records), [records])
   const markersByDay = useMemo(() => groupByDay(markers), [markers])
@@ -319,7 +310,6 @@ export function CalendarView({
             onPointerDown={(e) => {
               if (e.pointerType === 'mouse' && e.button !== 0) return
               cancelSnap()
-              cancelWheel()
               suppressClickRef.current = false
               commit(beginMonthScroll(getState(), e.clientY, performance.now()))
             }}
