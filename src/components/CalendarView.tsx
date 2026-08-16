@@ -49,6 +49,7 @@ export function CalendarView({
   const suppressClickRef = useRef(false)
   const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const snapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const snapRafRef = useRef<number | null>(null)
 
   useEffect(() => {
     onSelectedDateChange(selectedKey)
@@ -67,6 +68,8 @@ export function CalendarView({
   const cancelSnap = useCallback(() => {
     if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
     snapTimerRef.current = null
+    if (snapRafRef.current !== null) cancelAnimationFrame(snapRafRef.current)
+    snapRafRef.current = null
     setSnapping(false)
   }, [])
 
@@ -80,14 +83,26 @@ export function CalendarView({
     stateRef.current = r.state
     if (r.change !== 0 || preEnd.viewTop !== 0) {
       const start = snapStartState(preEnd, r.change, MONTH_LAYOUT)
-      setSnapping(true)
+      // Two-phase snap: render the start position with the transition off
+      // (identical to the release moment), then enable the transition and move
+      // to the settled position in the next frame. Toggling the transition in
+      // the same update as the position change would animate from the previous
+      // computed value instead.
+      setSnapping(false)
       setScrollState(start)
-      snapTimerRef.current = setTimeout(() => {
-        const settled = createMonthScroll(start.anchorIdx)
-        stateRef.current = settled
-        setSnapping(false)
-        setScrollState(settled)
-      }, SNAP_MS)
+      snapRafRef.current = requestAnimationFrame(() => {
+        snapRafRef.current = requestAnimationFrame(() => {
+          snapRafRef.current = null
+          setSnapping(true)
+          setScrollState({ ...start, viewTop: 0 })
+          snapTimerRef.current = setTimeout(() => {
+            const settled = createMonthScroll(start.anchorIdx)
+            stateRef.current = settled
+            setSnapping(false)
+            setScrollState(settled)
+          }, SNAP_MS)
+        })
+      })
     } else {
       setScrollState(r.state)
     }
@@ -113,6 +128,7 @@ export function CalendarView({
       vp.removeEventListener('wheel', onWheel)
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
       if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
+      if (snapRafRef.current !== null) cancelAnimationFrame(snapRafRef.current)
     }
   }, [cancelSnap, finishGesture])
 
