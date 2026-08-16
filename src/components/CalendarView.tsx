@@ -75,15 +75,15 @@ export function CalendarView({
     wheelTimerRef.current = null
   }, [])
 
-  // Release: decide the target from the gesture (declarative), then tween the
-  // rendered position to it. The tween starts from the actually painted
-  // transform (measured), so deferred React renders can never cause a jump.
-  const finishGesture = useCallback((preEnd: MonthScrollState) => {
-    const r = endMonthScroll(preEnd, MONTH_LAYOUT)
-    const target = r.state.anchorIdx
-    if (r.change !== 0 || preEnd.viewTop !== 0) {
+  // Snap tween: animate the rendered position from its current (measured)
+  // position to the target anchor's top. Declarative target, rAF-driven — the
+  // tween starts from the actually painted transform so deferred React renders
+  // can never cause a jump. Shared by gesture release and header jumps.
+  const animateTo = useCallback(
+    (target: number) => {
+      const preEnd = getState()
       const renderedViewTop = -(measureContainerY(containerRef.current) ?? -preEnd.viewTop)
-      // Target may be several months away (flick clamp vs. release anchor)
+      // Target may be several months away (flick clamp / today jump)
       const targetBlockTop = blockOffset(preEnd.anchorIdx, target, MONTH_LAYOUT)
       const startViewTop = renderedViewTop - targetBlockTop
       const gen = ++snapGenRef.current
@@ -93,8 +93,7 @@ export function CalendarView({
         if (gen !== snapGenRef.current) return
         const t = Math.min(1, (now - t0) / SNAP_MS)
         const eased = 1 - Math.pow(1 - t, 3)
-        const viewTop = startViewTop * (1 - eased)
-        commit({ ...createMonthScroll(target), viewTop })
+        commit({ ...createMonthScroll(target), viewTop: startViewTop * (1 - eased) })
         if (t < 1) {
           snapRafRef.current = requestAnimationFrame(tick)
         } else {
@@ -103,10 +102,40 @@ export function CalendarView({
         }
       }
       snapRafRef.current = requestAnimationFrame(tick)
-    } else {
-      commit(createMonthScroll(target))
-    }
-  }, [commit])
+    },
+    [commit, getState],
+  )
+
+  // Release: decide the target from the gesture (declarative), then tween to it
+  const finishGesture = useCallback(
+    (preEnd: MonthScrollState) => {
+      const r = endMonthScroll(preEnd, MONTH_LAYOUT)
+      const target = r.state.anchorIdx
+      if (r.change !== 0 || preEnd.viewTop !== 0) {
+        animateTo(target)
+      } else {
+        commit(createMonthScroll(target))
+      }
+    },
+    [animateTo, commit],
+  )
+
+  const goToMonth = useCallback(
+    (delta: number) => {
+      cancelSnap()
+      cancelWheel()
+      animateTo(getState().anchorIdx + delta)
+    },
+    [animateTo, cancelSnap, cancelWheel, getState],
+  )
+
+  const goToday = useCallback(() => {
+    cancelSnap()
+    cancelWheel()
+    const now = new Date()
+    animateTo(monthIndex(startOfMonth(now)))
+    setSelectedKey(toDateKey(now))
+  }, [animateTo, cancelSnap, cancelWheel])
 
   useEffect(() => {
     const vp = viewportRef.current
@@ -179,6 +208,28 @@ export function CalendarView({
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between px-4 py-2">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => goToMonth(-1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
+            aria-label="이전 달"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => goToMonth(1)}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
+            aria-label="다음 달"
+          >
+            ›
+          </button>
+          <button
+            onClick={goToday}
+            className="ml-1 min-h-9 rounded-full px-3 text-sm font-medium text-primary hover:bg-emerald-50"
+          >
+            오늘
+          </button>
+        </div>
         <h2 className="text-lg font-bold">{anchorLabel}</h2>
         <span className="w-24" />
       </div>
