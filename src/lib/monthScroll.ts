@@ -6,7 +6,7 @@ export const FLICK_VELOCITY = 0.5 // px/ms
 export const VELOCITY_WINDOW_MS = 200
 export const MAX_SAMPLES = 8
 
-export type ScrollSession = 'idle' | 'pressed' | 'dragging'
+export type ScrollSession = 'idle' | 'pressed' | 'dragging' | 'wheel'
 
 export interface MonthScrollState {
   /** Month containing the viewport top edge */
@@ -40,14 +40,24 @@ export function createMonthScroll(anchorIdx: number, viewTop = 0): MonthScrollSt
   }
 }
 
+/** Starts a fresh pointer gesture from the current position. Any previous
+ *  session (e.g. a lingering wheel burst) is discarded — input handoff must
+ *  never carry over stale lastY or velocity samples. */
 export function beginMonthScroll(s: MonthScrollState, y: number, t: number): MonthScrollState {
-  if (s.session !== 'idle') return s
-  return { ...s, session: 'pressed', startAnchorIdx: s.anchorIdx, startY: y, lastY: y, samples: [{ t, y }] }
+  return {
+    ...createMonthScroll(s.anchorIdx, s.viewTop),
+    session: 'pressed',
+    startAnchorIdx: s.anchorIdx,
+    startY: y,
+    lastY: y,
+    samples: [{ t, y }],
+  }
 }
 
-/** Finger drag. Pressed → dragging after the start threshold (stable takeover). */
+/** Finger drag. Pressed → dragging after the start threshold (stable takeover).
+ *  Other sessions (wheel, idle) are ignored. */
 export function moveMonthScroll(s: MonthScrollState, y: number, t: number, layout: MonthLayout): MoveResult {
-  if (s.session === 'idle') return { state: s, active: false }
+  if (s.session !== 'pressed' && s.session !== 'dragging') return { state: s, active: false }
   if (s.session === 'pressed') {
     const dy = y - (s.startY ?? y)
     if (Math.abs(dy) < DRAG_START_THRESHOLD) return { state: { ...s, lastY: y }, active: false }
@@ -57,13 +67,14 @@ export function moveMonthScroll(s: MonthScrollState, y: number, t: number, layou
   return applyOffset(s, (s.lastY ?? y) - y, y, t, layout)
 }
 
-/** Wheel input — moves like a drag without a pressed phase.
+/** Wheel input — moves like a drag without a pressed phase. Uses its own
+ *  session so it can never be driven by, or feed, pointer gestures.
  *  Positive deltaY (wheel down) moves toward future months, matching natural
  *  scroll; sampled y is inverted so flick direction matches finger semantics. */
 export function wheelMonthScroll(s: MonthScrollState, dy: number, t: number, layout: MonthLayout): MoveResult {
-  if (s.session !== 'idle' && s.session !== 'dragging') return { state: s, active: false }
+  if (s.session !== 'idle' && s.session !== 'wheel') return { state: s, active: false }
   const startAnchorIdx = s.session === 'idle' ? s.anchorIdx : s.startAnchorIdx
-  return applyOffset({ ...s, session: 'dragging', startAnchorIdx, lastY: 0 }, dy, lastSampleY(s) - dy, t, layout)
+  return applyOffset({ ...s, session: 'wheel', startAnchorIdx, lastY: null }, dy, lastSampleY(s) - dy, t, layout)
 }
 
 /** Release. Two rules with separate reference frames:
@@ -77,7 +88,7 @@ export function endMonthScroll(
   s: MonthScrollState,
   layout: MonthLayout,
 ): { state: MonthScrollState; change: -1 | 0 | 1 } {
-  if (s.session !== 'dragging') return { state: createMonthScroll(s.anchorIdx), change: 0 }
+  if (s.session !== 'dragging' && s.session !== 'wheel') return { state: createMonthScroll(s.anchorIdx), change: 0 }
   const v = velocity(s.samples)
   const h = monthHeight(s.anchorIdx, layout)
   let change: -1 | 0 | 1 = 0

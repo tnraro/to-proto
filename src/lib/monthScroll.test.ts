@@ -208,4 +208,48 @@ describe('wheelMonthScroll', () => {
     const r = endMonthScroll(s, LAYOUT)
     expect(r.change).toBe(1)
   })
+
+  test('핑거 세션 중 휠은 무시', () => {
+    let s = beginMonthScroll(createMonthScroll(FEB), 100, 0)
+    s = moveMonthScroll(s, 130, 10, LAYOUT).state // dragging
+    const r = wheelMonthScroll(s, 300, 20, LAYOUT)
+    expect(r.active).toBe(false)
+    expect(r.state).toBe(s)
+  })
+
+  test('휠 세션 중 moveMonthScroll은 무시 (호버 오프셋 차단)', () => {
+    let s = wheelMonthScroll(createMonthScroll(FEB), 200, 0, LAYOUT).state // 'wheel' 세션
+    const r = moveMonthScroll(s, 400, 10, LAYOUT)
+    expect(r.active).toBe(false)
+    expect(r.state).toBe(s)
+    expect(s.viewTop).toBe(200)
+  })
+})
+
+describe('입력 핸드오프 (휠 → 포인터)', () => {
+  test('begin은 잔존 세션을 버리고 위치를 유지한 채 재시작', () => {
+    let s = wheelMonthScroll(createMonthScroll(FEB), 200, 0, LAYOUT).state // FEB 200, 'wheel'
+    s = beginMonthScroll(s, 500, 100)
+    expect(s.session).toBe('pressed')
+    expect(s.anchorIdx).toBe(FEB)
+    expect(s.viewTop).toBe(200)
+    expect(s.startAnchorIdx).toBe(FEB)
+    expect(s.samples).toEqual([{ t: 100, y: 500 }])
+  })
+
+  test('휠 직후 첫 pointermove는 점프 없이 손가락을 따름', () => {
+    let s = wheelMonthScroll(createMonthScroll(FEB), 200, 0, LAYOUT).state // FEB 200
+    s = beginMonthScroll(s, 500, 100)
+    s = moveMonthScroll(s, 470, 110, LAYOUT).state // takeover (-30)
+    s = moveMonthScroll(s, 450, 120, LAYOUT).state // 위로 20 → FEB 220
+    expect(s.anchorIdx).toBe(FEB)
+    expect(s.viewTop).toBe(220)
+  })
+
+  test('핸드오프 후 새 제스처의 startAnchorIdx는 현재 앵커', () => {
+    let s = wheelMonthScroll(createMonthScroll(FEB), 300, 0, LAYOUT).state // MAR 28
+    s = wheelMonthScroll(s, 100, 100, LAYOUT).state // MAR 128
+    s = beginMonthScroll(s, 400, 200)
+    expect(s.startAnchorIdx).toBe(MAR)
+  })
 })
