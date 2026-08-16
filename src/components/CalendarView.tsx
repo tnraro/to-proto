@@ -1,11 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Marker, MarkerType, VomitRecord, VomitType } from '../types'
 import { VOMIT_TYPES } from '../types'
 import { WEEKDAYS, groupByDay, monthLabel, startOfMonth, toDateKey } from '../lib/dates'
 import { pieSegments } from '../lib/pieSegments'
 import type { CalendarIndicator } from '../lib/calendarIndicator'
+import { blockCount, monthFromIndex, monthHeight, monthIndex, rowsInMonth, type MonthLayout } from '../lib/monthList'
+import {
+  beginMonthScroll,
+  createMonthScroll,
+  endMonthScroll,
+  moveMonthScroll,
+  snapStartState,
+  wheelMonthScroll,
+  type MonthScrollState,
+} from '../lib/monthScroll'
 
 const MAX_TYPE_PAIRS = 3
+/** Must match the CSS below: month label + 52px cells with 4px gaps */
+const MONTH_LAYOUT: MonthLayout = { headerH: 64, rowH: 56 }
+const SNAP_MS = 200
+const WHEEL_IDLE_MS = 250
 
 interface Props {
   records: VomitRecord[]
@@ -25,59 +39,109 @@ export function CalendarView({
   onSelectedDateChange,
 }: Props) {
   const today = new Date()
-  const [cursor, setCursor] = useState(() => startOfMonth(today))
+  const [scrollState, setScrollState] = useState(() => createMonthScroll(monthIndex(startOfMonth(today))))
   const [selectedKey, setSelectedKey] = useState(() => toDateKey(today))
+  const [vh, setVh] = useState(0)
+  const [snapping, setSnapping] = useState(false)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const stateRef = useRef(scrollState)
+  stateRef.current = scrollState
+  const suppressClickRef = useRef(false)
+  const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const snapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     onSelectedDateChange(selectedKey)
   }, [selectedKey, onSelectedDateChange])
 
-  const cells = useMemo(() => buildMonthCells(cursor), [cursor])
+  useEffect(() => {
+    const vp = viewportRef.current
+    if (!vp) return
+    const ro = new ResizeObserver((entries) => {
+      setVh(entries[0].contentRect.height)
+    })
+    ro.observe(vp)
+    return () => ro.disconnect()
+  }, [])
+
+  const cancelSnap = useCallback(() => {
+    if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
+    snapTimerRef.current = null
+    setSnapping(false)
+  }, [])
+
+  const cancelWheel = useCallback(() => {
+    if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
+    wheelTimerRef.current = null
+  }, [])
+
+  const finishGesture = useCallback((preEnd: MonthScrollState) => {
+    const r = endMonthScroll(preEnd, MONTH_LAYOUT)
+    stateRef.current = r.state
+    if (r.change !== 0 || preEnd.viewTop !== 0) {
+      const start = snapStartState(preEnd, r.change, MONTH_LAYOUT)
+      setSnapping(true)
+      setScrollState(start)
+      snapTimerRef.current = setTimeout(() => {
+        const settled = createMonthScroll(start.anchorIdx)
+        stateRef.current = settled
+        setSnapping(false)
+        setScrollState(settled)
+      }, SNAP_MS)
+    } else {
+      setScrollState(r.state)
+    }
+  }, [])
+
+  useEffect(() => {
+    const vp = viewportRef.current
+    if (!vp) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      cancelSnap()
+      const r = wheelMonthScroll(stateRef.current, e.deltaY, performance.now(), MONTH_LAYOUT)
+      stateRef.current = r.state
+      setScrollState(r.state)
+      if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
+      wheelTimerRef.current = setTimeout(() => {
+        wheelTimerRef.current = null
+        finishGesture(stateRef.current)
+      }, WHEEL_IDLE_MS)
+    }
+    vp.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      vp.removeEventListener('wheel', onWheel)
+      if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current)
+      if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
+    }
+  }, [cancelSnap, finishGesture])
 
   const recordsByDay = useMemo(() => groupByDay(records), [records])
   const markersByDay = useMemo(() => groupByDay(markers), [markers])
 
-  const move = useCallback((delta: number) => {
-    setCursor((cur) => {
-      const next = new Date(cur)
-      next.setMonth(next.getMonth() + delta)
-      return startOfMonth(next)
-    })
-  }, [])
+  const blocks = useMemo(() => {
+    const count = blockCount(vh, MONTH_LAYOUT)
+    const firstIdx = scrollState.anchorIdx - 1
+    const list: { idx: number; top: number; height: number }[] = []
+    let acc = 0
+    for (let i = 0; i < count; i++) {
+      const idx = firstIdx + i
+      const height = monthHeight(idx, MONTH_LAYOUT)
+      list.push({ idx, top: acc, height })
+      acc += height
+    }
+    return list
+  }, [vh, scrollState.anchorIdx])
+
+  const anchorLabel = monthLabel(monthFromIndex(scrollState.anchorIdx))
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => move(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
-            aria-label="이전 달"
-          >
-            ‹
-          </button>
-          <button
-            onClick={() => move(1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
-            aria-label="다음 달"
-          >
-            ›
-          </button>
-          <button
-            onClick={() => {
-              setCursor(startOfMonth(today))
-              setSelectedKey(toDateKey(today))
-            }}
-            className="ml-1 min-h-9 rounded-full px-3 text-sm font-medium text-primary hover:bg-emerald-50"
-          >
-            오늘
-          </button>
-        </div>
-        <h2 className="text-lg font-bold">{monthLabel(cursor)}</h2>
+    <div className="flex h-full flex-col">
+      <div className="flex shrink-0 items-center justify-between px-4 py-2">
+        <h2 className="text-lg font-bold">{anchorLabel}</h2>
         <span className="w-24" />
       </div>
-
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid shrink-0 grid-cols-7 gap-1 px-4 pb-1">
         {WEEKDAYS.map((w, i) => (
           <div
             key={w}
@@ -86,91 +150,150 @@ export function CalendarView({
             {w}
           </div>
         ))}
-        {cells.map((cell, i) => {
-          const key = cell ? toDateKey(cell) : null
-          const list = key ? recordsByDay.get(key) : undefined
-          const dayMarkers = key ? markersByDay.get(key) : undefined
-          const summary = list ? summarizeByType(list) : null
-          const isSelected = key === selectedKey
-          const isToday = key === toDateKey(today)
-          return (
-            <button
-              key={i}
-              disabled={!cell}
-              onClick={() => cell && setSelectedKey(toDateKey(cell))}
-              className={`flex min-h-12 flex-col rounded-lg p-1 text-left transition sm:min-h-16 ${
-                isSelected
-                  ? 'bg-emerald-50 ring-2 ring-primary'
-                  : 'hover:bg-gray-100'
-              } ${!cell ? '' : 'bg-white'}`}
-            >
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium ${
-                  !cell
-                    ? ''
-                    : isSelected
-                      ? 'bg-primary font-bold text-white'
-                      : isToday
-                        ? 'bg-emerald-100 text-primary'
-                        : 'text-gray-600'
-                }`}
-              >
-                {cell?.getDate()}
-              </span>
-              {dayMarkers?.map((m) => (
-                <span
-                  key={m.id}
-                  className="mt-0.5 block w-full truncate rounded bg-blue-50 px-1 text-[10px] leading-tight text-blue-600"
-                  title={markerTypes.find((t) => t.id === m.typeId)?.name}
+      </div>
+
+      <div
+        ref={viewportRef}
+        className="relative min-h-0 flex-1 touch-none overflow-hidden"
+        onPointerDown={(e) => {
+          if (e.pointerType === 'mouse' && e.button !== 0) return
+          cancelSnap()
+          cancelWheel()
+          suppressClickRef.current = false
+          e.currentTarget.setPointerCapture(e.pointerId)
+          stateRef.current = beginMonthScroll(stateRef.current, e.clientY, performance.now())
+          setScrollState(stateRef.current)
+        }}
+        onPointerMove={(e) => {
+          if (stateRef.current.session === 'idle') return
+          const r = moveMonthScroll(stateRef.current, e.clientY, performance.now(), MONTH_LAYOUT)
+          stateRef.current = r.state
+          if (r.active) {
+            suppressClickRef.current = true
+            setScrollState(r.state)
+          }
+        }}
+        onPointerUp={() => {
+          if (stateRef.current.session === 'idle') return
+          finishGesture(stateRef.current)
+        }}
+        onPointerCancel={() => {
+          cancelWheel()
+          cancelSnap()
+          stateRef.current = createMonthScroll(stateRef.current.anchorIdx)
+          setScrollState(stateRef.current)
+        }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: `translateY(${-scrollState.viewTop}px)`,
+            transition: snapping ? `transform ${SNAP_MS}ms ease-out` : 'none',
+          }}
+        >
+          {blocks.map(({ idx, top, height }) => {
+            const cells = buildMonthCells(monthFromIndex(idx))
+            const rows = rowsInMonth(idx)
+            return (
+              <div key={idx} className="absolute left-0 right-0" style={{ top, height }}>
+                <h3 className="px-4 pb-1 pt-2 text-sm font-semibold text-gray-700">
+                  {monthLabel(monthFromIndex(idx))}
+                </h3>
+                <div
+                  className="grid grid-cols-7 gap-1 px-4"
+                  style={{ gridTemplateRows: `repeat(${rows}, ${MONTH_LAYOUT.rowH - 4}px)` }}
                 >
-                  {markerTypes.find((t) => t.id === m.typeId)?.name ?? '?'}
-                </span>
-              ))}
-              {indicator === 'count' ? (
-                list && list.length > 0 ? (
-                  <span className="mt-0.5 flex items-center gap-1">
-                    <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
-                    <span className="text-[10px] leading-none text-gray-500">{list.length}</span>
-                  </span>
-                ) : null
-              ) : indicator === 'pie' ? (
-                list && list.length > 0 ? (
-                  <span className="mt-0.5 flex items-center gap-1">
-                    <span
-                      className="h-3.5 w-3.5 rounded-full"
-                      style={{
-                        background: `conic-gradient(${pieSegments(summary ?? []).map((s) => `${s.color} ${s.start}% ${s.end}%`).join(', ')})`,
-                      }}
-                    />
-                    <span className="text-[10px] leading-none text-gray-500">
-                      {summary?.reduce((s, x) => s + x.count, 0) ?? 0}
-                    </span>
-                  </span>
-                ) : null
-              ) : (
-                summary && (
-                  <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                    {summary.slice(0, MAX_TYPE_PAIRS).map(({ type, count }) => (
-                      <span
-                        key={type}
-                        className="flex items-center gap-0.5"
-                        title={`${VOMIT_TYPES[type].label} ${count}회`}
+                  {cells.map((cell, i) => {
+                    const key = cell ? toDateKey(cell) : null
+                    const list = key ? recordsByDay.get(key) : undefined
+                    const dayMarkers = key ? markersByDay.get(key) : undefined
+                    const summary = list ? summarizeByType(list) : null
+                    const isSelected = key === selectedKey
+                    const isToday = key === toDateKey(today)
+                    return (
+                      <button
+                        key={i}
+                        disabled={!cell}
+                        onClick={() => {
+                          if (suppressClickRef.current || !cell) return
+                          setSelectedKey(toDateKey(cell))
+                        }}
+                        className={`flex flex-col rounded-lg p-1 text-left transition ${
+                          isSelected ? 'bg-emerald-50 ring-2 ring-primary' : 'hover:bg-gray-100'
+                        } ${!cell ? '' : 'bg-white'}`}
                       >
-                        <span className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[type].color}`} />
-                        {count > 1 && <span className="text-[10px] leading-none text-gray-500">{count}</span>}
-                      </span>
-                    ))}
-                    {summary.length > MAX_TYPE_PAIRS && (
-                      <span className="text-[10px] leading-none text-gray-400">
-                        +{summary.slice(MAX_TYPE_PAIRS).reduce((s, x) => s + x.count, 0)}
-                      </span>
-                    )}
-                  </span>
-                )
-              )}
-            </button>
-          )
-        })}
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium ${
+                            !cell
+                              ? ''
+                              : isSelected
+                                ? 'bg-primary font-bold text-white'
+                                : isToday
+                                  ? 'bg-emerald-100 text-primary'
+                                  : 'text-gray-600'
+                          }`}
+                        >
+                          {cell?.getDate()}
+                        </span>
+                        {dayMarkers?.map((m) => (
+                          <span
+                            key={m.id}
+                            className="mt-0.5 block w-full truncate rounded bg-blue-50 px-1 text-[10px] leading-tight text-blue-600"
+                            title={markerTypes.find((t) => t.id === m.typeId)?.name}
+                          >
+                            {markerTypes.find((t) => t.id === m.typeId)?.name ?? '?'}
+                          </span>
+                        ))}
+                        {indicator === 'count' ? (
+                          list && list.length > 0 ? (
+                            <span className="mt-0.5 flex items-center gap-1">
+                              <span className="inline-block h-2 w-2 rounded-full bg-gray-400" />
+                              <span className="text-[10px] leading-none text-gray-500">{list.length}</span>
+                            </span>
+                          ) : null
+                        ) : indicator === 'pie' ? (
+                          list && list.length > 0 ? (
+                            <span className="mt-0.5 flex items-center gap-1">
+                              <span
+                                className="h-3.5 w-3.5 rounded-full"
+                                style={{
+                                  background: `conic-gradient(${pieSegments(summary ?? []).map((s) => `${s.color} ${s.start}% ${s.end}%`).join(', ')})`,
+                                }}
+                              />
+                              <span className="text-[10px] leading-none text-gray-500">
+                                {summary?.reduce((s, x) => s + x.count, 0) ?? 0}
+                              </span>
+                            </span>
+                          ) : null
+                        ) : (
+                          summary && (
+                            <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                              {summary.slice(0, MAX_TYPE_PAIRS).map(({ type, count }) => (
+                                <span
+                                  key={type}
+                                  className="flex items-center gap-0.5"
+                                  title={`${VOMIT_TYPES[type].label} ${count}회`}
+                                >
+                                  <span className={`inline-block h-2 w-2 rounded-full ${VOMIT_TYPES[type].color}`} />
+                                  {count > 1 && <span className="text-[10px] leading-none text-gray-500">{count}</span>}
+                                </span>
+                              ))}
+                              {summary.length > MAX_TYPE_PAIRS && (
+                                <span className="text-[10px] leading-none text-gray-400">
+                                  +{summary.slice(MAX_TYPE_PAIRS).reduce((s, x) => s + x.count, 0)}
+                                </span>
+                              )}
+                            </span>
+                          )
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

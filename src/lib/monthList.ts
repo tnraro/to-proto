@@ -1,6 +1,8 @@
-/** Virtualized month-list math. Month blocks use exact computed heights
- *  (header + calendar rows), so virtualization needs no measurement.
- *  idx is an absolute month index from REF_YEAR-01. */
+/** Month-index math for the tiled virtual calendar.
+ *  idx is an absolute month index from REF_YEAR-01. Block heights are exact
+ *  (header + calendar rows), so tiling needs no measurement. Never compute
+ *  cumulative heights across arbitrary ranges — positions derive from the
+ *  anchor month and its neighbors only. */
 
 export const REF_YEAR = 2000
 
@@ -30,37 +32,13 @@ export function monthHeight(idx: number, layout: MonthLayout = DEFAULT_LAYOUT): 
   return layout.headerH + rowsInMonth(idx) * layout.rowH
 }
 
-/** Cumulative height of months [start, end) */
-export function prefixHeight(start: number, end: number, layout: MonthLayout = DEFAULT_LAYOUT): number {
-  let sum = 0
-  for (let i = start; i < end; i++) sum += monthHeight(i, layout)
-  return sum
-}
+const MIN_ROWS = 4
+const MAX_ROWS = 6
 
-/** Index of the month containing the given offset from the window start */
-export function monthAtOffset(start: number, offset: number, layout: MonthLayout = DEFAULT_LAYOUT): number {
-  let lo = start
-  let hi = start + 1
-  while (prefixHeight(start, hi, layout) <= offset) hi *= 2
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1
-    if (prefixHeight(start, mid + 1, layout) <= offset) lo = mid + 1
-    else hi = mid
-  }
-  return lo
-}
-
-/** Months intersecting the viewport [scrollTop, scrollTop + viewportH) within the window */
-export function visibleMonths(
-  start: number,
-  end: number,
-  scrollTop: number,
-  viewportH: number,
-  layout: MonthLayout = DEFAULT_LAYOUT,
-): [number, number] {
-  const first = Math.max(start, monthAtOffset(start, Math.max(0, scrollTop), layout))
-  const bottom = scrollTop + viewportH
-  let last = first
-  while (last < end && prefixHeight(start, last + 1, layout) < bottom) last++
-  return [first, Math.min(end, last + 1)]
+/** Blocks needed so the viewport [viewTop, viewTop + vh] stays covered while the
+ *  anchor shifts one month in either direction (viewTop ≤ max month height) */
+export function blockCount(vh: number, layout: MonthLayout = DEFAULT_LAYOUT): number {
+  const minH = layout.headerH + MIN_ROWS * layout.rowH
+  const maxH = layout.headerH + MAX_ROWS * layout.rowH
+  return Math.ceil((maxH + vh) / minH) + 1
 }
