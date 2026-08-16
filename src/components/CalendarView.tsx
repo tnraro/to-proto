@@ -136,15 +136,6 @@ export function CalendarView({
     [animateTo, commit],
   )
 
-  const goToMonth = useCallback(
-    (delta: number) => {
-      cancelSnap()
-      cancelWheel()
-      animateTo(getState().anchorIdx + delta)
-    },
-    [animateTo, cancelSnap, cancelWheel, getState],
-  )
-
   const goToday = useCallback(() => {
     cancelSnap()
     cancelWheel()
@@ -152,6 +143,11 @@ export function CalendarView({
     animateTo(monthIndex(startOfMonth(now)))
     setSelectedKey(toDateKey(now))
   }, [animateTo, cancelSnap, cancelWheel])
+
+  /** Day-view jump: select today without moving the month grid */
+  const goTodayDay = useCallback(() => {
+    setSelectedKey(toDateKey(new Date()))
+  }, [])
 
   useEffect(() => {
     const vp = viewportRef.current
@@ -240,42 +236,23 @@ export function CalendarView({
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between px-4 py-2">
-        {dayViewOpen ? (
-          <button
-            onClick={() => setDayViewOpen(false)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
-            aria-label="월 보기"
-          >
-            ‹
-          </button>
-        ) : (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => goToMonth(-1)}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
-              aria-label="이전 달"
-            >
-              ‹
-            </button>
-            <button
-              onClick={() => goToMonth(1)}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
-              aria-label="다음 달"
-            >
-              ›
-            </button>
-            <button
-              onClick={goToday}
-              className="ml-1 min-h-9 rounded-full px-3 text-sm font-medium text-primary hover:bg-emerald-50"
-            >
-              오늘
-            </button>
-          </div>
-        )}
+        <button
+          onClick={dayViewOpen ? () => setDayViewOpen(false) : undefined}
+          className="flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-200"
+          style={{ opacity: dayViewOpen ? 1 : 0, transition: 'opacity 200ms ease-out' }}
+          aria-label="월 보기"
+        >
+          ‹
+        </button>
         <h2 className="text-lg font-bold">
           {dayViewOpen ? monthLabel(parseDateKey(selectedKey)) : anchorLabel}
         </h2>
-        <span className="w-24" />
+        <button
+          onClick={dayViewOpen ? goTodayDay : goToday}
+          className="min-h-9 rounded-full px-3 text-sm font-medium text-primary hover:bg-emerald-50"
+        >
+          오늘
+        </button>
       </div>
       <div className="grid shrink-0 grid-cols-7 gap-1 px-4 pb-1">
         {WEEKDAYS.map((w, i) => {
