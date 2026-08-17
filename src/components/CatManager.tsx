@@ -75,7 +75,7 @@ function CatItem({
       label: '삭제',
       danger: true,
       onClick: () => {
-        if (confirm(`'${cat.name}' 고양이와 기록을 모두 삭제할까요?`)) deleteCat(cat.id)
+        if (confirm(`'${cat.name}' 고양이, 기록, 관련 규칙을 모두 삭제할까요?`)) deleteCat(cat.id)
       },
     },
   ]

@@ -13,27 +13,27 @@ import {
   clearAlertLog,
   clearAll,
   delAlertEntry,
-  delCat,
   delMarker,
   delMarkerType,
   delPhotos,
-  delRecord,
-  delRecordsByCat,
   delRule,
+  deleteCatAtomic,
+  deleteRecordAtomic,
   getAllAlertLog,
   getAllCats,
   getAllMarkerTypes,
   getAllMarkers,
   getAllRecords,
   getAllRules,
-  putAlertEntry,
   putCat,
-  putMarker,
   putMarkerType,
-  putPhoto,
-  putRecord,
   putRule,
+  saveMarkerWithPhotos,
+  saveRecordWithPhotos,
   uid,
+  updateMarkerWithPhotos,
+  updateRecordWithPhotos,
+  type PhotoBlob,
 } from '../lib/storage'
 import { evaluateNewRecord, violationToAlertEntry } from '../lib/thresholds'
 import { sortByDatetimeDesc } from '../lib/dates'
@@ -135,63 +135,46 @@ export function useStore(): Store {
   }, [])
 
   const deleteCat = useCallback((id: string) => {
-    setCats((prev) => {
-      const target = prev.find((c) => c.id === id)
-      if (target?.photoId) void delPhotos([target.photoId])
-      return prev.filter((c) => c.id !== id)
-    })
-    setCurrentCat((cur) => (cur === id ? null : cur))
-    setRecords((prev) => prev.filter((r) => r.catId !== id))
-    setMarkers((prev) => {
-      const removed: Marker[] = []
-      const next = prev.flatMap((m) => {
-        if (!m.catIds.includes(id)) return [m]
-        const catIds = m.catIds.filter((c) => c !== id)
-        if (catIds.length === 0) {
-          removed.push(m)
-          return []
-        }
-        void putMarker({ ...m, catIds })
-        return [{ ...m, catIds }]
-      })
-      if (removed.length > 0) void delPhotos(removed.flatMap((m) => m.photos))
-      return next
-    })
     void (async () => {
-      const photoIds = await delRecordsByCat(id)
-      await delCat(id)
-      await delPhotos(photoIds)
+      const result = await deleteCatAtomic(id)
+      setCats((prev) => prev.filter((c) => c.id !== id))
+      setCurrentCat((cur) => (cur === id ? null : cur))
+      setRecords((prev) => prev.filter((r) => r.catId !== id))
+      const updatedById = new Map(result.updatedMarkers.map((m) => [m.id, m]))
+      setMarkers((prev) => {
+        const removedIds = new Set(result.removedMarkers.map((m) => m.id))
+        return prev.flatMap((m) => (removedIds.has(m.id) ? [] : [updatedById.get(m.id) ?? m]))
+      })
+      setRules((prev) => prev.filter((r) => r.catId !== id))
     })()
   }, [])
 
-  async function savePhotoBlobs(blobs: Blob[]): Promise<string[]> {
+  /** Resizes and stashes new blobs (deduped by blob identity), keeping existing ids in order */
+  async function resolvePhotoIds(photos: Array<string | Blob>): Promise<{ ids: string[]; newPhotos: PhotoBlob[] }> {
     const ids: string[] = []
-    for (const blob of blobs) {
-      const id = uid()
-      const resized = await resizeImage(blob)
-      await putPhoto(id, resized)
-      ids.push(id)
-    }
-    return ids
-  }
-
-  async function resolvePhotoIds(photos: Array<string | Blob>): Promise<string[]> {
-    const ids: string[] = []
+    const newPhotos: PhotoBlob[] = []
+    const seen = new Map<Blob, string>()
     for (const p of photos) {
       if (typeof p === 'string') {
         ids.push(p)
-      } else {
-        ids.push(...(await savePhotoBlobs([p])))
+        continue
       }
+      let id = seen.get(p)
+      if (!id) {
+        id = uid()
+        seen.set(p, id)
+        newPhotos.push({ id, blob: await resizeImage(p) })
+      }
+      ids.push(id)
     }
-    return ids
+    return { ids, newPhotos }
   }
 
   const addRecord = useCallback(
     async (input: RecordInput): Promise<AlertEntry[]> => {
       const now = new Date()
       const { photos, ...rest } = input
-      const photoIds = await resolvePhotoIds(photos ?? [])
+      const { ids: photoIds, newPhotos } = await resolvePhotoIds(photos ?? [])
       const created: VomitRecord = {
         ...rest,
         photos: photoIds,
@@ -199,15 +182,11 @@ export function useStore(): Store {
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       }
-      const nextRecords = sortByDatetimeDesc([...records, created])
       const newAlerts = evaluateNewRecord(rules, records, cats, created, now).map(violationToAlertEntry)
 
-      setRecords(nextRecords)
-      await putRecord(created)
-      if (newAlerts.length > 0) {
-        setAlertLog((prev) => [...newAlerts, ...prev])
-        for (const a of newAlerts) void putAlertEntry(a)
-      }
+      await saveRecordWithPhotos(created, newPhotos, newAlerts)
+      setRecords((prev) => sortByDatetimeDesc([...prev, created]))
+      if (newAlerts.length > 0) setAlertLog((prev) => [...newAlerts, ...prev])
       return newAlerts
     },
     [records, rules, cats],
@@ -218,26 +197,25 @@ export function useStore(): Store {
       const existing = records.find((r) => r.id === id)
       if (!existing) return
       const { photos, ...rest } = input
-      const photoIds = await resolvePhotoIds(photos ?? [])
+      const { ids: photoIds, newPhotos } = await resolvePhotoIds(photos ?? [])
       const updated: VomitRecord = {
         ...existing,
         ...rest,
         photos: photoIds,
         updatedAt: new Date().toISOString(),
       }
+      const removedPhotoIds = existing.photos.filter((p) => !photoIds.includes(p))
+      await updateRecordWithPhotos(updated, newPhotos, removedPhotoIds)
       setRecords((prev) => sortByDatetimeDesc(prev.map((r) => (r.id === id ? updated : r))))
-      await putRecord(updated)
-      await delPhotos(existing.photos.filter((p) => !updated.photos.includes(p)))
     },
     [records],
   )
 
   const deleteRecord = useCallback((id: string) => {
-    setRecords((prev) => prev.filter((r) => r.id !== id))
     void (async () => {
       const record = records.find((r) => r.id === id)
-      await delRecord(id)
-      if (record) await delPhotos(record.photos)
+      await deleteRecordAtomic(id, record?.photos ?? [])
+      setRecords((prev) => prev.filter((r) => r.id !== id))
     })()
   }, [records])
 
@@ -245,10 +223,10 @@ export function useStore(): Store {
     async (input: MarkerInput) => {
       const now = new Date().toISOString()
       const { photos, ...rest } = input
-      const photoIds = await resolvePhotoIds(photos ?? [])
+      const { ids: photoIds, newPhotos } = await resolvePhotoIds(photos ?? [])
       const marker: Marker = { ...rest, photos: photoIds, id: uid(), createdAt: now, updatedAt: now }
+      await saveMarkerWithPhotos(marker, newPhotos)
       setMarkers((prev) => sortByDatetimeDesc([...prev, marker]))
-      await putMarker(marker)
     },
     [],
   )
@@ -258,11 +236,11 @@ export function useStore(): Store {
       const existing = markers.find((m) => m.id === id)
       if (!existing) return
       const { photos, ...rest } = input
-      const photoIds = await resolvePhotoIds(photos ?? [])
+      const { ids: photoIds, newPhotos } = await resolvePhotoIds(photos ?? [])
       const updated: Marker = { ...existing, ...rest, photos: photoIds, updatedAt: new Date().toISOString() }
+      const removedPhotoIds = existing.photos.filter((p) => !photoIds.includes(p))
+      await updateMarkerWithPhotos(updated, newPhotos, removedPhotoIds)
       setMarkers((prev) => sortByDatetimeDesc(prev.map((m) => (m.id === id ? updated : m))))
-      await putMarker(updated)
-      await delPhotos(existing.photos.filter((p) => !photoIds.includes(p)))
     },
     [markers],
   )

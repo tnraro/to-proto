@@ -17,7 +17,7 @@ export interface RecordFormValues {
 interface Props {
   cats: Cat[]
   initial: FormOpenState<RecordFormValues>
-  onSubmit: (input: RecordInput) => void
+  onSubmit: (input: RecordInput) => Promise<void> | void
   /** Close callback (confirm/draft discard are handled inside the form) */
   onClose: () => void
   onAddCat: () => void
@@ -68,17 +68,21 @@ export function RecordForm({ cats, initial, onSubmit, onClose, onAddCat, ref }: 
     setTypes((prev) => (prev.includes(k) ? prev.filter((t) => t !== k) : [...prev, k]))
   }
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!datetime || !catId || types.length === 0) return
-    discard()
-    onSubmit({
-      datetime: fromLocalDateTimeInput(datetime).toISOString(),
-      catId,
-      types,
-      memo: memo.trim(),
-      photos: photoItems.length > 0 ? photoItems.map((p) => (p.id ?? p.blob)) : undefined,
-    })
+    try {
+      await onSubmit({
+        datetime: fromLocalDateTimeInput(datetime).toISOString(),
+        catId,
+        types,
+        memo: memo.trim(),
+        photos: photoItems.length > 0 ? photoItems.map((p) => (p.id ?? p.blob)) : undefined,
+      })
+      discard()
+    } catch {
+      alert('저장에 실패했습니다. 다시 시도해 주세요')
+    }
   }
 
   return (

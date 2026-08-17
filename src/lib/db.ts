@@ -22,13 +22,6 @@ function openDB(): Promise<IDBDatabase> {
   return dbPromise
 }
 
-function request<T>(req: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
-}
-
 function txDone(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
@@ -93,6 +86,37 @@ export async function dbClearAll(): Promise<void> {
       return txDone(tx)
     }),
   )
+}
+
+/**
+ * Runs fn inside one transaction spanning multiple stores — every request in
+ * the transaction commits atomically or rolls back entirely on any failure
+ * (fn throw → tx.abort). Keep async preprocessing (image resize etc.) outside;
+ * awaiting request promises inside fn is safe: pending requests keep the
+ * transaction alive until the event loop goes idle.
+ */
+export async function dbTxn(
+  stores: StoreName[],
+  mode: IDBTransactionMode,
+  fn: (tx: IDBTransaction) => Promise<void> | void,
+): Promise<void> {
+  const db = await openDB()
+  const tx = db.transaction(stores, mode)
+  try {
+    await fn(tx)
+  } catch (err) {
+    tx.abort()
+    throw err
+  }
+  await txDone(tx)
+}
+
+/** Promise wrapper for IDBRequest inside a transaction */
+export function request<T>(req: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
 }
 
 /** Test-only: closes the connection and deletes the DB so migration scenarios can be reproduced */

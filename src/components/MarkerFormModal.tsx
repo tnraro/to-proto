@@ -106,17 +106,21 @@ function MarkerFormContent({
     setAddingType(false)
   }
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!datetime || !typeId) return
-    discard()
-    void onSubmit({
-      datetime: fromLocalDateTimeInput(datetime).toISOString(),
-      typeId,
-      catIds,
-      memo: memo.trim() || undefined,
-      photos: photoItems.length > 0 ? photoItems.map((p) => p.id ?? p.blob) : undefined,
-    })
+    try {
+      await onSubmit({
+        datetime: fromLocalDateTimeInput(datetime).toISOString(),
+        typeId,
+        catIds,
+        memo: memo.trim() || undefined,
+        photos: photoItems.length > 0 ? photoItems.map((p) => p.id ?? p.blob) : undefined,
+      })
+      discard()
+    } catch {
+      alert('저장에 실패했습니다. 다시 시도해 주세요')
+    }
   }
 
   return (
