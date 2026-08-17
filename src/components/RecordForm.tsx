@@ -5,6 +5,7 @@ import type { FormOpenState } from '../hooks/useFormOpener'
 import type { Cat, RecordDraft, RecordInput, VomitType } from '../types'
 import { VOMIT_TYPE_KEYS, VOMIT_TYPES } from '../types'
 import { fromLocalDateTimeInput } from '../lib/dates'
+import { catExists } from '../lib/storage'
 import { PhotoSection } from './ui/PhotoSection'
 
 export interface RecordFormValues {
@@ -21,13 +22,14 @@ interface Props {
   /** Close callback (confirm/draft discard are handled inside the form) */
   onClose: () => void
   onAddCat: () => void
+  refresh: () => Promise<void>
 }
 
 export interface RecordFormHandle {
   requestClose: () => void
 }
 
-export function RecordForm({ cats, initial, onSubmit, onClose, onAddCat, ref }: Props & { ref?: Ref<RecordFormHandle> }) {
+export function RecordForm({ cats, initial, onSubmit, onClose, onAddCat, refresh, ref }: Props & { ref?: Ref<RecordFormHandle> }) {
   const [datetime, setDatetime] = useState(initial.values.datetime)
   const [catId, setCatId] = useState(initial.values.catId)
   const [types, setTypes] = useState<VomitType[]>(initial.values.types)
@@ -36,6 +38,8 @@ export function RecordForm({ cats, initial, onSubmit, onClose, onAddCat, ref }: 
 
   if (cats.length > 0 && !cats.some((c) => c.id === catId)) {
     setCatId(cats[cats.length - 1].id)
+  } else if (cats.length === 0 && catId) {
+    setCatId('')
   }
 
   const { hasDraft, onStateChange, discard } = useFormDraft<RecordDraft>(
@@ -71,6 +75,11 @@ export function RecordForm({ cats, initial, onSubmit, onClose, onAddCat, ref }: 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!datetime || !catId || types.length === 0) return
+    if (!(await catExists(catId))) {
+      await refresh()
+      alert('삭제된 고양이입니다. 목록이 갱신되었으니 다시 선택해 주세요')
+      return
+    }
     try {
       await onSubmit({
         datetime: fromLocalDateTimeInput(datetime).toISOString(),

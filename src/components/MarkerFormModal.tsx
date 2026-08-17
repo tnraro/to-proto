@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type Ref } from 'react'
 import { useImperativeHandle } from 'react'
 import type { Cat, MarkerDraft, MarkerInput, MarkerType } from '../types'
 import { fromLocalDateTimeInput } from '../lib/dates'
+import { catExists, markerTypeExists } from '../lib/storage'
 import { useFormDraft } from '../hooks/useFormDraft'
 import type { FormOpenState } from '../hooks/useFormOpener'
 import { Modal } from './ui/Modal'
@@ -21,13 +22,14 @@ interface Props {
   onSubmit: (input: MarkerInput) => void | Promise<void>
   onClose: () => void
   onAddMarkerType: (name: string) => string
+  refresh: () => Promise<void>
 }
 
 interface MarkerFormHandle {
   requestClose: () => void
 }
 
-export function MarkerFormModal({ markerTypes, cats, initial, onSubmit, onClose, onAddMarkerType }: Props) {
+export function MarkerFormModal({ markerTypes, cats, initial, onSubmit, onClose, onAddMarkerType, refresh }: Props) {
   const contentRef = useRef<MarkerFormHandle | null>(null)
   if (!initial) return null
   return (
@@ -40,6 +42,7 @@ export function MarkerFormModal({ markerTypes, cats, initial, onSubmit, onClose,
         onSubmit={onSubmit}
         onClose={onClose}
         onAddMarkerType={onAddMarkerType}
+        refresh={refresh}
       />
     </Modal>
   )
@@ -52,6 +55,7 @@ function MarkerFormContent({
   onSubmit,
   onClose,
   onAddMarkerType,
+  refresh,
   ref,
 }: Omit<Props, 'initial'> & { initial: FormOpenState<MarkerFormValues>; ref?: Ref<MarkerFormHandle> }) {
   const [datetime, setDatetime] = useState(initial.values.datetime)
@@ -66,6 +70,9 @@ function MarkerFormContent({
   const validCatIds = catIds.filter((id) => cats.some((c) => c.id === id))
   if (validCatIds.length !== catIds.length) {
     setCatIds(validCatIds)
+  }
+  if (typeId && !markerTypes.some((t) => t.id === typeId)) {
+    setTypeId(markerTypes[0]?.id ?? '')
   }
 
   const { hasDraft, onStateChange, discard } = useFormDraft<MarkerDraft>(
@@ -109,6 +116,20 @@ function MarkerFormContent({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!datetime || !typeId) return
+    const [typeOk, catsOk] = await Promise.all([
+      markerTypeExists(typeId),
+      Promise.all(catIds.map(catExists)).then((rs) => rs.every(Boolean)),
+    ])
+    if (!typeOk) {
+      await refresh()
+      alert('삭제된 마커 종류입니다. 목록이 갱신되었으니 다시 선택해 주세요')
+      return
+    }
+    if (!catsOk) {
+      await refresh()
+      alert('삭제된 고양이가 포함되어 있습니다. 목록이 갱신되었으니 다시 선택해 주세요')
+      return
+    }
     try {
       await onSubmit({
         datetime: fromLocalDateTimeInput(datetime).toISOString(),

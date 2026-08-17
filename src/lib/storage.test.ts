@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import 'fake-indexeddb/auto'
 import { dbGet, dbGetAll, dbPut, dbTxn, resetDbForTests } from './db'
 import {
+  catExists,
   deleteCatAtomic,
   deleteRecordAtomic,
   getPhotoCount,
+  markerTypeExists,
   saveRecordWithPhotos,
   updateRecordWithPhotos,
   uid,
@@ -157,6 +159,17 @@ describe('dbTxn 롤백', () => {
     expect(await dbGet<Cat>('cats', 'a')).toBeUndefined()
     expect(await dbGet('records', 'r')).toBeUndefined()
     expect(await dbGet<Cat>('cats', 'pre')).toEqual({ id: 'pre', name: '기존' })
+  })
+})
+
+describe('catExists / markerTypeExists', () => {
+  test('존재/부재 판별 (IDB 직접 조회)', async () => {
+    const s = await seed()
+    expect(await catExists(s.cat.id)).toBe(true)
+    expect(await catExists('없는-고양이')).toBe(false)
+    await dbPut('markerTypes', { id: 't1', name: '건강 검진' })
+    expect(await markerTypeExists('t1')).toBe(true)
+    expect(await markerTypeExists('없는-종류')).toBe(false)
   })
 })
 

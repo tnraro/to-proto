@@ -107,6 +107,14 @@ export async function getAllMarkerTypes(): Promise<MarkerType[]> {
   return dbGetAll<MarkerType>('markerTypes')
 }
 
+export async function markerTypeExists(id: string): Promise<boolean> {
+  return (await dbGet<MarkerType>('markerTypes', id)) !== undefined
+}
+
+export async function catExists(id: string): Promise<boolean> {
+  return (await dbGet<Cat>('cats', id)) !== undefined
+}
+
 export async function putMarkerType(markerType: MarkerType): Promise<void> {
   await dbPut('markerTypes', markerType)
 }

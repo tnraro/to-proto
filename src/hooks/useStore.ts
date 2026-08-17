@@ -70,6 +70,8 @@ export interface Store {
   deleteAlert: (id: string) => void
   clearAlerts: () => void
   resetAll: () => void
+  /** Reloads every store from IndexedDB (cross-tab edits become visible) */
+  refresh: () => Promise<void>
 }
 
 export function useStore(): Store {
@@ -82,31 +84,37 @@ export function useStore(): Store {
   const [markerTypes, setMarkerTypes] = useState<MarkerType[]>([])
   const [currentCatId, setCurrentCat] = useState<string | null>(null)
 
+  const loadAll = useCallback(async () => {
+    const [loadedCats, loadedRecords, loadedRules, loadedAlerts, loadedMarkers, loadedMarkerTypes] =
+      await Promise.all([
+        getAllCats(),
+        getAllRecords(),
+        getAllRules(),
+        getAllAlertLog(),
+        getAllMarkers(),
+        getAllMarkerTypes(),
+      ])
+    setCats(loadedCats)
+    setRecords(sortByDatetimeDesc(loadedRecords))
+    setRules(loadedRules)
+    setAlertLog(loadedAlerts)
+    setMarkers(sortByDatetimeDesc(loadedMarkers))
+    setMarkerTypes(loadedMarkerTypes)
+    return loadedCats
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const [loadedCats, loadedRecords, loadedRules, loadedAlerts, loadedMarkers, loadedMarkerTypes] =
-        await Promise.all([
-          getAllCats(),
-          getAllRecords(),
-          getAllRules(),
-          getAllAlertLog(),
-          getAllMarkers(),
-          getAllMarkerTypes(),
-        ])
+      const loadedCats = await loadAll()
       if (cancelled) return
-      setCats(loadedCats)
-      setRecords(sortByDatetimeDesc(loadedRecords))
-      setRules(loadedRules)
-      setAlertLog(loadedAlerts)
-      setMarkers(sortByDatetimeDesc(loadedMarkers))
-      setMarkerTypes(loadedMarkerTypes)
+      setCurrentCat((cur) => (cur && loadedCats.some((c) => c.id === cur) ? cur : null))
       setHydrated(true)
     })()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loadAll])
 
   const addCat = useCallback((name: string, photoId?: string) => {
     const cat: Cat = { id: uid(), name: name.trim(), photoId }
@@ -324,6 +332,11 @@ export function useStore(): Store {
     void clearAll()
   }, [])
 
+  const refresh = useCallback(async () => {
+    const loadedCats = await loadAll()
+    setCurrentCat((cur) => (cur && loadedCats.some((c) => c.id === cur) ? cur : null))
+  }, [loadAll])
+
   return {
     hydrated,
     cats,
@@ -353,5 +366,6 @@ export function useStore(): Store {
     deleteAlert,
     clearAlerts,
     resetAll,
+    refresh,
   }
 }

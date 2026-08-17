@@ -11,9 +11,10 @@ interface Props {
   /** Close callback (confirm/draft discard are handled inside RecordForm) */
   onClose: () => void
   onAddCat: () => void
+  refresh: () => Promise<void>
 }
 
-export function RecordFormModal({ cats, initial, onSubmit, onClose, onAddCat }: Props) {
+export function RecordFormModal({ cats, initial, onSubmit, onClose, onAddCat, refresh }: Props) {
   const formRef = useRef<RecordFormHandle | null>(null)
   if (!initial) return null
   return (
@@ -26,6 +27,7 @@ export function RecordFormModal({ cats, initial, onSubmit, onClose, onAddCat }: 
         onSubmit={onSubmit}
         onClose={onClose}
         onAddCat={onAddCat}
+        refresh={refresh}
       />
     </Modal>
   )

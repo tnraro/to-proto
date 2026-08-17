@@ -267,6 +267,7 @@ function Shell() {
         onSubmit={handleSubmit}
         onClose={recordOpener.close}
         onAddCat={openCatModal}
+        refresh={store.refresh}
       />
 
       <MarkerFormModal
@@ -276,6 +277,7 @@ function Shell() {
         onSubmit={handleMarkerSubmit}
         onClose={markerOpener.close}
         onAddMarkerType={addMarkerType}
+        refresh={store.refresh}
       />
 
       <CatFormModal open={catModalOpen} onClose={() => setCatModalOpen(false)} onAdd={handleCatAdd} />
