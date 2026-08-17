@@ -17,7 +17,7 @@ async function seed(): Promise<{
   cat: Cat
   otherCat: Cat
   record: VomitRecord
-  markerRemoved: Marker
+  markerSolo: Marker
   markerKept: Marker
   catRule: ThresholdRule
   globalRule: ThresholdRule
@@ -42,7 +42,7 @@ async function seed(): Promise<{
     createdAt: '2026-08-01T10:00:00.000Z',
     updatedAt: '2026-08-01T10:00:00.000Z',
   }
-  const markerRemoved: Marker = {
+  const markerSolo: Marker = {
     id: uid(),
     datetime: '2026-08-01T11:00:00.000Z',
     typeId: 't1',
@@ -65,35 +65,35 @@ async function seed(): Promise<{
   await dbPut('cats', cat)
   await dbPut('cats', otherCat)
   await dbPut('records', record)
-  await dbPut('markers', markerRemoved)
+  await dbPut('markers', markerSolo)
   await dbPut('markers', markerKept)
   await dbPut('rules', catRule)
   await dbPut('rules', globalRule)
   await dbPut('photos', { id: catPhotoId, blob: blob(1) })
   await dbPut('photos', { id: recordPhotoId, blob: blob(2) })
   await dbPut('photos', { id: markerPhotoId, blob: blob(3) })
-  return { cat, otherCat, record, markerRemoved, markerKept, catRule, globalRule, catPhotoId, recordPhotoId, markerPhotoId }
+  return { cat, otherCat, record, markerSolo, markerKept, catRule, globalRule, catPhotoId, recordPhotoId, markerPhotoId }
 }
 
 describe('deleteCatAtomic', () => {
-  test('기록·마커·사진·규칙·고양이를 한 트랜잭션으로 캐스케이드 삭제', async () => {
+  test('기록·사진·규칙·고양이 삭제, 마커는 catIds만 정리 (0이어도 유지)', async () => {
     const s = await seed()
     const result = await deleteCatAtomic(s.cat.id)
 
     expect(await dbGet<Cat>('cats', s.cat.id)).toBeUndefined()
     expect(await dbGet<Cat>('cats', s.otherCat.id)).toBeDefined()
     expect(await dbGet<VomitRecord>('records', s.record.id)).toBeUndefined()
-    expect(await dbGet<Marker>('markers', s.markerRemoved.id)).toBeUndefined()
+    expect(await dbGet<Marker>('markers', s.markerSolo.id)).toEqual({ ...s.markerSolo, catIds: [] })
     expect(await dbGet<Marker>('markers', s.markerKept.id)).toEqual({ ...s.markerKept, catIds: [s.otherCat.id] })
     expect(await dbGet<ThresholdRule>('rules', s.catRule.id)).toBeUndefined()
     expect(await dbGet<ThresholdRule>('rules', s.globalRule.id)).toBeDefined()
     expect(await dbGet('photos', s.catPhotoId)).toBeUndefined()
     expect(await dbGet('photos', s.recordPhotoId)).toBeUndefined()
-    expect(await dbGet('photos', s.markerPhotoId)).toBeUndefined()
+    expect(await dbGet('photos', s.markerPhotoId)).toBeDefined()
 
-    expect(result.removedMarkers.map((m) => m.id)).toEqual([s.markerRemoved.id])
-    expect(result.updatedMarkers.map((m) => m.id)).toEqual([s.markerKept.id])
-    expect(result.updatedMarkers[0].catIds).toEqual([s.otherCat.id])
+    expect(result.updatedMarkers.map((m) => m.id)).toEqual([s.markerSolo.id, s.markerKept.id])
+    expect(result.updatedMarkers[0].catIds).toEqual([])
+    expect(result.updatedMarkers[1].catIds).toEqual([s.otherCat.id])
   })
 
   test('다른 고양이의 데이터는 그대로', async () => {
@@ -102,7 +102,7 @@ describe('deleteCatAtomic', () => {
     const records = await dbGetAll<VomitRecord>('records')
     const markers = await dbGetAll<Marker>('markers')
     expect(records).toHaveLength(0)
-    expect(markers.map((m) => m.id)).toEqual([s.markerKept.id])
+    expect(markers.map((m) => m.id).sort()).toEqual([s.markerSolo.id, s.markerKept.id].sort())
   })
 })
 

@@ -198,38 +198,29 @@ export async function deleteRecordAtomic(id: string, photoIds: string[]): Promis
 }
 
 export interface DeleteCatResult {
-  /** Markers that lost all their cats and were removed with their photos */
-  removedMarkers: Marker[]
-  /** Markers that kept the cat id in their list removed */
+  /** Markers that had the cat id in their list removed */
   updatedMarkers: Marker[]
 }
 
 /**
- * Atomic cat deletion cascade: records (by catId index), markers (catIds
- * containing the id — dropped or removed with photos), cat-scoped rules, the
- * cat's own photo, and the cat itself, all in one transaction.
+ * Atomic cat deletion cascade: records (by catId index), markers (the cat id
+ * removed from catIds — a marker is kept even with an empty list), cat-scoped
+ * rules, the cat's own photo, and the cat itself, all in one transaction.
  */
 export async function deleteCatAtomic(catId: string): Promise<DeleteCatResult> {
-  const result: DeleteCatResult = { removedMarkers: [], updatedMarkers: [] }
+  const result: DeleteCatResult = { updatedMarkers: [] }
   await dbTxn(['cats', 'records', 'markers', 'photos', 'rules'], 'readwrite', async (tx) => {
     const recordsOs = tx.objectStore('records')
     const photosOs = tx.objectStore('photos')
     const targetRecords = await request(recordsOs.index('catId').getAll(catId))
     const recordPhotoIds = targetRecords.flatMap((r) => r.photos)
     for (const r of targetRecords) recordsOs.delete(r.id)
-    const markerPhotoIds: string[] = []
     const markers = await request<Marker[]>(tx.objectStore('markers').getAll())
     for (const m of markers) {
       if (!m.catIds.includes(catId)) continue
       const catIds = m.catIds.filter((c) => c !== catId)
-      if (catIds.length === 0) {
-        result.removedMarkers.push(m)
-        markerPhotoIds.push(...m.photos)
-        tx.objectStore('markers').delete(m.id)
-      } else {
-        result.updatedMarkers.push({ ...m, catIds })
-        tx.objectStore('markers').put({ ...m, catIds })
-      }
+      result.updatedMarkers.push({ ...m, catIds })
+      tx.objectStore('markers').put({ ...m, catIds })
     }
     const rules = await request<ThresholdRule[]>(tx.objectStore('rules').getAll())
     for (const rule of rules) {
@@ -238,7 +229,7 @@ export async function deleteCatAtomic(catId: string): Promise<DeleteCatResult> {
     const cat = await request<Cat | undefined>(tx.objectStore('cats').get(catId))
     if (cat?.photoId) photosOs.delete(cat.photoId)
     tx.objectStore('cats').delete(catId)
-    for (const pid of [...recordPhotoIds, ...markerPhotoIds]) photosOs.delete(pid)
+    for (const pid of recordPhotoIds) photosOs.delete(pid)
   })
   return result
 }

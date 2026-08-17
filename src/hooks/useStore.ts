@@ -141,10 +141,7 @@ export function useStore(): Store {
       setCurrentCat((cur) => (cur === id ? null : cur))
       setRecords((prev) => prev.filter((r) => r.catId !== id))
       const updatedById = new Map(result.updatedMarkers.map((m) => [m.id, m]))
-      setMarkers((prev) => {
-        const removedIds = new Set(result.removedMarkers.map((m) => m.id))
-        return prev.flatMap((m) => (removedIds.has(m.id) ? [] : [updatedById.get(m.id) ?? m]))
-      })
+      setMarkers((prev) => prev.map((m) => updatedById.get(m.id) ?? m))
       setRules((prev) => prev.filter((r) => r.catId !== id))
     })()
   }, [])
