@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Store } from '../hooks/useStore'
 import { CALENDAR_INDICATOR_OPTIONS, type CalendarIndicator } from '../lib/calendarIndicator'
+import { formatBytes, getStorageUsage, isPersisted } from '../lib/storageStats'
 import { CatManager } from './CatManager'
 import { MarkerTypeManager } from './MarkerTypeManager'
 import { Card } from './ui/Card'
@@ -33,6 +34,7 @@ export function SettingsView({
   onIndicatorChange: (v: CalendarIndicator) => void
 }) {
   const [confirming, setConfirming] = useState(false)
+  const [usageVersion, setUsageVersion] = useState(0)
   const pwaStatus = usePwaStatus()
 
   return (
@@ -60,7 +62,12 @@ export function SettingsView({
           <Stat label="기록" value={records.length} onClick={() => onNavigate('record')} />
           <Stat label="규칙" value={rules.length} onClick={() => onNavigate('alert')} />
           <Stat label="경고 이력" value={alertLog.length} onClick={() => onNavigate('alert')} />
+          <Stat label="마커" value={markers.length} />
+          <Stat label="사진" value={records.reduce((n, r) => n + r.photos.length, 0)} />
         </dl>
+        <div className="mt-3">
+          <StorageUsage version={usageVersion} />
+        </div>
         <p className="mt-3 text-xs text-gray-400">데이터는 이 기기에만 저장됩니다</p>
       </Card>
 
@@ -126,6 +133,7 @@ export function SettingsView({
               onClick={() => {
                 resetAll()
                 setConfirming(false)
+                setUsageVersion((v) => v + 1)
               }}
               className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
             >
@@ -151,7 +159,7 @@ export function SettingsView({
   )
 }
 
-function Stat({ label, value, onClick }: { label: string; value: number; onClick: () => void }) {
+function Stat({ label, value, onClick }: { label: string; value: number; onClick?: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -160,5 +168,38 @@ function Stat({ label, value, onClick }: { label: string; value: number; onClick
       <div className="text-lg font-bold text-gray-800">{value}</div>
       <div className="text-xs text-gray-500">{label}</div>
     </button>
+  )
+}
+
+type Usage = { usage: number; persisted: boolean | null } | null | undefined
+
+function StorageUsage({ version }: { version: number }) {
+  const [state, setState] = useState<Usage>(undefined)
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const [usage, persisted] = await Promise.all([getStorageUsage(), isPersisted()])
+      if (cancelled) return
+      setState(usage ? { usage: usage.usage, persisted } : null)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [version])
+
+  if (state === undefined) return <p className="text-xs text-gray-400">저장 공간 측정 중…</p>
+  if (state === null) return <p className="text-xs text-gray-400">이 브라우저에서는 저장 공간 확인 불가</p>
+
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-gray-600">
+        저장 공간 <span className="font-medium text-gray-800">{formatBytes(state.usage)}</span>
+      </span>
+      {state.persisted && (
+        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+          영구 보존됨
+        </span>
+      )}
+    </div>
   )
 }

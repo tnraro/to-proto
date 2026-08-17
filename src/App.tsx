@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRoute, Router, useLocation } from 'wouter'
 import { useHashLocation } from 'wouter/use-hash-location'
 import { useStore } from './hooks/useStore'
@@ -20,6 +20,7 @@ import { AppHeader } from './components/AppHeader'
 import { DropdownMenu } from './components/ui/DropdownMenu'
 import { useFeatureFlag } from './hooks/useFeatureFlag'
 import { CALENDAR_INDICATOR_KEY, parseCalendarIndicator } from './lib/calendarIndicator'
+import { requestPersistence } from './lib/storageStats'
 import type { AlertEntry, Marker, VomitRecord } from './types'
 
 type Tab = 'record' | 'calendar' | 'stats' | 'alert' | 'settings'
@@ -52,6 +53,10 @@ function Shell() {
   const [calendarDate, setCalendarDate] = useState<string | null>(null)
   const [modalAlerts, setModalAlerts] = useState<AlertEntry[]>([])
   const [catModalOpen, setCatModalOpen] = useState(false)
+  // Best-effort persistent storage grant (no prompt for installed PWAs)
+  useEffect(() => {
+    void requestPersistence()
+  }, [])
   // Experiment (feature flag)
   const [calendarIndicator, setCalendarIndicator] = useFeatureFlag(
     CALENDAR_INDICATOR_KEY,
