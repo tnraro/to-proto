@@ -51,6 +51,11 @@ export async function dbGetAllByIndex<T>(store: StoreName, index: string, value:
   return request(db.transaction(store, 'readonly').objectStore(store).index(index).getAll(value) as IDBRequest<T[]>)
 }
 
+export async function dbCount(store: StoreName): Promise<number> {
+  const db = await openDB()
+  return request(db.transaction(store, 'readonly').objectStore(store).count() as IDBRequest<number>)
+}
+
 export async function dbDel(store: StoreName, id: string): Promise<void> {
   const db = await openDB()
   const tx = db.transaction(store, 'readwrite')

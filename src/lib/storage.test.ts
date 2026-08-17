@@ -4,6 +4,7 @@ import { dbGet, dbGetAll, dbPut, dbTxn, resetDbForTests } from './db'
 import {
   deleteCatAtomic,
   deleteRecordAtomic,
+  getPhotoCount,
   saveRecordWithPhotos,
   updateRecordWithPhotos,
   uid,
@@ -156,6 +157,15 @@ describe('dbTxn 롤백', () => {
     expect(await dbGet<Cat>('cats', 'a')).toBeUndefined()
     expect(await dbGet('records', 'r')).toBeUndefined()
     expect(await dbGet<Cat>('cats', 'pre')).toEqual({ id: 'pre', name: '기존' })
+  })
+})
+
+describe('getPhotoCount', () => {
+  test('photos 스토어의 실제 개수 (SSoT)', async () => {
+    await seed()
+    expect(await getPhotoCount()).toBe(3)
+    await dbPut('photos', { id: uid(), blob: blob(9) })
+    expect(await getPhotoCount()).toBe(4)
   })
 })
 

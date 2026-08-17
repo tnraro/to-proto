@@ -1,5 +1,5 @@
 import type { AlertEntry, BaseDraft, Cat, Marker, MarkerType, ThresholdRule, VomitRecord } from '../types'
-import { dbClear, dbClearAll, dbDel, dbDelByIndex, dbGet, dbGetAll, dbGetAllByIndex, dbPut, dbTxn, request } from './db'
+import { dbClear, dbClearAll, dbCount, dbDel, dbDelByIndex, dbGet, dbGetAll, dbGetAllByIndex, dbPut, dbTxn, request } from './db'
 
 export function uid(): string {
   return crypto.randomUUID()
@@ -123,6 +123,11 @@ export async function delMarkerType(id: string): Promise<void> {
 export async function getPhoto(id: string): Promise<Blob | undefined> {
   const entry = await dbGet<{ id: string; blob: Blob }>('photos', id)
   return entry?.blob
+}
+
+/** Photo bodies live in the photos store — its count is the source of truth */
+export async function getPhotoCount(): Promise<number> {
+  return dbCount('photos')
 }
 
 export async function delPhotos(ids: string[]): Promise<void> {

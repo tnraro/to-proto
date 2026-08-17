@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Store } from '../hooks/useStore'
 import { CALENDAR_INDICATOR_OPTIONS, type CalendarIndicator } from '../lib/calendarIndicator'
 import { formatBytes, getStorageUsage, isPersisted } from '../lib/storageStats'
+import { getPhotoCount } from '../lib/storage'
 import { CatManager } from './CatManager'
 import { MarkerTypeManager } from './MarkerTypeManager'
 import { Card } from './ui/Card'
@@ -63,7 +64,7 @@ export function SettingsView({
           <Stat label="규칙" value={rules.length} onClick={() => onNavigate('alert')} />
           <Stat label="경고 이력" value={alertLog.length} onClick={() => onNavigate('alert')} />
           <Stat label="마커" value={markers.length} />
-          <Stat label="사진" value={records.reduce((n, r) => n + r.photos.length, 0)} />
+          <PhotoStat cats={cats} />
         </dl>
         <div className="mt-3">
           <StorageUsage version={usageVersion} />
@@ -168,6 +169,28 @@ function Stat({ label, value, onClick }: { label: string; value: number; onClick
       <div className="text-lg font-bold text-gray-800">{value}</div>
       <div className="text-xs text-gray-500">{label}</div>
     </button>
+  )
+}
+
+/** Photo count straight from the photos store (source of truth), not summed
+ *  from reference sites — cats are edited on this same screen, so cats is the
+ *  refetch trigger */
+function PhotoStat({ cats }: { cats: Store['cats'] }) {
+  const [count, setCount] = useState<number | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void getPhotoCount().then((n) => {
+      if (!cancelled) setCount(n)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [cats])
+  return (
+    <div className="rounded-lg bg-gray-50 px-3 py-2.5 text-center">
+      <div className="text-lg font-bold text-gray-800">{count ?? '…'}</div>
+      <div className="text-xs text-gray-500">사진</div>
+    </div>
   )
 }
 
