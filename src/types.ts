@@ -14,6 +14,12 @@ export interface Cat {
   photoId?: string
 }
 
+/** A photo stored in the photos store — id is the store key, blob the body */
+export interface PhotoEntry {
+  id: string
+  blob: Blob
+}
+
 export interface VomitRecord {
   id: string
   datetime: string // ISO

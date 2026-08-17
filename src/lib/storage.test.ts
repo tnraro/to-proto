@@ -9,7 +9,7 @@ import {
   updateRecordWithPhotos,
   uid,
 } from './storage'
-import type { Cat, Marker, ThresholdRule, VomitRecord } from '../types'
+import type { Cat, Marker, PhotoEntry, ThresholdRule, VomitRecord } from '../types'
 
 const blob = (n: number) => new Blob([new Uint8Array([n])], { type: 'image/jpeg' })
 
@@ -69,9 +69,9 @@ async function seed(): Promise<{
   await dbPut('markers', markerKept)
   await dbPut('rules', catRule)
   await dbPut('rules', globalRule)
-  await dbPut('photos', { id: catPhotoId, blob: blob(1) })
-  await dbPut('photos', { id: recordPhotoId, blob: blob(2) })
-  await dbPut('photos', { id: markerPhotoId, blob: blob(3) })
+  await dbPut('photos', { id: catPhotoId, blob: blob(1) } satisfies PhotoEntry)
+  await dbPut('photos', { id: recordPhotoId, blob: blob(2) } satisfies PhotoEntry)
+  await dbPut('photos', { id: markerPhotoId, blob: blob(3) } satisfies PhotoEntry)
   return { cat, otherCat, record, markerSolo, markerKept, catRule, globalRule, catPhotoId, recordPhotoId, markerPhotoId }
 }
 
@@ -164,7 +164,7 @@ describe('getPhotoCount', () => {
   test('photos 스토어의 실제 개수 (SSoT)', async () => {
     await seed()
     expect(await getPhotoCount()).toBe(3)
-    await dbPut('photos', { id: uid(), blob: blob(9) })
+    await dbPut('photos', { id: uid(), blob: blob(9) } satisfies PhotoEntry)
     expect(await getPhotoCount()).toBe(4)
   })
 })

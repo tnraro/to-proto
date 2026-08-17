@@ -5,6 +5,7 @@ import type {
   Marker,
   MarkerInput,
   MarkerType,
+  PhotoEntry,
   RecordInput,
   ThresholdRule,
   VomitRecord,
@@ -33,7 +34,6 @@ import {
   uid,
   updateMarkerWithPhotos,
   updateRecordWithPhotos,
-  type PhotoBlob,
 } from '../lib/storage'
 import { evaluateNewRecord, violationToAlertEntry } from '../lib/thresholds'
 import { sortByDatetimeDesc } from '../lib/dates'
@@ -147,9 +147,9 @@ export function useStore(): Store {
   }, [])
 
   /** Resizes and stashes new blobs (deduped by blob identity), keeping existing ids in order */
-  async function resolvePhotoIds(photos: Array<string | Blob>): Promise<{ ids: string[]; newPhotos: PhotoBlob[] }> {
+  async function resolvePhotoIds(photos: Array<string | Blob>): Promise<{ ids: string[]; newPhotos: PhotoEntry[] }> {
     const ids: string[] = []
-    const newPhotos: PhotoBlob[] = []
+    const newPhotos: PhotoEntry[] = []
     const seen = new Map<Blob, string>()
     for (const p of photos) {
       if (typeof p === 'string') {

@@ -1,13 +1,8 @@
-import type { AlertEntry, BaseDraft, Cat, Marker, MarkerType, ThresholdRule, VomitRecord } from '../types'
+import type { AlertEntry, BaseDraft, Cat, Marker, MarkerType, PhotoEntry, ThresholdRule, VomitRecord } from '../types'
 import { dbClear, dbClearAll, dbCount, dbDel, dbDelByIndex, dbGet, dbGetAll, dbGetAllByIndex, dbPut, dbTxn, request } from './db'
 
 export function uid(): string {
   return crypto.randomUUID()
-}
-
-export interface PhotoBlob {
-  id: string
-  blob: Blob
 }
 
 export const DRAFT_TTL_MS = 30 * 60 * 1000
@@ -121,7 +116,7 @@ export async function delMarkerType(id: string): Promise<void> {
 }
 
 export async function getPhoto(id: string): Promise<Blob | undefined> {
-  const entry = await dbGet<{ id: string; blob: Blob }>('photos', id)
+  const entry = await dbGet<PhotoEntry>('photos', id)
   return entry?.blob
 }
 
@@ -144,7 +139,7 @@ export async function clearAll(): Promise<void> {
  */
 export async function saveRecordWithPhotos(
   record: VomitRecord,
-  newPhotos: PhotoBlob[],
+  newPhotos: PhotoEntry[],
   alerts: AlertEntry[],
 ): Promise<void> {
   await dbTxn(['photos', 'records', 'alertLog'], 'readwrite', async (tx) => {
@@ -157,7 +152,7 @@ export async function saveRecordWithPhotos(
 
 export async function updateRecordWithPhotos(
   record: VomitRecord,
-  newPhotos: PhotoBlob[],
+  newPhotos: PhotoEntry[],
   removedPhotoIds: string[],
 ): Promise<void> {
   await dbTxn(['photos', 'records'], 'readwrite', (tx) => {
@@ -168,7 +163,7 @@ export async function updateRecordWithPhotos(
   })
 }
 
-export async function saveMarkerWithPhotos(marker: Marker, newPhotos: PhotoBlob[]): Promise<void> {
+export async function saveMarkerWithPhotos(marker: Marker, newPhotos: PhotoEntry[]): Promise<void> {
   await dbTxn(['photos', 'markers'], 'readwrite', (tx) => {
     const photos = tx.objectStore('photos')
     for (const p of newPhotos) photos.put({ id: p.id, blob: p.blob })
@@ -178,7 +173,7 @@ export async function saveMarkerWithPhotos(marker: Marker, newPhotos: PhotoBlob[
 
 export async function updateMarkerWithPhotos(
   marker: Marker,
-  newPhotos: PhotoBlob[],
+  newPhotos: PhotoEntry[],
   removedPhotoIds: string[],
 ): Promise<void> {
   await dbTxn(['photos', 'markers'], 'readwrite', (tx) => {
