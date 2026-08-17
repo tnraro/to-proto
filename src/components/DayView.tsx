@@ -10,6 +10,7 @@ import {
   type DragSession,
 } from '../lib/dragSession'
 import { beginSwipe, createSwipeSession, endSwipe, moveSwipe, type SwipeSession } from '../lib/horizontalSwipe'
+import { bindGestureListeners } from '../lib/gestureListeners'
 import { RecordList } from './RecordList'
 
 const DAY_SLIDE_OFFSET = 80
@@ -68,66 +69,25 @@ export function DayView({
         }
       : null
     const ctx = (): DragContext => ({ container, sheetHeight: area.offsetHeight })
-    const applyMove = (y: number) => {
-      const r = moveDrag(sessionRef.current, y, ctx())
-      sessionRef.current = r.session
-      setDragY(r.session.dragY)
-    }
-    const applyEnd = () => {
-      const r = endDrag(sessionRef.current, ctx())
-      sessionRef.current = r.session
-      setDragY(null)
-      if (r.close) onCloseRef.current()
-    }
-
-    // Mouse/pen path — touch pointers are ignored here because the touch path
-    // below must stay live during native scroll (pointer events get cancelled)
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      sessionRef.current = beginDrag(sessionRef.current, e.target instanceof Element ? e.target : null, e.clientY)
-    }
-    const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      applyMove(e.clientY)
-    }
-    const onPointerEnd = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      applyEnd()
-    }
-
-    // Touch path — non-passive move so the session can stop native scroll on takeover
-    const onTouchStart = (e: TouchEvent) => {
-      const t = e.touches[0]
-      if (!t) return
-      sessionRef.current = beginDrag(sessionRef.current, e.target instanceof Element ? e.target : null, t.clientY)
-    }
-    const onTouchMove = (e: TouchEvent) => {
-      const t = e.touches[0]
-      if (!t) return
-      const r = moveDrag(sessionRef.current, t.clientY, ctx())
-      sessionRef.current = r.session
-      if (r.preventDefault) e.preventDefault()
-      setDragY(r.session.dragY)
-    }
-    const onTouchEnd = () => applyEnd()
-
-    area.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerEnd)
-    window.addEventListener('pointercancel', onPointerEnd)
-    area.addEventListener('touchstart', onTouchStart, { passive: true })
-    area.addEventListener('touchmove', onTouchMove, { passive: false })
-    area.addEventListener('touchend', onTouchEnd, { passive: true })
-    area.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    const unbind = bindGestureListeners(area, {
+      onDown: (target, _, y) => {
+        sessionRef.current = beginDrag(sessionRef.current, target, y)
+      },
+      onMove: (_, y) => {
+        const r = moveDrag(sessionRef.current, y, ctx())
+        sessionRef.current = r.session
+        setDragY(r.session.dragY)
+        return r.preventDefault
+      },
+      onEnd: () => {
+        const r = endDrag(sessionRef.current, ctx())
+        sessionRef.current = r.session
+        setDragY(null)
+        if (r.close) onCloseRef.current()
+      },
+    })
     return () => {
-      area.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerEnd)
-      window.removeEventListener('pointercancel', onPointerEnd)
-      area.removeEventListener('touchstart', onTouchStart)
-      area.removeEventListener('touchmove', onTouchMove)
-      area.removeEventListener('touchend', onTouchEnd)
-      area.removeEventListener('touchcancel', onTouchEnd)
+      unbind()
       sessionRef.current = createDragSession()
     }
   }, [])
@@ -141,6 +101,7 @@ export function DayView({
       const r = moveSwipe(swipeSessionRef.current, x, y)
       swipeSessionRef.current = r.session
       if (r.session.state === 'horizontal') setDx(r.dx)
+      return r.session.state === 'horizontal'
     }
     // Animate the content back to 0; the timer (not transitionend) resets the
     // gate so gestures can never get stuck after a no-op release
@@ -166,55 +127,15 @@ export function DayView({
         settleBack()
       }
     }
-
-    // Mouse/pen path — touch pointers are ignored here because the touch path
-    // below must stay live during native scroll (pointer events get cancelled)
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      swipeSessionRef.current = beginSwipe(swipeSessionRef.current, e.clientX, e.clientY)
-    }
-    const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      applyMove(e.clientX, e.clientY)
-    }
-    const onPointerEnd = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      applyEnd()
-    }
-
-    // Touch path — non-passive move so horizontal takeover can stop native scroll
-    const onTouchStart = (e: TouchEvent) => {
-      const t = e.touches[0]
-      if (!t) return
-      swipeSessionRef.current = beginSwipe(swipeSessionRef.current, t.clientX, t.clientY)
-    }
-    const onTouchMove = (e: TouchEvent) => {
-      const t = e.touches[0]
-      if (!t) return
-      const r = moveSwipe(swipeSessionRef.current, t.clientX, t.clientY)
-      swipeSessionRef.current = r.session
-      if (r.session.state === 'horizontal') e.preventDefault()
-      setDx(r.dx)
-    }
-    const onTouchEnd = () => applyEnd()
-
-    area.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerEnd)
-    window.addEventListener('pointercancel', onPointerEnd)
-    area.addEventListener('touchstart', onTouchStart, { passive: true })
-    area.addEventListener('touchmove', onTouchMove, { passive: false })
-    area.addEventListener('touchend', onTouchEnd, { passive: true })
-    area.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    const unbind = bindGestureListeners(area, {
+      onDown: (_, x, y) => {
+        swipeSessionRef.current = beginSwipe(swipeSessionRef.current, x, y)
+      },
+      onMove: applyMove,
+      onEnd: applyEnd,
+    })
     return () => {
-      area.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerEnd)
-      window.removeEventListener('pointercancel', onPointerEnd)
-      area.removeEventListener('touchstart', onTouchStart)
-      area.removeEventListener('touchmove', onTouchMove)
-      area.removeEventListener('touchend', onTouchEnd)
-      area.removeEventListener('touchcancel', onTouchEnd)
+      unbind()
       if (swipeTimerRef.current) clearTimeout(swipeTimerRef.current)
       swipeSessionRef.current = createSwipeSession()
     }

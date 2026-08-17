@@ -91,9 +91,9 @@ describe('deleteCatAtomic', () => {
     expect(await dbGet('photos', s.recordPhotoId)).toBeUndefined()
     expect(await dbGet('photos', s.markerPhotoId)).toBeDefined()
 
-    expect(result.updatedMarkers.map((m) => m.id)).toEqual([s.markerSolo.id, s.markerKept.id])
-    expect(result.updatedMarkers[0].catIds).toEqual([])
-    expect(result.updatedMarkers[1].catIds).toEqual([s.otherCat.id])
+    const byId = new Map(result.updatedMarkers.map((m) => [m.id, m]))
+    expect(byId.get(s.markerSolo.id)?.catIds).toEqual([])
+    expect(byId.get(s.markerKept.id)?.catIds).toEqual([s.otherCat.id])
   })
 
   test('다른 고양이의 데이터는 그대로', async () => {

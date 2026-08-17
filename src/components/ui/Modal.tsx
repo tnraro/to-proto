@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { beginDrag, createDragSession, endDrag, moveDrag, type DragContext, type DragSession } from '../../lib/dragSession'
+import { bindGestureListeners } from '../../lib/gestureListeners'
 
 interface Props {
   open: boolean
@@ -86,66 +87,25 @@ export function Modal({
       : null
     const ctx = (): DragContext => ({ container, sheetHeight: sheet.offsetHeight })
     const sync = (s: DragSession) => setDragY(s.dragY)
-    const applyMove = (y: number) => {
-      const r = moveDrag(sessionRef.current, y, ctx())
-      sessionRef.current = r.session
-      sync(r.session)
-    }
-    const applyEnd = () => {
-      const r = endDrag(sessionRef.current, ctx())
-      sessionRef.current = r.session
-      sync(r.session)
-      if (r.close) onCloseRef.current()
-    }
-
-    // Mouse/pen path — touch pointers are ignored here because the touch path
-    // below must stay live during native scroll (pointer events get cancelled)
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      sessionRef.current = beginDrag(sessionRef.current, e.target instanceof Element ? e.target : null, e.clientY)
-    }
-    const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      applyMove(e.clientY)
-    }
-    const onPointerEnd = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return
-      applyEnd()
-    }
-
-    // Touch path — non-passive move so the session can stop native scroll on takeover
-    const onTouchStart = (e: TouchEvent) => {
-      const t = e.touches[0]
-      if (!t) return
-      sessionRef.current = beginDrag(sessionRef.current, e.target instanceof Element ? e.target : null, t.clientY)
-    }
-    const onTouchMove = (e: TouchEvent) => {
-      const t = e.touches[0]
-      if (!t) return
-      const r = moveDrag(sessionRef.current, t.clientY, ctx())
-      sessionRef.current = r.session
-      if (r.preventDefault) e.preventDefault()
-      sync(r.session)
-    }
-    const onTouchEnd = () => applyEnd()
-
-    sheet.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerEnd)
-    window.addEventListener('pointercancel', onPointerEnd)
-    sheet.addEventListener('touchstart', onTouchStart, { passive: true })
-    sheet.addEventListener('touchmove', onTouchMove, { passive: false })
-    sheet.addEventListener('touchend', onTouchEnd, { passive: true })
-    sheet.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    const unbind = bindGestureListeners(sheet, {
+      onDown: (target, _, y) => {
+        sessionRef.current = beginDrag(sessionRef.current, target, y)
+      },
+      onMove: (_, y) => {
+        const r = moveDrag(sessionRef.current, y, ctx())
+        sessionRef.current = r.session
+        sync(r.session)
+        return r.preventDefault
+      },
+      onEnd: () => {
+        const r = endDrag(sessionRef.current, ctx())
+        sessionRef.current = r.session
+        sync(r.session)
+        if (r.close) onCloseRef.current()
+      },
+    })
     return () => {
-      sheet.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('pointermove', onPointerMove)
-      window.removeEventListener('pointerup', onPointerEnd)
-      window.removeEventListener('pointercancel', onPointerEnd)
-      sheet.removeEventListener('touchstart', onTouchStart)
-      sheet.removeEventListener('touchmove', onTouchMove)
-      sheet.removeEventListener('touchend', onTouchEnd)
-      sheet.removeEventListener('touchcancel', onTouchEnd)
+      unbind()
       sessionRef.current = createDragSession()
       setDragY(null)
     }
