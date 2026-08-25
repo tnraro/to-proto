@@ -4,6 +4,7 @@ import { dayLabel } from '../lib/dates'
 import {
   beginDrag,
   createDragSession,
+  DRAG_CLOSE_RATIO,
   endDrag,
   moveDrag,
   type DragContext,
@@ -56,6 +57,13 @@ export function DayView({
   const [dragY, setDragY] = useState<number | null>(null)
   const [dx, setDx] = useState(0)
   const [swipeTransitioning, setSwipeTransitioning] = useState(false)
+
+  const areaHeight = areaRef.current?.offsetHeight ?? 0
+  const dragProgress =
+    dragY !== null && areaHeight > 0 ? Math.min(1, dragY / (areaHeight * DRAG_CLOSE_RATIO)) : 0
+  // Rotation starts only past the halfway point so the arrow stays put during
+  // the initial pull and tracks progress in the second half
+  const arrowRotation = Math.max(0, (dragProgress - 0.5) * 2) * 180
 
   useEffect(() => {
     const area = areaRef.current
@@ -157,7 +165,37 @@ export function DayView({
           transition: swipeTransitioning ? `transform ${SWIPE_SETTLE_MS}ms ease-out` : 'none',
         }}
       >
-        <h3 className="shrink-0 px-4 pb-2 pt-1 text-sm font-semibold text-gray-600">{dayLabel(selectedKey)}</h3>
+        <div className="flex shrink-0 flex-col px-4 pb-2 pt-1">
+          <div
+            className="flex justify-center"
+            style={{
+              transition: dragY !== null ? 'none' : 'opacity 150ms ease-out',
+              opacity: dragY !== null ? 1 : 0,
+            }}
+            aria-hidden="true"
+          >
+            <span className="flex items-center gap-1">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`h-6 w-6 ${dragProgress >= 1 ? 'text-blue-500' : 'text-gray-400'}`}
+                style={{
+                  transform: `rotate(${arrowRotation}deg)`,
+                  transition: dragY !== null ? 'none' : 'opacity 150ms ease-out',
+                }}
+              >
+                <path d="M12 5v14" />
+                <path d="M19 12l-7 7-7-7" />
+              </svg>
+              {dragProgress >= 1 && <span className="text-xs font-medium text-blue-500">놓으면 닫힘</span>}
+            </span>
+          </div>
+          <h3 className="text-sm font-semibold text-gray-600">{dayLabel(selectedKey)}</h3>
+        </div>
         <div ref={scrollRef} className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain">
           <RecordList
             items={items}
