@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 
@@ -9,20 +9,38 @@ interface Props {
 
 export function Tooltip({ content, children }: Props) {
   const [show, setShow] = useState(false)
+  const [pinned, setPinned] = useState(false)
   const [pos, setPos] = useState<{ top: number; left: number; below: boolean } | null>(null)
   const wrapRef = useRef<HTMLSpanElement>(null)
-  const hideTimer = useRef<ReturnType<typeof setTimeout>>(null)
+  const tooltipId = useId()
 
   useEffect(() => {
     if (!show) return
-    const onScroll = () => setShow(false)
+    const onScroll = () => {
+      setShow(false)
+      setPinned(false)
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShow(false)
+        setPinned(false)
+      }
+    }
+    const onPointerDownOutside = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setShow(false)
+        setPinned(false)
+      }
+    }
     window.addEventListener('scroll', onScroll, true)
-    return () => window.removeEventListener('scroll', onScroll, true)
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('pointerdown', onPointerDownOutside, true)
+    return () => {
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('pointerdown', onPointerDownOutside, true)
+    }
   }, [show])
-
-  useEffect(() => () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-  }, [])
 
   const place = () => {
     const el = wrapRef.current
@@ -34,19 +52,19 @@ export function Tooltip({ content, children }: Props) {
     setPos({ top, left, below })
   }
 
-  const showTooltip = () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
+  const showHovered = () => {
     place()
     setShow(true)
   }
 
-  const scheduleHide = () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-    hideTimer.current = setTimeout(() => setShow(false), 2000)
+  const showPinned = () => {
+    place()
+    setPinned(true)
+    setShow(true)
   }
 
   const hideNow = () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current)
+    if (pinned) return
     setShow(false)
   }
 
@@ -54,10 +72,13 @@ export function Tooltip({ content, children }: Props) {
     <>
       <span
         ref={wrapRef}
-        onPointerEnter={showTooltip}
+        tabIndex={0}
+        aria-describedby={show ? tooltipId : undefined}
+        onPointerEnter={showHovered}
         onPointerLeave={hideNow}
-        onPointerDown={showTooltip}
-        onPointerUp={scheduleHide}
+        onPointerDown={showPinned}
+        onFocus={showHovered}
+        onBlur={hideNow}
       >
         {children}
       </span>
@@ -65,6 +86,8 @@ export function Tooltip({ content, children }: Props) {
         pos &&
         createPortal(
           <div
+            id={tooltipId}
+            role="tooltip"
             className="pointer-events-none fixed z-50 rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs text-white shadow-pop"
             style={{
               top: pos.top,
