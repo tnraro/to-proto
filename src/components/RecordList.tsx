@@ -77,7 +77,7 @@ function RecordListItem({
           <span className="text-base font-semibold text-gray-900">{cat?.name ?? '?'}</span>
           <RelativeTime iso={record.datetime} />
         </div>
-        {record.memo && <p className="mt-1 break-words text-sm text-gray-500">{record.memo}</p>}
+        {record.memo && <p className="mt-1 whitespace-pre-line break-words text-sm text-gray-500">{record.memo}</p>}
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {record.types.map((t) => (
             <span
@@ -146,7 +146,7 @@ function MarkerListItem({
             })}
           </div>
         )}
-        {marker.memo && <p className="mt-1 break-words text-sm text-gray-500">{marker.memo}</p>}
+        {marker.memo && <p className="mt-1 whitespace-pre-line break-words text-sm text-gray-500">{marker.memo}</p>}
         {marker.photos.length > 0 && (
           <div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
             {marker.photos.map((pid, i) => (
