@@ -5,7 +5,6 @@ export async function resizeImage(file: Blob): Promise<Blob> {
   const bitmap = await createImageBitmap(file)
   try {
     const scale = Math.min(1, MAX_SIZE / Math.max(bitmap.width, bitmap.height))
-    if (scale === 1) return file
     const w = Math.round(bitmap.width * scale)
     const h = Math.round(bitmap.height * scale)
     const canvas = document.createElement('canvas')
@@ -13,6 +12,7 @@ export async function resizeImage(file: Blob): Promise<Blob> {
     canvas.height = h
     const ctx = canvas.getContext('2d')
     if (!ctx) return file
+    ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(bitmap, 0, 0, w, h)
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, 'image/jpeg', QUALITY),
