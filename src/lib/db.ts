@@ -1,28 +1,49 @@
+import { runDataMigrations } from './dataMigrations'
 import { MIGRATIONS, runMigrations } from './migrations'
 
-export type StoreName = 'cats' | 'records' | 'rules' | 'alertLog' | 'photos' | 'draft' | 'markers' | 'markerTypes'
+export type StoreName =
+  | 'cats'
+  | 'records'
+  | 'rules'
+  | 'alertLog'
+  | 'photos'
+  | 'draft'
+  | 'markers'
+  | 'markerTypes'
+  | 'meta'
 
 const DB_NAME = 'to-app'
 export const DB_VERSION = MIGRATIONS.length
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
+/**
+ * Resolves only after schema migrations (sync, inside upgradeneeded) and data
+ * migrations (async) complete, so every caller sees fully migrated data.
+ */
 function openDB(): Promise<IDBDatabase> {
   if (!dbPromise) {
-    dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION)
-      req.onupgradeneeded = (e) => {
-        const oldVersion = (e as IDBVersionChangeEvent).oldVersion
-        runMigrations(req.result, oldVersion, req.transaction!)
-      }
-      req.onsuccess = () => resolve(req.result)
-      req.onerror = () => reject(req.error)
+    dbPromise = openSchema().then(async (db) => {
+      await runDataMigrations(db)
+      return db
     })
   }
   return dbPromise
 }
 
-function txDone(tx: IDBTransaction): Promise<void> {
+function openSchema(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION)
+    req.onupgradeneeded = (e) => {
+      const oldVersion = (e as IDBVersionChangeEvent).oldVersion
+      runMigrations(req.result, oldVersion, req.transaction!)
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+export function txDone(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)

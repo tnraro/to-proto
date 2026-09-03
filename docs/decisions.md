@@ -5,3 +5,9 @@ Rationale behind non-obvious design choices. What the system does is visible in 
 ## Migrations are synchronous and versioned by list position
 
 `Migration.up` must be synchronous: it runs inside the `upgradeneeded` transaction, which commits as soon as its request queue goes idle, so async work cannot be reliably awaited there — a rejected promise would surface as an unhandled rejection while the DB still opens. `DB_VERSION` is `MIGRATIONS.length` and each migration's version is its index + 1, so the previously possible drift between a hardcoded constant and the migration list is impossible by construction.
+
+## Data migrations run async after the DB opens
+
+Schema migrations stay synchronous inside `upgradeneeded`; data migrations run after the connection opens and block the first read/write — all store access goes through `openDB`, which awaits them. Their `up` is async because it awaits IDB requests inside a normal readwrite transaction, where pending requests keep the transaction alive; other async work (image decode, fetch) must happen outside the tx.
+
+Progress is a `meta`-store marker written inside each migration's own transaction rather than in localStorage: writing it in the same tx makes the migration atomic (a crash retries it whole), and transaction serialization keeps concurrent tabs from double-applying. Data migrations may only transform existing rows, never insert or seed: fresh installs run every pending migration on empty stores, so anything that inserts would corrupt already-current data.

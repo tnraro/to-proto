@@ -42,6 +42,14 @@ const DEFINED_MIGRATIONS: Omit<Migration, 'version'>[] = [
       }
     },
   },
+  {
+    name: 'meta store for data migration markers',
+    up: (db) => {
+      if (!db.objectStoreNames.contains('meta')) {
+        db.createObjectStore('meta', { keyPath: 'id' })
+      }
+    },
+  },
 ]
 
 export const MIGRATIONS: Migration[] = DEFINED_MIGRATIONS.map((m, index) => ({ ...m, version: index + 1 }))
