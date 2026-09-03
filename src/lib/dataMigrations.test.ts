@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import 'fake-indexeddb/auto'
 import { request, resetDbForTests, txDone } from './db'
-import { runDataMigrations, type DataMigration } from './dataMigrations'
+import { runDataMigrations, DATA_MIGRATIONS, type DataMigration } from './dataMigrations'
 import { runMigrations } from './migrations'
 
 const DB_NAME = 'to-app'
 
-async function putLegacyRecord(value: unknown): Promise<void> {
-  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+async function openLegacyV2(): Promise<IDBDatabase> {
+  return new Promise<IDBDatabase>((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 2)
     req.onupgradeneeded = () => {
       const db = req.result
@@ -22,9 +22,17 @@ async function putLegacyRecord(value: unknown): Promise<void> {
     req.onsuccess = () => resolve(req.result)
     req.onerror = () => reject(req.error)
   })
-  const tx = db.transaction('records', 'readwrite')
-  tx.objectStore('records').put(value)
+}
+
+async function putRaw(db: IDBDatabase, store: string, value: unknown): Promise<void> {
+  const tx = db.transaction(store, 'readwrite')
+  tx.objectStore(store).put(value)
   await txDone(tx)
+}
+
+async function putLegacyRecord(value: unknown): Promise<void> {
+  const db = await openLegacyV2()
+  await putRaw(db, 'records', value)
   db.close()
 }
 
@@ -144,6 +152,103 @@ describe('데이터 마이그레이션', () => {
 
     expect(await getAll<unknown>(db, 'records')).toEqual([])
     expect(await getMarker(db)).toBe(1)
+    db.close()
+  })
+
+  test('식사 시드: 신규 설치에서 기본 마커 타입 추가', async () => {
+    await resetDbForTests()
+    const db = await openAtDbVersion()
+
+    await runDataMigrations(db)
+
+    const types = await getAll<{ id: string; name: string }>(db, 'markerTypes')
+    expect(types).toEqual([{ id: 'meal', name: '식사' }])
+    expect(await getMarker(db)).toBe(DATA_MIGRATIONS.length)
+    db.close()
+  })
+
+  test('식사 시드: 기존 설치에 타입이 없으면 추가', async () => {
+    await resetDbForTests()
+    const oldDb = await openLegacyV2()
+    oldDb.close()
+
+    const db = await openAtDbVersion()
+    await runDataMigrations(db)
+
+    const types = await getAll<{ id: string; name: string }>(db, 'markerTypes')
+    expect(types).toEqual([{ id: 'meal', name: '식사' }])
+    db.close()
+  })
+
+  test('식사 시드: 다른 타입만 있으면 추가', async () => {
+    await resetDbForTests()
+    const oldDb = await openLegacyV2()
+    await putRaw(oldDb, 'markerTypes', { id: 't2', name: '건강 검진' })
+    oldDb.close()
+
+    const db = await openAtDbVersion()
+    await runDataMigrations(db)
+
+    const types = await getAll<{ id: string; name: string }>(db, 'markerTypes')
+    expect(types).toEqual([
+      { id: 'meal', name: '식사' },
+      { id: 't2', name: '건강 검진' },
+    ])
+    db.close()
+  })
+
+  test('식사 시드: 동명 타입은 id 정규화 + 마커 cascade', async () => {
+    await resetDbForTests()
+    const oldDb = await openLegacyV2()
+    await putRaw(oldDb, 'markerTypes', { id: 'uuid-1', name: '식사' })
+    await putRaw(oldDb, 'markerTypes', { id: 't2', name: '건강 검진' })
+    await putRaw(oldDb, 'markers', {
+      id: 'm1',
+      datetime: '2026-08-13T12:00:00.000Z',
+      typeId: 'uuid-1',
+      catIds: ['c1'],
+      photos: [],
+      createdAt: '2026-08-13T12:00:00.000Z',
+      updatedAt: '2026-08-13T12:00:00.000Z',
+    })
+    await putRaw(oldDb, 'markers', {
+      id: 'm2',
+      datetime: '2026-08-14T12:00:00.000Z',
+      typeId: 't2',
+      catIds: ['c1'],
+      photos: [],
+      createdAt: '2026-08-14T12:00:00.000Z',
+      updatedAt: '2026-08-14T12:00:00.000Z',
+    })
+    oldDb.close()
+
+    const db = await openAtDbVersion()
+    await runDataMigrations(db)
+
+    const types = await getAll<{ id: string; name: string }>(db, 'markerTypes')
+    expect(types).toEqual([
+      { id: 'meal', name: '식사' },
+      { id: 't2', name: '건강 검진' },
+    ])
+    const markers = await getAll<{ id: string; typeId: string }>(db, 'markers')
+    expect(markers.map((m) => ({ id: m.id, typeId: m.typeId }))).toEqual([
+      { id: 'm1', typeId: 'meal' },
+      { id: 'm2', typeId: 't2' },
+    ])
+    db.close()
+  })
+
+  test('식사 시드: 삭제 후 재실행해도 되살아나지 않음', async () => {
+    await resetDbForTests()
+    const db = await openAtDbVersion()
+    await runDataMigrations(db)
+
+    const tx = db.transaction('markerTypes', 'readwrite')
+    tx.objectStore('markerTypes').delete('meal')
+    await txDone(tx)
+    await runDataMigrations(db)
+
+    expect(await getAll<unknown>(db, 'markerTypes')).toEqual([])
     db.close()
   })
 })
