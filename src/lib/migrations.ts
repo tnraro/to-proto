@@ -2,22 +2,21 @@ export interface Migration {
   version: number
   name: string
   /**
-   * Schema/data transform. Runs inside the upgradeneeded transaction, so
-   * failure rolls back everything. Keep schema changes synchronous and
-   * data migration as a tx-based request chain.
+   * Must be synchronous — it runs inside the upgradeneeded transaction, so
+   * async work cannot be awaited and failure rolls back everything.
    */
-  up: (db: IDBDatabase, tx: IDBTransaction) => void | Promise<void>
+  up: (db: IDBDatabase, tx: IDBTransaction) => void
 }
 
 /**
- * On future schema changes: bump DB_VERSION in db.ts and append a new entry here.
+ * On future schema changes: append a new entry here. DB_VERSION derives from
+ * this list's length, and each entry's version is its index + 1.
  * Fresh installs (oldVersion 0) also run v1 first, so v1 owns the baseline schema.
  * Each migration fixes its own version's store list inline (no shared STORES).
  * Never change already-shipped migration snapshots — handle changes with a new version.
  */
-export const MIGRATIONS: Migration[] = [
+const DEFINED_MIGRATIONS: Omit<Migration, 'version'>[] = [
   {
-    version: 1,
     name: 'initial schema',
     up: (db, tx) => {
       const v1Stores = ['cats', 'records', 'rules', 'alertLog', 'photos', 'draft'] as const
@@ -33,7 +32,6 @@ export const MIGRATIONS: Migration[] = [
     },
   },
   {
-    version: 2,
     name: 'markers and marker types',
     up: (db) => {
       const v2Stores = ['markers', 'markerTypes'] as const
@@ -46,50 +44,12 @@ export const MIGRATIONS: Migration[] = [
   },
 ]
 
+export const MIGRATIONS: Migration[] = DEFINED_MIGRATIONS.map((m, index) => ({ ...m, version: index + 1 }))
+
 export function runMigrations(db: IDBDatabase, oldVersion: number, tx: IDBTransaction): void {
   for (const m of MIGRATIONS) {
     if (m.version > oldVersion) {
-      void m.up(db, tx)
+      m.up(db, tx)
     }
   }
-}
-
-export function ensureStore(db: IDBDatabase, name: string, keyPath?: string): IDBObjectStore {
-  if (db.objectStoreNames.contains(name)) return db.transaction(name, 'readonly').objectStore(name)
-  return db.createObjectStore(name, keyPath ? { keyPath } : {})
-}
-
-export function ensureIndex(store: IDBObjectStore, name: string, keyPath: string | string[]): void {
-  if (!store.indexNames.contains(name)) store.createIndex(name, keyPath)
-}
-
-export function dropStore(db: IDBDatabase, name: string): void {
-  if (db.objectStoreNames.contains(name)) db.deleteObjectStore(name)
-}
-
-/** Old store removal is dropStore */
-export async function copyStore(
-  db: IDBDatabase,
-  from: string,
-  to: string,
-  transform: (value: unknown, key: IDBValidKey) => unknown,
-): Promise<void> {
-  const oldStore = db.transaction(from, 'readonly').objectStore(from)
-  const newStore = db.transaction(to, 'readonly').objectStore(to)
-  await new Promise<void>((resolve, reject) => {
-    const req = oldStore.openCursor()
-    req.onsuccess = () => {
-      const cursor = req.result
-      if (!cursor) {
-        resolve()
-        return
-      }
-      const value = transform(cursor.value, cursor.key)
-      if (value !== null) {
-        newStore.put(value)
-      }
-      cursor.continue()
-    }
-    req.onerror = () => reject(req.error)
-  })
 }
